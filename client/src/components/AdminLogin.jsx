@@ -14,7 +14,9 @@ import { useState } from "react";
  * On successful login, it calls the `onSuccess` callback with admin data.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
 const ADMIN_API = `${API_BASE}/api/admin`;
 
 export default function AdminLogin({ onSuccess }) {

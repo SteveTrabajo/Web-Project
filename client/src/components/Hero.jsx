@@ -30,7 +30,7 @@ export default function Hero({ onStart }) {
             <div className="flex-1 text-center md:text-right text-white space-y-6">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
                 עוזר חכם לסטודנטים <br className="hidden md:block" />
-                <span className="text-[#F5B301]">לביוטכנולוגיה</span>
+                <span className="text-[#F5B301]">הנדסת ביוטכנולוגיה</span>
               </h1>
 
               <p className="text-lg md:text-xl text-blue-100 max-w-2xl">

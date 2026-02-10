@@ -18,7 +18,9 @@ import { useEffect, useMemo, useState, useCallback } from "react";
  */
 
 const SEMESTERS = [2, 3, 4, 5, 6, 7];
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
 
 /**
  * formatDate(iso)

@@ -24,7 +24,9 @@ import AdminRegistrationGuidelines from "./AdminRegistrationGuidelines.jsx"; // 
  * - Auto-loads data based on authentication and active tab.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
 /**
  * apiFetch(path, options)
  * ----------------------

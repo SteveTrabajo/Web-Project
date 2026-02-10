@@ -136,3 +136,32 @@ GEMINI_API_KEY=your_gemini_api_key
 FIREBASE_PROJECT_ID=your_firebase_project_id
 FIREBASE_CLIENT_EMAIL=your_firebase_client_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+Create a `.env` file inside the `client` directory:
+Example (local):
+VITE_API_BASE=http://localhost:5000
+
+Example (production):
+VITE_API_BASE=https://your-backend.onrender.com
+
+## Run locally
+server: 
+npm install
+pip install -r requirements.txt
+npm start
+client:
+ npm run dev
+ 
+## Deployment (Vercel)
+Root Directory: client
+Add environment variable:
+VITE_API_BASE=https://your-backend.onrender.com
+
+Deploy normally.
+
+## Deployment (Render)
+Build Command:
+pip install -r requirements.txt && npm install
+
+Start Command:
+npm start

@@ -18,7 +18,7 @@ export default function App() {
       {view === "home" && <Hero onStart={() => setView("chat")} />}
 
       {view !== "home" && (
-        <main className="bg-gradient-to-b from-blue-50 to-white dark:from-slate-950 dark:to-slate-900 min-h-screen">
+        <main className="bg-linear-to-b from-blue-50 to-white dark:from-slate-950 dark:to-slate-900 min-h-screen">
           <div className="max-w-6xl mx-auto px-4 py-8">
             {view === "chat" && <ChatBot />}
             {view === "labs" && <LabsViewer />}

@@ -17,130 +17,39 @@ import {
 const router = express.Router();
 const MODEL = "gemini-2.5-flash";
 
-/**
- * זיהוי שאלה על לוח מעבדות (Schedule) בלבד:
- * חייב לכלול "מעבדה/מעבדות/מע" + מילות זמן/תאריך/יום/לוח.
- * ✅ כך "למי פונים לגבי מעבדות" לא יישלח בטעות ל-askLabs.
- */
-function isLabQuestion(question = "") {
-  const q = question.toLowerCase();
-
-  const labWords = ["מעבדה", "מעבדות", "מע"];
-  const timeWords = [
-    "מתי",
-    "איזה",
-    "יום",
-    "תאריך",
-    "היום",
-    "מחר",
-    "השבוע",
-    "שבוע הבא",
-    "באיזה",
-    "לוח",
-    "זמן",
-    "מפגש",
-  ];
-
-  // חייב להיות אזכור של מעבדה + הקשר של זמן / לוח
-  return labWords.some((w) => q.includes(w)) && timeWords.some((t) => q.includes(t));
-}
-
-/**
- * זיהוי "כוונה אקדמית" על קורסים (לא רישום ולא לוח מעבדות):
- * דוגמאות:
- * - "אפשר לקחת X לפני Y?"
- * - "מה דרישות הקדם של X?"
- * - "אפשר במקביל?"
- *
- * ✅ משמש כדי לחסום כניסה ל-Registration כשזו שאלה על קורסים.
- */
-function isAcademicCourseIntent(question = "") {
-  const q = normalizeHebrew(question);
-
-  return [
-    "קדם",
-    "דרישת קדם",
-    "דרישות קדם",
-    "קורסי קדם",
-    "מה צריך לפני",
-    "אפשר ללמוד",
-    "אפשר לקחת",
-    "במקביל",
-    "צמוד",
-    "חובה",
-    "תנאי",
-    "דרישות",
-  ].some((k) => q.includes(normalizeHebrew(k)));
-}
-function detectGreeting(question = "") {
-  const q = normalizeHebrew(question);
-
-  return [
-    "היי",
-    "הי",
-    "שלום",
-    "אהלן",
-    "הלו",
-    "בוקר טוב",
-    "ערב טוב",
-    "מה נשמע"
-  ].some(g => q === normalizeHebrew(g));
-}
-
-/**
- * זיהוי מהיר של שאלת "מידע בסיסי על קורס" (lookup) כדי למנוע בלבול עם Registration.
- * דוגמאות:
- * - "מה הקוד של חדו\"א 2"
- * - "מה מספר הקורס של מעבדה בביוריאקטורים"
- * - "מה שם הקורס 11005"
- *
- * ✅ מונע מצב ששאלה עם המילה "מעבדה" תיפול ל-Registration.
- */
-function isCourseLookupQuestion(question = "") {
-  const q = normalizeHebrew(question);
-
-  const lookupPhrases = [
-    "מה הקוד של",
-    "מה קוד של",
-    "מה מספר הקורס",
-    "מה מספר של הקורס",
-    "מספר קורס",
-    "קוד קורס",
-    "קוד של",
-    "מה השם של",
-    "מה שם הקורס",
-    "איך קוראים לקורס",
-  ].map(normalizeHebrew);
-
-  if (lookupPhrases.some((p) => q.includes(p))) return true;
-
-  // אם יש מספר קורס + שאלה מילולית סביב זה
-  const code = extractCourseCode(question);
-  if (code && (q.includes(normalizeHebrew("מה שם")) || q.includes(normalizeHebrew("איזה קורס")))) {
-    return true;
-  }
-
-  return false;
-}
-
 /* =============================
-   Utils
+   Utils (MUST be defined BEFORE usage)
 ============================= */
 
 /**
  * נירמול עברית:
- * - מוריד גרשיים
+ * - מוריד גרשיים/גרשיים כפולים
  * - מחליף נקודות/מקפים ברווח
  * - מצמצם רווחים
  */
-const normalizeHebrew = (s = "") =>
-  String(s)
+function normalizeHebrew(s = "") {
+  return String(s)
     .replace(/["׳״'`]/g, "")
     .replace(/[.-]/g, " ")
     .replace(/\s+/g, " ")
     .toLowerCase()
     .trim();
+}
+const PREREQ_KEYWORDS = [
+  "קדם",
+  "דרישת קדם",
+  "דרישות קדם",
+  "קורסי קדם",
+  "מה צריך לפני",
+  "לפני",
+  "תנאי",
+  "דרישות",
+  "מה צריך כדי",
+];
 
+function escapeRegex(str = "") {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 /** בדיקה אם מחרוזת נראית כמו קוד קורס (5-6 ספרות) */
 const isCourseCode = (s) => /^\d{5,6}$/.test(String(s || "").trim());
 
@@ -175,16 +84,98 @@ function safeParseJson(text) {
 }
 
 /* =============================
-   Cache: Courses (Firestore) 
+   Intent detectors (non-reg / labs)
+============================= */
+
+function isLabQuestion(question = "", qLower = null) {
+  const q = qLower ?? String(question).toLowerCase();
+
+  const labWords = ["מעבדה", "מעבדות", "מע"];
+  const timeWords = [
+    "מתי",
+    "איזה",
+    "יום",
+    "תאריך",
+    "היום",
+    "מחר",
+    "השבוע",
+    "שבוע הבא",
+    "באיזה",
+    "לוח",
+    "זמן",
+    "מפגש",
+  ];
+
+  return labWords.some((w) => q.includes(w)) && timeWords.some((t) => q.includes(t));
+}
+
+const PARALLEL_KEYWORDS = ["במקביל", "צמוד", "עם"];
+
+function isAcademicCourseIntent(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  return (
+    PREREQ_KEYWORDS.some((k) => q.includes(normalizeHebrew(k))) ||
+    PARALLEL_KEYWORDS.some((k) => q.includes(normalizeHebrew(k))) ||
+    q.includes(normalizeHebrew("אפשר ללמוד")) ||
+    q.includes(normalizeHebrew("אפשר לקחת"))
+  );
+}
+
+
+function detectGreeting(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+
+  return ["היי", "הי", "שלום", "אהלן", "הלו", "בוקר טוב", "ערב טוב", "מה נשמע"].some(
+    (g) => q === normalizeHebrew(g)
+  );
+}
+
+function isCourseLookupQuestion(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+
+  const lookupPhrases = [
+    "מה הקוד של",
+    "מה קוד של",
+    "מה מספר הקורס",
+    "מה מספר של הקורס",
+    "מספר קורס",
+    "קוד קורס",
+    "קוד של",
+    "מה השם של",
+    "מה שם הקורס",
+    "איך קוראים לקורס",
+  ].map(normalizeHebrew);
+
+  if (lookupPhrases.some((p) => q.includes(p))) return true;
+
+  const code = extractCourseCode(question);
+  if (code && (q.includes(normalizeHebrew("מה שם")) || q.includes(normalizeHebrew("איזה קורס")))) {
+    return true;
+  }
+
+  return false;
+}
+
+function detectPrerequisitesFallback(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  return PREREQ_KEYWORDS.some((k) => q.includes(normalizeHebrew(k)));
+}
+
+
+function detectIntent(question = "", qNorm = null) {
+  const s = qNorm ?? normalizeHebrew(question);
+  if (s.includes("לפני") || s.includes("קדם")) return "before";
+  if (s.includes("במקביל") || s.includes("צמוד") || s.includes("עם")) return "parallel";
+  return "general";
+}
+
+/* =============================
+   Cache: Courses (Firestore)
 ============================= */
 
 const _coursesCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/**
- * טעינת כל הקורסים מכל הסמסטרים (Required Courses) + Cache ל-5 דקות
- * ✅ מפחית עלויות/latency ל-Firestore
- */
 async function getAllCoursesCached(yearbookId) {
   const now = Date.now();
   const cached = _coursesCache.get(yearbookId);
@@ -192,6 +183,7 @@ async function getAllCoursesCached(yearbookId) {
 
   const coursesRef = db.collection("yearbooks").doc(yearbookId).collection("requiredCourses");
   const semestersSnap = await coursesRef.get();
+
   const coursePromises = semestersSnap.docs.map((sem) => sem.ref.collection("courses").get());
   const coursesSnaps = await Promise.all(coursePromises);
 
@@ -199,11 +191,13 @@ async function getAllCoursesCached(yearbookId) {
   coursesSnaps.forEach((snap) => {
     snap.forEach((doc) => {
       const data = doc.data() || {};
+      const courseCode = String(data.courseCode || doc.id);
+      const courseName = String(data.courseName || "");
       allCourses.push({
-        courseCode: String(data.courseCode || doc.id),
-        courseName: String(data.courseName || ""),
-        nameNorm: normalizeHebrew(data.courseName),
-        codeNorm: String(data.courseCode || doc.id).replace(/\s+/g, ""),
+        courseCode,
+        courseName,
+        nameNorm: normalizeHebrew(courseName),
+        codeNorm: courseCode.replace(/\s+/g, ""),
       });
     });
   });
@@ -212,103 +206,144 @@ async function getAllCoursesCached(yearbookId) {
   return allCourses;
 }
 
-/**
- * התאמת קורס לפי:
- * - קוד קורס (11005)
- * - שם (כולל התאמה חלקית)
- */
+/* =============================
+   Matching / Extraction
+============================= */
+
 function matchCourse(raw, courses, nameIndex) {
   if (!raw) return null;
-
   const s = String(raw).trim();
 
-  // קוד קורס
-  if (isCourseCode(s)) {
-    return courses.find((c) => c.courseCode === s) || null;
-  }
+  if (isCourseCode(s)) return courses.find((c) => c.courseCode === s) || null;
 
-  // שם קורס
   const n = normalizeHebrew(s);
   if (!n) return null;
 
-  // התאמה מדויקת
-  if (nameIndex.has(n)) return nameIndex.get(n);
+  if (nameIndex?.has(n)) return nameIndex.get(n);
 
-  // התאמה חלקית
-  for (const [key, course] of nameIndex.entries()) {
-    if (key.includes(n) || n.includes(key)) return course;
+  if (nameIndex) {
+    for (const [key, course] of nameIndex.entries()) {
+      if (key.includes(n) || n.includes(key)) return course;
+    }
   }
 
   return null;
 }
 
-/**
- * זיהוי fallback לשאלות קדם אם ג'מיני לא סיווג נכון
- */
-function detectPrerequisitesFallback(question = "") {
-  const q = normalizeHebrew(question);
+function extractMultipleCourses(question, allCourses, qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  const matches = [];
 
-  return [
-    "קדם",
-    "דרישת קדם",
-    "דרישות קדם",
-    "קורסי קדם",
-    "מה צריך לפני",
-    "לפני",
-    "תנאי",
-    "דרישות",
-    "מה צריך כדי",
-  ].some((k) => q.includes(normalizeHebrew(k)));
+  for (const c of allCourses) {
+    if (!c.nameNorm) continue;
+
+    const words = c.nameNorm.split(" ").filter(w => w.length >= 2);
+
+    const found = words.every(w =>
+      new RegExp(`\\b${escapeRegex(w)}\\b`, "i").test(q)
+    );
+
+    if (found) matches.push(c);
+  }
+
+  return matches;
+}
+
+
+
+
+/* =============================
+   Firestore relations
+============================= */
+const _relationTypeCache = new Map();
+
+async function getRelationType(yearbookId, courseA_code, courseB_code) {
+  const key = `${yearbookId}:${courseA_code}:${courseB_code}`;
+  if (_relationTypeCache.has(key)) return _relationTypeCache.get(key);
+
+  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
+
+  for (const sem of semSnap.docs) {
+    const relRef = sem.ref
+      .collection("courses")
+      .doc(courseA_code)
+      .collection("relations")
+      .doc(courseB_code);
+
+    const relSnap = await relRef.get();
+    if (relSnap.exists) {
+      const val = relSnap.data()?.type || null;
+      _relationTypeCache.set(key, val);
+      return val;
+    }
+  }
+
+  _relationTypeCache.set(key, null);
+  return null;
+}
+
+/**
+ * ✅ Recursive prerequisites + CACHE (כבד מאוד בלי Cache)
+ */
+const _prereqCache = new Map();
+const PREREQ_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getAllPrerequisitesRecursive(yearbookId, courseCode, visited = new Set()) {
+  if (visited.has(courseCode)) return [];
+  visited.add(courseCode);
+
+  const prereqs = [];
+
+  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
+
+  for (const sem of semSnap.docs) {
+    const relsSnap = await sem.ref
+      .collection("courses")
+      .doc(courseCode)
+      .collection("relations")
+      .where("type", "==", "PREREQUISITE")
+      .get();
+
+    for (const doc of relsSnap.docs) {
+      const prereqCode = doc.id;
+      const prereqName = doc.data().courseName || prereqCode;
+
+      prereqs.push({ code: prereqCode, name: prereqName });
+
+      const deeper = await getAllPrerequisitesRecursive(yearbookId, prereqCode, visited);
+      prereqs.push(...deeper);
+    }
+  }
+
+  return prereqs;
+}
+
+async function getAllPrerequisitesRecursiveCached(yearbookId, courseCode) {
+  const key = `${yearbookId}:${courseCode}`;
+  const now = Date.now();
+  const cached = _prereqCache.get(key);
+  if (cached && now - cached.ts < PREREQ_CACHE_TTL_MS) return cached.data;
+
+  const data = await getAllPrerequisitesRecursive(yearbookId, courseCode);
+  _prereqCache.set(key, { ts: now, data });
+  return data;
 }
 
 /* =============================
-   Gemini (Courses classifier)
+   Gemini Wrapper 
 ============================= */
 
-/**
- * סיווג שאלה אקדמית לקורסים בלבד:
- * - lookup: קורס אחד (מה הקוד/מה השם)
- * - prerequisites: דרישות קדם של קורס אחד
- * - relation: קשר בין שני קורסים (לפני/במקביל)
- */
-async function classifyQuestion(question) {
-  const classifierPrompt = `
-החזירי JSON בלבד בפורמט הבא:
-{
-  "kind": "lookup" | "relation" | "prerequisites",
-  "courseA": "שם קורס או קוד",
-  "courseB": "שם קורס או קוד (רק אם זה relation)"
-}
-
-הגדרות:
-- "lookup" → מידע כללי על קורס אחד
-- "relation" → קשר בין שני קורסים (קדם / במקביל / לפני)
-- "prerequisites" → שאלה על דרישות קדם או קורסי קדם של קורס אחד
-
-דוגמאות:
-שאלה: "מה קורסי הקדם של חדוא?"
-→ { "kind": "prerequisites", "courseA": "חדוא" }
-
-שאלה: "מה צריך ללמוד לפני אלגוריתמים?"
-→ { "kind": "prerequisites", "courseA": "אלגוריתמים" }
-
-שאלה: "אפשר ללמוד אלגוריתמים לפני מבני נתונים?"
-→ { "kind": "relation", "courseA": "אלגוריתמים", "courseB": "מבני נתונים" }
-
-שאלה:
-"${question}"
-`;
+async function callGeminiJson(promptText) {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
+    process.env.GEMINI_API_KEY;
 
   try {
-    const url =
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-      process.env.GEMINI_API_KEY;
-
     const resp = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: classifierPrompt }] }],
+        contents: [{ parts: [{ text: promptText }] }],
         generationConfig: { temperature: 0 },
       }),
     });
@@ -321,72 +356,31 @@ async function classifyQuestion(question) {
   }
 }
 
-/**
- * זיהוי יחס "לפני" / "במקביל" / "כללי" לשאלות relation
- */
-function detectIntent(question = "") {
-  const s = String(question).toLowerCase();
-  if (s.includes("לפני") || s.includes("קדם")) return "before";
-  if (s.includes("במקביל") || s.includes("צמוד")) return "parallel";
-  return "general";
+async function classifyQuestion(question) {
+  const classifierPrompt = `
+החזירי JSON בלבד:
+
+{
+  "kind": "lookup" | "relation" | "prerequisites",
+  "courses": ["רשימת קורסים"],
+  "intent": "before" | "parallel" | "general"
 }
 
-/* =============================
-   Firestore relations
-============================= */
+הגדרות:
+lookup → קורס אחד (שם/קוד)
+prerequisites → קורסי קדם של קורס אחד
+relation → קשר בין שני קורסים או יותר (לפני/במקביל/כללי)
 
-/**
- * שליפת סוג הקשר בין courseA ל-courseB מתוך relations:
- * PREREQUISITE / COREQUISITE / null
- */
-async function getRelationType(yearbookId, courseA_code, courseB_code) {
-  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
-
-  for (const sem of semSnap.docs) {
-    const relRef = sem.ref
-      .collection("courses")
-      .doc(courseA_code)
-      .collection("relations")
-      .doc(courseB_code);
-
-    const relSnap = await relRef.get();
-    if (relSnap.exists) return relSnap.data()?.type || null;
-  }
-
-  return null;
-}
-
-/**
- * שליפת כל קורסי הקדם (PREREQUISITE) של קורס אחד (courseCode)
- * ✅ מחזיר רשימת שמות קורסים
- */
-async function getAllPrerequisites(yearbookId, courseCode) {
-  const prereqs = [];
-  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
-
-  for (const sem of semSnap.docs) {
-    const relsSnap = await sem.ref
-      .collection("courses")
-      .doc(courseCode)
-      .collection("relations")
-      .where("type", "==", "PREREQUISITE")
-      .get();
-
-    relsSnap.forEach((doc) => {
-      prereqs.push(doc.data().courseName || doc.id);
-    });
-  }
-  return prereqs;
+שאלה:
+"${question}"
+`;
+  return callGeminiJson(classifierPrompt);
 }
 
 /* =============================
    Emotion detection (Gemini)
 ============================= */
 
-/**
- * פרומפט לזיהוי מצוקה רגשית.
- * ✅ מופעל רק אם לא זוהה קורס בצורה מובהקת (כדי לא לבלבל שאלות אקדמיות).
- */
 function buildEmotionPrompt(question) {
   return `
 את מערכת שמזהה מצוקה רגשית של סטודנטים.
@@ -414,26 +408,8 @@ function buildEmotionPrompt(question) {
 `;
 }
 
-/** קריאה לג'מיני לזיהוי מצוקה */
 async function detectEmotion(question) {
-  const prompt = buildEmotionPrompt(question);
-
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-    process.env.GEMINI_API_KEY;
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0 },
-    }),
-  });
-
-  const data = await resp.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  return safeParseJson(text);
+  return callGeminiJson(buildEmotionPrompt(question));
 }
 
 /* =============================
@@ -443,45 +419,37 @@ async function detectEmotion(question) {
 router.post("/ask", async (req, res) => {
   try {
     const { yearbookId, question } = req.body || {};
-    if (!question || !yearbookId) {
-      return res.status(400).json({ html: "❌ חסרה שאלה" });
-    }
-     if (detectGreeting(question)) {
+    if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
+
+    // ✅ normalize once
+    const qNorm = normalizeHebrew(question);
+    const qLower = String(question).toLowerCase();
+
+    if (detectGreeting(question, qNorm)) {
       return res.json({
         html: `
           <div class="text-sm">
             👋 היי!<br/>
             איך אפשר לעזור לך היום? 😊
           </div>
-        `
+        `,
       });
     }
 
-    // =========================================================
     // 1) Labs schedule
-    // =========================================================
-    // ✅ רק שאלות "לוח" (מעבדה + זמן/תאריך/יום/לוח) מגיעות לפה
-    if (isLabQuestion(question)) return askLabs(req, res);
+    if (isLabQuestion(question, qLower)) return askLabs(req, res);
 
-    // =========================================================
     // 2) Registration
-    // =========================================================
-
     if (
       isRegistrationQuestion(question) &&
-      !isAcademicCourseIntent(question) &&
-      !isCourseLookupQuestion(question)
+      !isAcademicCourseIntent(question, qNorm) &&
+      !isCourseLookupQuestion(question, qNorm)
     ) {
-      // 1️⃣ סיווג כוונה (עם fallback)
       const intentObj = await classifyRegistrationIntent(question);
       const finalIntent = refineRegistrationIntent(intentObj?.intent, question) || "general";
-
-      // 2️⃣ חילוץ סמסטר (אם קיים)
       const semNum = extractSemesterNumber(question);
 
-      // =================================================
       // 2.1 "מתי הרישום?" בלי סמסטר → כל הסמסטרים
-      // =================================================
       if (finalIntent === "window" && !semNum) {
         const allDocs = await getAllRegDocs();
 
@@ -505,13 +473,10 @@ router.post("/ask", async (req, res) => {
         return res.json({ html });
       }
 
-      // =================================================
       // 2.2 שאלות כלליות בלי סמסטר
-      // =================================================
       if (!semNum) {
         const allDocs = await getAllRegDocs();
 
-        // ---------- נקודות זכות כלליות ----------
         if (finalIntent === "credits") {
           return res.json({
             html: `
@@ -523,7 +488,6 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        // ---------- פטורים / חריגים ----------
         if (finalIntent === "exemptions") {
           return res.json({
             html: `
@@ -535,7 +499,6 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        // ---------- אנשי קשר כלליים ----------
         if (finalIntent === "contacts") {
           return res.json({
             html: `
@@ -547,27 +510,16 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        // ---------- יועצים ----------
-        if (finalIntent === "advisors") {
-          return res.json({ html: buildAllAdvisorsAnswer(allDocs) });
-        }
+        if (finalIntent === "advisors") return res.json({ html: buildAllAdvisorsAnswer(allDocs) });
+        if (finalIntent === "labs") return res.json({ html: buildAllLabsAnswer(allDocs) });
 
-        // ---------- מעבדות (אנשי קשר/אחראי מעבדות מתוך מסמכי רישום) ----------
-        if (finalIntent === "labs") {
-          return res.json({ html: buildAllLabsAnswer(allDocs) });
-        }
-
-        // ---------- מלווה ----------
         if (finalIntent === "mentors") {
           const docsWithMentors = allDocs.filter((d) => (d.contacts?.mentors || []).length > 0);
 
           if (!docsWithMentors.length) {
-            return res.json({
-              html: `<div class="text-sm">ℹ️ אין סטודנט/ית מלווה בשנתון זה.</div>`,
-            });
+            return res.json({ html: `<div class="text-sm">ℹ️ אין סטודנט/ית מלווה בשנתון זה.</div>` });
           }
 
-          // אצלך בפועל – לרוב רק סמסטר 1
           if (docsWithMentors.length === 1) {
             const d = docsWithMentors[0];
             const m = d.contacts.mentors[0];
@@ -583,26 +535,18 @@ router.post("/ask", async (req, res) => {
             });
           }
 
-          // אם בעתיד יהיו יותר → מומלץ להוסיף buildAllMentorsAnswer בשירות
-          return res.json({
-            html: `<div class="text-sm">ℹ️ יש מספר מלווים. אנא צייני סמסטר.</div>`,
-          });
+          return res.json({ html: `<div class="text-sm">ℹ️ יש מספר מלווים. אנא צייני סמסטר.</div>` });
         }
 
-        // ---------- קישורי הדרכה ----------
         if (finalIntent === "links") {
           const docsWithLinks = allDocs.filter((d) => (d.links || []).length > 0);
 
           if (!docsWithLinks.length) {
-            return res.json({
-              html: `<div class="text-sm">ℹ️ לא נמצאו קישורי הדרכה.</div>`,
-            });
+            return res.json({ html: `<div class="text-sm">ℹ️ לא נמצאו קישורי הדרכה.</div>` });
           }
 
           if (docsWithLinks.length === 1) {
-            return res.json({
-              html: buildRegistrationAnswer("links", docsWithLinks[0]),
-            });
+            return res.json({ html: buildRegistrationAnswer("links", docsWithLinks[0]) });
           }
 
           return res.json({
@@ -623,14 +567,12 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        // ---------- סטאז' בלי סמסטר ----------
         if (finalIntent === "internship") {
           return res.json({
             html: `<div class="text-sm">ℹ️ תנאי סטאז' משתנים לפי סמסטר. אנא צייני סמסטר.</div>`,
           });
         }
 
-        // ---------- כללי ----------
         if (finalIntent === "general") {
           return res.json({
             html: `
@@ -642,31 +584,18 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        // fallback
-        return res.json({
-          html: `<div class="text-sm">ℹ️ אנא צייני סמסטר (לדוגמה: סמסטר 2)</div>`,
-        });
+        return res.json({ html: `<div class="text-sm">ℹ️ אנא צייני סמסטר (לדוגמה: סמסטר 2)</div>` });
       }
 
-      // =================================================
       // 2.3 יש סמסטר → תשובה ספציפית
-      // =================================================
       const regDoc = await getRegDoc(semNum);
       if (!regDoc) {
-        return res.json({
-          html: `<div class="text-sm">❌ לא מצאתי הנחיות רישום לסמסטר ${semNum}.</div>`,
-        });
+        return res.json({ html: `<div class="text-sm">❌ לא מצאתי הנחיות רישום לסמסטר ${semNum}.</div>` });
       }
 
-      // ---------- סטאז' עם סמסטר ----------
       if (finalIntent === "internship") {
         const rules = (regDoc.keyRules || []).filter((r) => r.code?.includes("INTERNSHIP"));
-
-        if (!rules.length) {
-          return res.json({
-            html: `<div class="text-sm">ℹ️ אין מידע על סטאז' בסמסטר זה.</div>`,
-          });
-        }
+        if (!rules.length) return res.json({ html: `<div class="text-sm">ℹ️ אין מידע על סטאז' בסמסטר זה.</div>` });
 
         return res.json({
           html: `
@@ -678,145 +607,164 @@ router.post("/ask", async (req, res) => {
         });
       }
 
-      // ---------- ברירת מחדל: תשובת סמסטר ----------
-      const html = buildRegistrationAnswer(finalIntent, regDoc);
-      return res.json({ html });
+      return res.json({ html: buildRegistrationAnswer(finalIntent, regDoc) });
     }
 
-    // =========================================================
     // 3) Courses / Relations / Prereqs / Emotion (Academic)
-    // =========================================================
-
-    // שימוש ב-CACHE (במקום קריאה ישירה ל-Firestore)
     const allCourses = await getAllCoursesCached(yearbookId);
 
-    // אינדקס התאמה מהירה לפי שם/קוד
+    // index only by nameNorm (code handled separately)
     const nameIndex = new Map();
-    allCourses.forEach((c) => {
-      nameIndex.set(c.nameNorm, c);
-      nameIndex.set(c.codeNorm, c);
-    });
+    allCourses.forEach((c) => nameIndex.set(c.nameNorm, c));
 
-    // מריצים במקביל כדי לחסוך זמן
-    const [emotion, classification] = await Promise.all([
-      detectEmotion(question),
-      classifyQuestion(question),
-    ]);
+    const detectedCourses = extractMultipleCourses(question, allCourses, qNorm);
 
-    const courseA = matchCourse(classification?.courseA || question, allCourses, nameIndex);
-    const courseB = matchCourse(classification?.courseB, allCourses, nameIndex);
+    const [emotion, classification] = await Promise.all([detectEmotion(question), classifyQuestion(question)]);
 
-    // ---------- טיפול ברגש ----------
-    // ✅ רק אם לא זוהה קורס (כדי לא לבלבל שאלות לימודיות)
-    if (emotion?.intent === "emotional_support" && !courseA) {
+    const geminiCourses = Array.isArray(classification?.courses)
+      ? classification.courses.map((c) => matchCourse(c, allCourses, nameIndex)).filter(Boolean)
+      : [];
+
+    const coursesFromQuestion = geminiCourses.length ? geminiCourses : detectedCourses;
+    const courseMain = coursesFromQuestion[0] || null;
+
+    // Emotion
+    if (emotion?.intent === "emotional_support" && !courseMain) {
       return res.json({
         html: `
-          <div class="text-sm leading-6">
+          <div dir="rtl" class="text-sm leading-6 text-right">
             💙 זה בסדר להרגיש ככה, את לא לבד.<br/>
             הרבה סטודנטים חווים עומס ובלבול במהלך הלימודים.<br/><br/>
-            אפשר וכדאי לפנות ליועץ/ת האקדמי/ת שלך או לדיקנט הסטודנטים.<br/>
-            ניתן למצוא יועץ/ת דרך התפריט למטה 👇
+
+            אם את מרגישה צורך בעזרה נוספת, אפשר וכדאי לפנות לדיקנט הסטודנטים.<br/><br/>
+
+            <div class="mt-2 rounded-lg border border-gray-200 bg-white p-3 text-right
+                        dark:bg-slate-950 dark:border-slate-700">
+              <div class="font-semibold mb-1">📌 פרטי הדיקנט</div>
+              <div class="space-y-1 text-sm">
+                <div>📞 טלפון: <span dir="ltr">04-9901906</span></div>
+                <div>
+                  ✉️ דוא״ל:
+                  <a class="underline text-blue-700 dark:text-sky-300" href="mailto:dean@braude.ac.il">
+                    dean@braude.ac.il
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              אפשר גם לפנות ליועץ/ת האקדמי/ת שלך.<br/>
+              ניתן למצוא יועץ/ת דרך התפריט למטה 👇
+            </div>
           </div>
         `,
       });
     }
 
-    // ---------- קורסי קדם (Prerequisites) ----------
-    if (
-      courseA &&
-      (classification?.kind === "prerequisites" || detectPrerequisitesFallback(question))
-    ) {
-      const prereqs = await getAllPrerequisites(yearbookId, courseA.courseCode);
+    const kind = classification?.kind || null;
+    const intent = classification?.intent || detectIntent(question, qNorm);
+
+    // Prerequisites (with cache)
+    if (courseMain && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
+      const prereqs = await getAllPrerequisitesRecursiveCached(yearbookId, courseMain.courseCode);
 
       if (!prereqs.length) {
         return res.json({
-          html: `
-            <div class="text-sm">
-              ℹ️ ל־<b>${courseA.courseName}</b> אין קורסי קדם.
-            </div>
-          `,
+          html: `<div class="text-sm">ℹ️ ל־<b>${courseMain.courseName}</b> אין קורסי קדם.</div>`,
         });
       }
 
       return res.json({
         html: `
           <div class="text-sm leading-6">
-            📘 <b>קורסי קדם ל־${courseA.courseName}</b><br/><br/>
-            ${prereqs.map((p) => `• ${p}`).join("<br/>")}
+            📘 <b>קורסי קדם ל־${courseMain.courseName}</b><br/><br/>
+            ${prereqs.map((p) => `• ${p.name}`).join("<br/>")}
           </div>
         `,
       });
     }
 
-    // ---------- LOOKUP (שם/קוד של קורס) ----------
-    if (classification?.kind === "lookup" || (courseA && !courseB)) {
-      if (courseA) {
-        return res.json({
-          html: `<div class="text-sm">✅ <b>${courseA.courseName}</b> (${courseA.courseCode})</div>`,
-        });
-      }
+    // Lookup
+    if ((kind === "lookup" || coursesFromQuestion.length === 1) && courseMain) {
+      return res.json({
+        html: `<div class="text-sm">✅ <b>${courseMain.courseName}</b> (${courseMain.courseCode})</div>`,
+      });
     }
 
-    // ---------- RELATION (קדם/במקביל/לפני) ----------
-    if (classification?.kind === "relation" || (courseA && courseB)) {
-      if (!courseA || !courseB) {
-        return res.json({
-          html: `<div class="text-sm">❌ לא הצלחתי לזהות את שני הקורסים שציינת.</div>`,
-        });
+    // Relations (2+)
+ if (coursesFromQuestion.length >= 2) {
+  const prerequisites = new Set();
+  const parallels = new Set();
+
+  const target = coursesFromQuestion[0]; // הקורס העיקרי מהשאלה
+
+  for (let i = 0; i < coursesFromQuestion.length; i++) {
+    for (let j = i + 1; j < coursesFromQuestion.length; j++) {
+      const A = coursesFromQuestion[i];
+      const B = coursesFromQuestion[j];
+
+      // 🔥 בדיקת prerequisites אמיתית (recursive)
+      const prereqsA = await getAllPrerequisitesRecursiveCached(yearbookId, A.courseCode);
+      const prereqsB = await getAllPrerequisitesRecursiveCached(yearbookId, B.courseCode);
+
+      // אם target תלוי בקורס אחר
+      if (A.courseCode === target.courseCode &&
+          prereqsA.some(p => p.code === B.courseCode)) {
+        prerequisites.add(B.courseName);
       }
 
-      const intent = detectIntent(question);
-      const relType = await getRelationType(yearbookId, courseA.courseCode, courseB.courseCode);
-      const prereqs = await getAllPrerequisites(yearbookId, courseA.courseCode);
-
-      let answer = "";
-
-      if (intent === "before") {
-        if (relType === "PREREQUISITE") {
-          answer = `❌ לא ניתן ללמוד <b>${courseA.courseName}</b> לפני <b>${courseB.courseName}</b>`;
-        } else if (relType === "COREQUISITE") {
-          answer = `⚠️ הקורסים צמודים – יש ללמוד במקביל`;
-        } else {
-          answer = `לפי הנתונים בשנתון, ל־<b>${courseA.courseName}</b> ${
-            prereqs.length > 0
-              ? `יש קורסי קדם:<br/>${prereqs.map((p) => `• ${p}`).join("<br/>")}`
-              : "אין קורסי קדם."
-          }<br/><br/>אם סיימת את דרישות הקדם – לא צפויה בעיה.`;
-        }
-      } else if (intent === "parallel") {
-        if (relType === "COREQUISITE") {
-          answer = `✅ ניתן ללמוד <b>${courseA.courseName}</b> במקביל עם <b>${courseB.courseName}</b>`;
-        } else if (relType === "PREREQUISITE") {
-          answer = `⚠️ לא מומלץ/לא אפשרי במקביל: <b>${courseB.courseName}</b> הוא <b>קורס קדם</b> ל־<b>${courseA.courseName}</b>.`;
-        } else {
-          answer = `לפי הנתונים בשנתון, ל־<b>${courseA.courseName}</b> ${
-            prereqs.length > 0
-              ? `יש קורסי קדם:<br/>${prereqs.map((p) => `• ${p}`).join("<br/>")}`
-              : "אין קורסי קדם."
-          }<br/><br/>אם סיימת את דרישות הקדם – לא צפויה בעיה.`;
-        }
-      } else {
-        if (relType === "PREREQUISITE") {
-          answer = `ℹ️ <b>${courseB.courseName}</b> הוא קורס קדם ל־<b>${courseA.courseName}</b>`;
-        } else {
-          answer = `לפי הנתונים בשנתון, ל־<b>${courseA.courseName}</b> ${
-            prereqs.length > 0
-              ? `יש קורסי קדם:<br/>${prereqs.map((p) => `• ${p}`).join("<br/>")}`
-              : "אין קורסי קדם."
-          }<br/><br/>אם סיימת את דרישות הקדם – לא צפויה בעיה.`;
-        }
+      if (B.courseCode === target.courseCode &&
+          prereqsB.some(p => p.code === A.courseCode)) {
+        prerequisites.add(A.courseName);
       }
 
-      return res.json({ html: `<div class="text-sm">${answer}</div>` });
+      // Corequisite (רק אם קיים relation כזה)
+      const relAB = await getRelationType(yearbookId, A.courseCode, B.courseCode);
+      const relBA = await getRelationType(yearbookId, B.courseCode, A.courseCode);
+
+      if (relAB === "COREQUISITE" || relBA === "COREQUISITE") {
+        parallels.add(`${A.courseName} ו־${B.courseName}`);
+      }
+    }
+  }
+
+  let answer = "";
+
+  // ❌ prerequisite message
+  if (prerequisites.size) {
+    const list = [...prerequisites];
+
+    answer += `⛔ לא ניתן ללמוד את הקורסים יחד.<br/>`;
+
+    if (list.length === 1) {
+      answer += `📌 קודם צריך לסיים <b>${list[0]}</b>, ואז לקחת <b>${target.courseName}</b>.<br/>`;
+    } else {
+      answer += `📌 קודם צריך לסיים:<br/>
+${list.map(c => `• ${c}`).join("<br/>")}
+<br/>ואז לקחת <b>${target.courseName}</b>.<br/>`;
     }
 
-    // ---------- Default ----------
-    return res.json({
-      html: `<div class="text-sm">ℹ️ לא מצאתי תשובה מדויקת. אם שאלת על קורס, וודאי שרשמת את שמו המלא. אם את/ה חווה קושי, אנחנו כאן.</div>`,
-    });
+    return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
+  }
+
+  // ✅ parallel message
+  if (parallels.size) {
+    answer += `✅ אפשר ללמוד במקביל 🙂<br/>
+${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
+
+    return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
+  }
+
+  // ℹ️ no relation
+  answer += `ℹ️ לא נראה שיש דרישות קדם ביניהם — אפשר ללמוד יחד 😊`;
+  return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
+}
+
+
+    return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסי שוב.</div>` });
   } catch (err) {
     console.error("ASK ERROR:", err);
-    return res.status(500).json({ html: "⚠️ שגיאה בעיבוד הבקשה." });
+    res.status(500).json({ html: "❌ שגיאה בעיבוד השאלה" });
   }
 });
 
@@ -824,10 +772,6 @@ router.post("/ask", async (req, res) => {
    Route: /courses/suggest
 ============================= */
 
-/**
- * Autocomplete לקורסים:
- * מחזיר עד 10 הצעות לפי match על שם/קוד.
- */
 router.get("/courses/suggest", async (req, res) => {
   try {
     const { yearbookId, q: qRaw } = req.query;
@@ -842,13 +786,9 @@ router.get("/courses/suggest", async (req, res) => {
         const code = c.codeNorm || String(c.courseCode).trim();
         let score = 0;
 
-        // 1) התאמה מושלמת
         if (name === query || code === query) score = 200;
-        // 2) מתחיל ב...
         else if (name.startsWith(query)) score = 150;
-        // 3) מכיל...
         else if (name.includes(query)) score = 100;
-        // 4) התאמה לפי מילים
         else {
           const queryWords = query.split(" ").filter((w) => w.length >= 2);
           const matched = queryWords.filter((word) => name.includes(word));

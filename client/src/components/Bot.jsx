@@ -18,7 +18,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * - GET  /api/advisor?lastNameLetter=&semester=&track=
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
 const TRACKS = ["מולקולרית-תרופתית", "מזון והסביבה"];
 const HEB_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ", "ק", "ר", "ש", "ת"];
 
@@ -319,28 +321,78 @@ addBot(html + "</div>");
       border border-gray-200 bg-white
       dark:bg-slate-950 dark:border-slate-700
     ">
-      <div class="font-semibold mb-1">מה עושים?</div>
+    <div
+  dir="rtl"
+  class="
+    rounded-xl p-4 text-sm space-y-3
+    border border-gray-200 bg-white
+    text-right
+    dark:bg-slate-950 dark:border-slate-700
+  "
+>
+  <div
+  dir="rtl"
+  class="
+    rounded-xl p-4 text-sm space-y-4
+    border border-gray-200 bg-white
+    text-right
+    dark:bg-slate-950 dark:border-slate-700
+  "
+>
+  <div class="font-semibold mb-2 text-base">
+  תהליך הגשת בקשה לרישום חריג:
+</div>
 
-      <div class="flex flex-row-reverse items-start gap-2">
-        <span class="shrink-0">1️⃣</span><span>מורידים את הטופס</span>
-      </div>
+<div class="flex items-start gap-3">
+  <span
+    class="
+      shrink-0 w-8 h-8 flex items-center justify-center
+      rounded-md bg-blue-600 text-white text-sm font-bold
+    "
+  >
+    1
+  </span>
+  <span>מורידים את הטופס.</span>
+</div>
 
-      <div class="flex flex-row-reverse items-start gap-2">
-        <span class="shrink-0">2️⃣</span><span>ממלאים פרטי קורס והסיבה לבקשה</span>
-      </div>
+<div class="flex items-start gap-3">
+  <span
+    class="
+      shrink-0 w-8 h-8 flex items-center justify-center
+      rounded-md bg-blue-600 text-white text-sm font-bold
+    "
+  >
+    2
+  </span>
+  <span>ממלאים פרטי הקורס והסיבה לבקשה.</span>
+</div>
 
-      <div class="flex flex-row-reverse items-start gap-2">
-        <span class="shrink-0">3️⃣</span>
-        <span>
-          פונים ליועץ האקדמי לקבלת חתימה
-          <span class="text-gray-600 dark:text-slate-300">(מידע על היועץ נמצא ב“יועץ אקדמי”)</span>
-        </span>
-      </div>
+<div class="flex items-start gap-3">
+  <span
+    class="
+      shrink-0 w-8 h-8 flex items-center justify-center
+      rounded-md bg-blue-600 text-white text-sm font-bold
+    "
+  >
+    3
+  </span>
+  <span>שולחים מייל מנומס ליועץ ומסבירים את הבקשה שלכם כולל צירוף הטופס.</span>
+</div>
 
-      <div class="flex flex-row-reverse items-start gap-2">
-        <span class="shrink-0">4️⃣</span><span>שולחים את הטופס החתום למזכירות המחלקה</span>
-      </div>
-    </div>
+<div class="flex items-start gap-3">
+  <span
+    class="
+      shrink-0 w-8 h-8 flex items-center justify-center
+      rounded-md bg-blue-600 text-white text-sm font-bold
+    "
+  >
+    4
+  </span>
+  <span>היועץ מאשר/דוחה את הבקשה וממשיך את הטיפול.</span>
+</div>
+
+
+
 
     <div class="border-t border-gray-200 pt-3 text-sm space-y-2 dark:border-slate-700">
       <div>
