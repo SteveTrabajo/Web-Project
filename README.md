@@ -126,42 +126,103 @@ If a student expresses emotional or academic distress, the system responds **emp
 
 ## 🔐 Environment Variables
 
+### Server (.env inside /server)
+
 Create a `.env` file inside the `server` directory:
 
-```env
-# Google Gemini (AI intent classification)
-GEMINI_API_KEY=your_gemini_api_key
-
-# Firebase Admin SDK (Service Account – ENV based)
-FIREBASE_PROJECT_ID=your_firebase_project_id
-FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+GEMINI_API_KEY=your_gemini_api_key  
+FIREBASE_PROJECT_ID=your_firebase_project_id  
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email  
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-Create a `.env` file inside the `client` directory:
-Example (local):
+
+---
+
+### Client (.env inside /client)
+
+Local development:
+
 VITE_API_BASE=http://localhost:5000
 
-Example (production):
-VITE_API_BASE=https://your-backend.onrender.com
+Production (Render backend):
 
-## Run locally
-server: 
-npm install
-pip install -r requirements.txt
-npm start
-client:
- npm run dev
- 
-## Deployment (Vercel)
-Root Directory: client
-Add environment variable:
-VITE_API_BASE=https://your-backend.onrender.com
+VITE_API_BASE=https://web-app-k033.onrender.com
 
-Deploy normally.
+---
 
-## Deployment (Render)
+## ▶️ Running Locally
+
+### Backend Server
+
+cd server  
+npm install  
+pip install -r requirements.txt  
+npm start  
+
+Server will run on:
+
+http://localhost:5000
+
+---
+
+### Frontend Client
+
+cd client  
+npm install  
+npm run dev  
+
+Client will run on:
+
+http://localhost:5173
+
+---
+
+## 🚀 Deployment Instructions
+
+### Frontend – Vercel
+
+1. Import the GitHub repository into Vercel.  
+2. Set Root Directory to:
+
+client
+
+3. Add environment variable:
+
+VITE_API_BASE=https://web-app-k033.onrender.com
+
+4. Deploy normally.
+
+---
+
+### Backend – Render
+
 Build Command:
+
 pip install -r requirements.txt && npm install
 
 Start Command:
+
 npm start
+
+Make sure all environment variables are configured in Render.
+
+---
+
+## 🌐 Production Links
+
+Frontend:
+
+https://web-app-navy-five.vercel.app
+
+Backend:
+
+https://web-app-k033.onrender.com
+
+---
+
+## ⚠️ Notes
+
+- Frontend deployed on Vercel.  
+- Backend deployed on Render.  
+- Firestore is used as the database.  
+- Google Gemini is used for AI intent classification.
