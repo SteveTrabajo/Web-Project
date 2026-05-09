@@ -1,6 +1,6 @@
-# 🌱 BIO-BOT – Academic Assistant for Biotechnology Students
+# 🌱 BIO-BOT 2.0 - Academic Assistant for Biotechnology Students
 
-BIO-BOT is an intelligent academic assistant designed for **Biotechnology students**.  
+BIO-BOT 2.0 is a revision and upgrade on the intelligent academic assistant designed for **Biotechnology students**.  
 The system provides **natural-language answers in Hebrew** about courses, prerequisites, registration guidelines, lab schedules, and academic contacts — powered by structured academic data and AI (Google Gemini).
 
 ---
