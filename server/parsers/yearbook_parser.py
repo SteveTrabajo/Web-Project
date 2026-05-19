@@ -7,14 +7,13 @@ from firebase_admin import credentials, firestore
 """
 yearbook_parser.py
 
-קורא קובץ Yearbook (DOCX) ומייבא אותו ל-Firestore:
-- מזהה סמסטרים
-- שומר קורסים (קוד, שם, שעות, נ"ז)
-- יוצר קשרי קורסים: קדם / צמוד
-- משלים שמות קורסים חסרים בקשרי קדם
+Reads a yearbook DOCX and imports it into Firestore:
+- Detects semesters from paragraph headings
+- Stores courses (code, name, hours, credits)
+- Creates course relations: PREREQUISITE / COREQUISITE (underlined = corequisite)
+- Backfills missing course names on relation documents after the full pass
 
-שימוש:
-python yearbook_parser.py <docx_path> <yearbook_id> <yearbook_label>
+Usage: python yearbook_parser.py <docx_path> <yearbook_id> <yearbook_label>
 """
 # ==============================
 # Firebase init (ENV based)
@@ -159,7 +158,6 @@ def process_docx(doc, yearbook_id, yearbook_label):
 
             code_i, name_i = 0, 1
 
-            # ✅ זיהוי נכון של עמודות
             lec_i  = find_col(headers, "הרצאה", "ה")
             prac_i = find_col(headers, "תרגול", "ת")
             lab_i  = find_col(headers, "מעבדה", "מ")

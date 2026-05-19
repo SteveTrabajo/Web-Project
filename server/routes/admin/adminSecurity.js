@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 const router = express.Router();
 const ADMIN_ID = "admin1";
 
-/* ✉️ שליחת קוד למייל */
+// Send reset code to admin email
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
@@ -27,7 +27,7 @@ router.post("/forgot-password", async (req, res) => {
     service: "gmail",
     auth: {
       user: "biobot139@gmail.com",
-      pass: "bdbd pwhr qlqr bjjk", // סיסמת אפליקציה של Gmail
+      pass: "bdbd pwhr qlqr bjjk",
     },
   });
 
@@ -41,7 +41,7 @@ router.post("/forgot-password", async (req, res) => {
   res.json({ ok: true });
 });
 
-/* 🔐 אימות קוד + סיסמה חדשה */
+// Verify reset code and set new password
 router.post("/reset-password", async (req, res) => {
   const { code, newPassword } = req.body;
 
@@ -65,7 +65,7 @@ router.post("/reset-password", async (req, res) => {
   res.json({ ok: true });
 });
 
-/* ✉️ שינוי אימייל */
+// Update admin email
 router.post("/change-email", async (req, res) => {
   const { newEmail } = req.body;
 
@@ -79,7 +79,7 @@ router.post("/change-email", async (req, res) => {
 
   res.json({ ok: true });
 });
-/* 🔐 שינוי סיסמה רגיל (כמו שינוי אימייל) */
+// Update admin password
 router.post("/change-password", async (req, res) => {
   const { newPassword } = req.body;
 
@@ -88,7 +88,7 @@ router.post("/change-password", async (req, res) => {
   }
 
   await db.collection("admins").doc(ADMIN_ID).update({
-    password: newPassword, // סיסמה פשוטה כמו NAD123
+    password: newPassword,
   });
 
   res.json({ ok: true });

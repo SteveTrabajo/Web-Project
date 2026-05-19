@@ -402,7 +402,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             <TextArea
               value={r.text || ""}
               onChange={(e) => {
-                // ✅ שינוי חדש: בכל שמירה/עריכה דואגים לשמור גם code פנימי, אבל בלי להציג אותו.
+                // Always persist the internal code alongside the display text; code is not shown in the UI.
                 updateItem("keyRules", idx, "code", internalCode);
                 updateItem("keyRules", idx, "text", e.target.value);
               }}

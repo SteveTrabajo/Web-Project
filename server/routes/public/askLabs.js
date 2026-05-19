@@ -142,7 +142,6 @@ async function classifyWithGemini(question) {
     }),
   });
 
-  // ✅ יציבות
   const data = await resp.json().catch(() => null);
   if (!resp.ok) return null;
 
@@ -164,7 +163,7 @@ async function getAllLabs(yearId) {
 
   for (const sem of semSnap.docs) {
     const semData = sem.data() || {};
-    const semesterNum = Number(semData.semester ?? sem.id); // ✅ fallback ל-ID של הדוק
+    const semesterNum = Number(semData.semester ?? sem.id); // fallback to the document ID as semester number
     const courses = semData.courses || {};
 
     for (const course of Object.values(courses)) {

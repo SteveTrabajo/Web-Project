@@ -110,7 +110,6 @@ export default function ChatBot() {
     const q = input.trim();
     if (!q) return;
 
-    // סגירת הצעות מיד עם השליחה
     setSuggestions([]);
     setShowSuggestions(false);
 
@@ -238,7 +237,6 @@ addBot(html + "</div>");
   };
 
   const loadAdvisor = async (letter, sem, track) => {
-    // מנקים את ה-topic מיד כדי שהמקלדת תיעלם בזמן הטעינה או מיד אחריה
     setContext(p => ({ ...p, topic: "advisor" }));
 
     try {
@@ -415,7 +413,6 @@ addBot(html + "</div>");
 
   };
 
-  // ✅ UPDATED: dark variants for buttons
   const pillBtn =
     "px-4 py-2 rounded-full border border-blue-500 bg-white text-blue-700 text-sm font-medium hover:bg-blue-50 transition-colors shadow-sm active:scale-95 font-sans " +
     "dark:bg-slate-900 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-800";
@@ -465,7 +462,7 @@ addBot(html + "</div>");
                   m.sender === "user"
                     ? "bg-[#3B82F6] text-white rounded-tl-none shadow-blue-100 font-sans dark:bg-blue-500"
                     : "bg-white border border-gray-200 text-gray-800 rounded-tr-none shadow-gray-100 font-sans dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 " +
-                      // ✅ NEW: make injected bot HTML readable in dark mode
+                      // injected bot HTML needs explicit dark-mode overrides (dangerouslySetInnerHTML bypasses Tailwind scoping)
                       "dark:**:text-slate-100 " +
                       "dark:[&_.text-gray-700]:text-slate-200 dark:[&_.text-gray-600]:text-slate-300 dark:[&_.text-gray-500]:text-slate-400 dark:[&_.text-gray-400]:text-slate-500"
                 }`}
@@ -553,7 +550,6 @@ addBot(html + "</div>");
 
           <div className="flex gap-4 items-center">
             <div className="flex-1 relative">
-              {/* רשימת הצעות שצפה מעל ה-input */}
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute bottom-full mb-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden dark:bg-slate-950 dark:border-slate-700">
                   {suggestions.map((s, idx) => (
@@ -586,7 +582,7 @@ addBot(html + "</div>");
                   setInput(val);
                   fetchSuggestions(val);
                 }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // השהייה קלה כדי לאפשר לחיצה
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // delay allows click to register before blur hides list
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
                 className="

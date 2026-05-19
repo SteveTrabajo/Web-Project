@@ -2,10 +2,7 @@ import express from "express";
 import { db } from "../../server.js";
 
 const router = express.Router();
-/**
- * מחזיר יועצים אקדמיים לפי:
- * אות שם משפחה, סמסטר ומסלול (אופציונלי)
- */
+
 router.get("/advisor", async (req, res) => {
   try {
     const lastNameLetter = req.query.lastNameLetter || "";

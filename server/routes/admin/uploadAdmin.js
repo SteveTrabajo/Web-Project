@@ -6,9 +6,7 @@ import os from "os";
 
 const router = express.Router();
 
-// בוחר פקודת Python לפי מערכת הפעלה
-// Windows → py
-// Linux / Render → python3
+// "py" on Windows, "python3" on Linux/Render
 const PYTHON_CMD = os.platform() === "win32" ? "py" : "python3";
 
 // ======================

@@ -2,9 +2,7 @@ import express from "express";
 import { db } from "../../server.js";
 
 const router = express.Router();
-/**
- * מחזיר רשימת שנתונים שיש להם לוח מעבדות
- */
+
 router.get("/labs-years", async (req, res) => {
   try {
     const snap = await db.collection("lab_schedule").get();
@@ -17,10 +15,6 @@ router.get("/labs-years", async (req, res) => {
     res.status(500).json({ error: "failed" });
   }
 });
-/**
- * מחזיר לוח מעבדות לשנתון וסמסטר מסוימים
- * yearbook = שנתון, semester = מספר סמסטר
- */
 router.get("/labs/:yearbook/:semester", async (req, res) => {
   const { yearbook, semester } = req.params;
 

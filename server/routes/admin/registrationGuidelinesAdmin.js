@@ -4,7 +4,7 @@ import { db } from "../../server.js";
 
 const router = express.Router();
 
-/* ========= GET הנחיות רישום ========= */
+// GET registration guidelines by semester
 router.get("/:semester", async (req, res) => {
   try {
     const semester = Number(req.params.semester);
@@ -22,14 +22,13 @@ router.get("/:semester", async (req, res) => {
   }
 });
 
-/* ========= PUT שמירת הנחיות רישום ========= */
+// PUT/save registration guidelines for a semester
 router.put("/:semester", async (req, res) => {
   try {
     const semester = Number(req.params.semester);
     const docId = `semester_${semester}`;
     const body = req.body || {};
 
-    // תמיד נשמור מספר סמסטר במסמך
     body.semesterNumber = semester;
 
     await db

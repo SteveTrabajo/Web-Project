@@ -19,7 +19,6 @@ router.get(
         .collection("courses")
         .get();
 
-      // ⚡ טעינה מקבילית של relations
       const courses = await Promise.all(
         snap.docs.map(async (doc) => {
           const relSnap = await doc.ref.collection("relations").get();

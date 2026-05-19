@@ -1,4 +1,3 @@
-// server/routes/adminAuth.js
 import express from "express";
 import { db } from "../../server.js";
 
@@ -25,12 +24,10 @@ router.post("/login", async (req, res) => {
     const doc = snap.docs[0];
     const admin = doc.data();
 
-    // ✅ בדיקה פשוטה
     if (admin.password !== password) {
       return res.status(401).json({ error: "סיסמה שגויה" });
     }
 
-    // ✅ התחברות הצליחה
     res.json({
       id: doc.id,
       email: admin.email,

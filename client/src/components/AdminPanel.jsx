@@ -3,7 +3,7 @@ import UploadYearbook from "./UploadYearbook.jsx";
 import UploadLabs from "./UploadLabs.jsx";
 import AdminSecurity from "./AdminSecurityUI.jsx";
 import AdminLogin from "./AdminLogin.jsx";
-import AdminRegistrationGuidelines from "./AdminRegistrationGuidelines.jsx"; // ✅ NEW: קומפוננט ניהול הנחיות רישום
+import AdminRegistrationGuidelines from "./AdminRegistrationGuidelines.jsx";
 /**
  * AdminPanel.jsx
  * --------------
@@ -152,7 +152,7 @@ export default function AdminPanel() {
 
   const isAuthed = !!admin;
   const [showSecurity, setShowSecurity] = useState(false);
-  const [activeTab, setActiveTab] = useState("advisors"); // ✅ NEW: בפועל כבר יש גם "registration" בטאבים (לא חובה לשנות את ההערה)
+  const [activeTab, setActiveTab] = useState("advisors");
   const [status, setStatus] = useState({ type: "idle", msg: "" });
 
   // ---------- Advisors state ----------

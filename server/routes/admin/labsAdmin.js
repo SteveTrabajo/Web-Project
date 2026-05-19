@@ -5,9 +5,6 @@ import admin from "firebase-admin";
 
 const router = express.Router();
 
-/**
- * GET – צפייה בלוח מעבדות לפי שנה + סמסטר
- */
 router.get("/labs/:yearbook/:semester", async (req, res) => {
   const { yearbook, semester } = req.params;
 
@@ -25,9 +22,7 @@ router.get("/labs/:yearbook/:semester", async (req, res) => {
   res.json({ doc: doc.data() });
 });
 
-/**
- * PUT – העלאה / החלפה מלאה של סמסטר
- */
+// Full replacement of a semester doc — intentional, not a partial update.
 router.put("/labs/:yearbook/:semester", async (req, res) => {
   const { yearbook, semester } = req.params;
 

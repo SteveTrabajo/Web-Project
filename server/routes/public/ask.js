@@ -21,12 +21,6 @@ const MODEL = "gemini-2.5-flash";
    Utils (MUST be defined BEFORE usage)
 ============================= */
 
-/**
- * נירמול עברית:
- * - מוריד גרשיים/גרשיים כפולים
- * - מחליף נקודות/מקפים ברווח
- * - מצמצם רווחים
- */
 function normalizeHebrew(s = "") {
   return String(s)
     .replace(/["׳״'`]/g, "")
@@ -50,20 +44,14 @@ const PREREQ_KEYWORDS = [
 function escapeRegex(str = "") {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-/** בדיקה אם מחרוזת נראית כמו קוד קורס (5-6 ספרות) */
 const isCourseCode = (s) => /^\d{5,6}$/.test(String(s || "").trim());
 
-/** חילוץ קוד קורס מתוך טקסט חופשי (אם קיים) */
 function extractCourseCode(question = "") {
   const m = String(question).match(/\b\d{5,6}\b/);
   return m ? m[0] : null;
 }
 
-/**
- * פרסור JSON בטוח מג'מיני:
- * - תומך ב-```json
- * - תופס אובייקט ראשון {...} אם יש רעש
- */
+// Strips ```json fences and falls back to extracting the first {...} object.
 function safeParseJson(text) {
   if (!text) return null;
 
@@ -282,9 +270,7 @@ async function getRelationType(yearbookId, courseA_code, courseB_code) {
   return null;
 }
 
-/**
- * ✅ Recursive prerequisites + CACHE (כבד מאוד בלי Cache)
- */
+// Recursive prerequisite walk — very expensive without the cache.
 const _prereqCache = new Map();
 const PREREQ_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -421,7 +407,6 @@ router.post("/ask", async (req, res) => {
     const { yearbookId, question } = req.body || {};
     if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
 
-    // ✅ normalize once
     const qNorm = normalizeHebrew(question);
     const qLower = String(question).toLowerCase();
 
@@ -449,7 +434,6 @@ router.post("/ask", async (req, res) => {
       const finalIntent = refineRegistrationIntent(intentObj?.intent, question) || "general";
       const semNum = extractSemesterNumber(question);
 
-      // 2.1 "מתי הרישום?" בלי סמסטר → כל הסמסטרים
       if (finalIntent === "window" && !semNum) {
         const allDocs = await getAllRegDocs();
 
@@ -473,7 +457,6 @@ router.post("/ask", async (req, res) => {
         return res.json({ html });
       }
 
-      // 2.2 שאלות כלליות בלי סמסטר
       if (!semNum) {
         const allDocs = await getAllRegDocs();
 
@@ -587,7 +570,6 @@ router.post("/ask", async (req, res) => {
         return res.json({ html: `<div class="text-sm">ℹ️ אנא צייני סמסטר (לדוגמה: סמסטר 2)</div>` });
       }
 
-      // 2.3 יש סמסטר → תשובה ספציפית
       const regDoc = await getRegDoc(semNum);
       if (!regDoc) {
         return res.json({ html: `<div class="text-sm">❌ לא מצאתי הנחיות רישום לסמסטר ${semNum}.</div>` });
@@ -696,18 +678,16 @@ router.post("/ask", async (req, res) => {
   const prerequisites = new Set();
   const parallels = new Set();
 
-  const target = coursesFromQuestion[0]; // הקורס העיקרי מהשאלה
+  const target = coursesFromQuestion[0];
 
   for (let i = 0; i < coursesFromQuestion.length; i++) {
     for (let j = i + 1; j < coursesFromQuestion.length; j++) {
       const A = coursesFromQuestion[i];
       const B = coursesFromQuestion[j];
 
-      // 🔥 בדיקת prerequisites אמיתית (recursive)
       const prereqsA = await getAllPrerequisitesRecursiveCached(yearbookId, A.courseCode);
       const prereqsB = await getAllPrerequisitesRecursiveCached(yearbookId, B.courseCode);
 
-      // אם target תלוי בקורס אחר
       if (A.courseCode === target.courseCode &&
           prereqsA.some(p => p.code === B.courseCode)) {
         prerequisites.add(B.courseName);
@@ -718,7 +698,7 @@ router.post("/ask", async (req, res) => {
         prerequisites.add(A.courseName);
       }
 
-      // Corequisite (רק אם קיים relation כזה)
+      // Corequisite — only when a relation record exists in Firestore.
       const relAB = await getRelationType(yearbookId, A.courseCode, B.courseCode);
       const relBA = await getRelationType(yearbookId, B.courseCode, A.courseCode);
 
@@ -730,7 +710,7 @@ router.post("/ask", async (req, res) => {
 
   let answer = "";
 
-  // ❌ prerequisite message
+  // prerequisite block
   if (prerequisites.size) {
     const list = [...prerequisites];
 
@@ -747,7 +727,7 @@ ${list.map(c => `• ${c}`).join("<br/>")}
     return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
   }
 
-  // ✅ parallel message
+  // corequisite/parallel reply
   if (parallels.size) {
     answer += `✅ אפשר ללמוד במקביל 🙂<br/>
 ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
@@ -755,7 +735,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
     return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
   }
 
-  // ℹ️ no relation
+  // no relation found
   answer += `ℹ️ לא נראה שיש דרישות קדם ביניהם — אפשר ללמוד יחד 😊`;
   return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
 }

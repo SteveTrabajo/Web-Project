@@ -11,22 +11,17 @@ export function ThemeProvider({ children }) {
     return prefersDark ? "dark" : "light";
   });
 
-  // ✅ NEW: פונקציה מרכזית ששומרת + מעדכנת class מיד (יותר אמין)
   const applyTheme = (next) => {
     localStorage.setItem("bio-bot-theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
     setTheme(next);
   };
 
-  // ✅ NEW: toggle שמשתמש ב-applyTheme כדי לוודא שה-class מתעדכן מיידית
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     applyTheme(next);
-    // ✅ NEW (דיבוג): תראי בקונסול שזה באמת התחלף
-    console.log("Theme switched to:", next);
   };
 
-  // ✅ NEW: כשנטען/משתנה theme, מוודאים שה-class תמיד מסונכרן
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
