@@ -12,7 +12,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* 🔑 התאמה לשמות ש-Navbar מצפה להם */}
       <Navbar view={view} onNavigate={setView} />
 
       {view === "home" && <Hero onStart={() => setView("chat")} />}

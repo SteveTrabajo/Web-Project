@@ -1126,7 +1126,7 @@ return (
               </Card>
             )}
 
-            {/* ⚠️ שימי לב: "registration" הועבר ל-left/main כדי שלא ייצור עמודה ריקה */}
+            {/* "registration" tab content is rendered in the left/main column to avoid an empty right column */}
             {activeTab === "yearbooks" && courseDraft && (
               <Card className="p-4 dark:bg-slate-900 dark:border-slate-700">
                 <div className="mt-3 space-y-3">

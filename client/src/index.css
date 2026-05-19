@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* ✅ NEW: גורם ל-dark: לעבוד לפי class "dark" על html ולא לפי מצב מערכת */
+/* Use class-based dark mode toggling ("dark" on <html>) instead of OS preference */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Reset גלובלי נכון ל-React */
+/* Global reset for React */
 html,
 body,
 #root {
@@ -12,7 +12,7 @@ body,
   width: 100%;
 }
 
-/* ✅ NEW: makes bot message HTML readable in dark mode */
+/* Override inline colors from bot-rendered HTML so text is readable in dark mode */
 .dark .bot-bubble * { color: rgb(241 245 249) !important; } /* slate-100 */
 .dark .bot-bubble .text-gray-700 { color: rgb(226 232 240) !important; } /* slate-200 */
 .dark .bot-bubble .text-gray-600 { color: rgb(203 213 225) !important; } /* slate-300 */

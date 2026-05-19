@@ -411,7 +411,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             />
           </Field>
 
-          {/* ✅ שינוי חדש: תצוגה “אנושית” במקום שדה code */}
+          {/* Displays the auto-generated internal ID as read-only text rather than an editable code field */}
           <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
             מזהה פנימי אוטומטי: <span className="font-mono">{internalCode}</span>
           </div>
