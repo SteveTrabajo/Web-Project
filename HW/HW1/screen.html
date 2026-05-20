@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIO-BOT 2.0 - לוח בקרה ניהולי</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+
+<body class="bg-gray-50 text-gray-800 font-sans p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-900">BIO-BOT 2.0 | לוח בקרה</h1>
+                <p class="text-gray-500">שלום, ד"ר לילך יסעור-קרוח</p>
+            </div>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
+                ייצוא דוח נתונים (PDF)
+            </button>
+        </header>
+
+        <div id="stats-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">שאלות אחרונות ללא מענה מספק</h2>
+            <ul id="questions-list" class="space-y-3">
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const dashboardData = {
+            stats: [
+                {title: "סטודנטים פעילים השבוע", value: "142" },
+                {title: "שאלות ללא מענה מדויק", value: "8", color: "text-red-600" },
+                {title: "ציון משוב ממוצע", value: "4.7 / 5" }
+            ],
+            unansweredQuestions: [
+                {studentId: "סטודנט חסוי", query: "מתי נפתח הרישום למעבדה בכימיה אורגנית?", date: "היום, 10:30" },
+                {studentId: "סטודנט חסוי", query: "טופס פטור עקב שירות מילואים ארוך", date: "אתמול, 14:15" },
+                {studentId: "סטודנט חסוי", query: "ביטול קורס חובה עקב כשל במבחן", date: "אתמול, 11:15" }
+            ]
+        };
+
+
+        const statsContainer = document.getElementById('stats-container');
+        dashboardData.stats.forEach(stat => {
+            const textColor = stat.color ? stat.color : 'text-blue-600';
+            const cardHTML = `
+                <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500">
+                    <h3 class="text-gray-500 text-sm">${stat.title}</h3>
+                    <p class="text-3xl font-bold mt-2 ${textColor}">${stat.value}</p>
+                </div>
+            `;
+            statsContainer.innerHTML += cardHTML;
+        });
+
+        const questionsList = document.getElementById('questions-list');
+        dashboardData.unansweredQuestions.forEach(item => {
+            const liHTML = `
+                <li class="flex justify-between items-center bg-gray-50 p-3 rounded border border-gray-200">
+                    <div>
+                        <span class="font-semibold">${item.query}</span>
+                        <p class="text-xs text-gray-500 mt-1">מאת: ${item.studentId}</p>
+                    </div>
+                    <span class="text-sm text-gray-400">${item.date}</span>
+                </li>
+            `;
+            questionsList.innerHTML += liHTML;
+        });
+    </script>
+</body>
+</html>
