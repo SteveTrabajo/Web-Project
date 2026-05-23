@@ -10,7 +10,7 @@ export default function Navbar({ view, onNavigate }) {
         onClick={() => onNavigate(key)}
         className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors duration-200
           ${isActive
-            ? "bg-white/10 text-[#F5B301]"
+            ? "bg-white/10 text-brand-gold"
             : "text-white/80 hover:text-white hover:bg-white/8"
           }`}
       >
@@ -20,7 +20,7 @@ export default function Navbar({ view, onNavigate }) {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#162A5A] dark:bg-[#0B1220] border-b border-[#F5B301]/40 shadow-xl">
+    <header className="sticky top-0 z-50 bg-brand-navy dark:bg-brand-navy-deep border-b border-brand-gold/40 shadow-xl">
       <div className="w-full px-6 h-16 flex items-center justify-between">
 
         {/* Left - logo, brand, theme toggle */}
@@ -33,7 +33,7 @@ export default function Navbar({ view, onNavigate }) {
             <img
               src="/assets/logo.png"
               alt="BIO BOT"
-              className="w-10 h-10 object-contain bg-white rounded-full p-1 ring-2 ring-white/10 group-hover:ring-[#F5B301]/50 transition-all duration-300"
+              className="w-10 h-10 object-contain bg-white rounded-full p-1 ring-2 ring-white/10 group-hover:ring-brand-gold/50 transition-all duration-300"
             />
             <div className="flex flex-col">
               <span className="text-lg font-black text-white tracking-tight leading-none uppercase">

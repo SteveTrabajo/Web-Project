@@ -1,8 +1,6 @@
 import { useState } from "react";
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:3000";
-
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 const ADMIN_API = `${API_BASE}/api/admin`;
 
 export default function AdminLogin({ onSuccess }) {
@@ -34,7 +32,7 @@ export default function AdminLogin({ onSuccess }) {
     const data = await res.json();
     if (!res.ok) return setMsg(data.error);
     setMode("reset");
-    setMsg("📧 Reset code sent to email");
+    setMsg("Reset code sent to email");
   };
 
   const resetPassword = async () => {
@@ -47,62 +45,56 @@ export default function AdminLogin({ onSuccess }) {
     const data = await res.json();
     if (!res.ok) return setMsg(data.error);
     setMode("login");
-    setMsg("✅ Password updated successfully");
+    setMsg("Password updated successfully");
   };
+
+  const inputClass = "w-full border border-surface-border bg-surface-page text-content-primary rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-brand-navy transition-colors placeholder:text-content-muted";
 
   return (
     <div className="space-y-4">
-
-      {/* Title */}
-      <div className="text-lg font-bold text-blue-700">
+      <div className="text-lg font-bold text-brand-navy dark:text-bio-green-glow">
         Admin Login
       </div>
 
-      {/* Email Input (always visible) */}
       <input
         type="email"
         placeholder="Email"
-        className="w-full border rounded-xl px-4 py-2"
+        className={inputClass}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
 
-      {/* Password Input (Login and Reset modes) */}
       {(mode === "login" || mode === "reset") && (
         <input
           type="password"
           placeholder={mode === "login" ? "Password" : "New Password"}
-          className="w-full border rounded-xl px-4 py-2"
+          className={inputClass}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       )}
 
-      {/* Reset Code Input (Reset mode only) */}
       {mode === "reset" && (
         <input
           placeholder="Reset code from email"
-          className="w-full border rounded-xl px-4 py-2"
+          className={inputClass}
           value={code}
           onChange={(e) => setCode(e.target.value)}
         />
       )}
 
-      {/* Status / Error Message */}
-      {msg && <div className="text-sm text-red-600">{msg}</div>}
+      {msg && <div className="text-sm text-red-600 dark:text-red-400">{msg}</div>}
 
-      {/* Login Mode Buttons */}
       {mode === "login" && (
         <>
           <button
-            className="w-full bg-blue-600 text-white rounded-xl py-2"
+            className="w-full bg-brand-navy text-white rounded-xl py-2 hover:opacity-90 transition-opacity"
             onClick={login}
           >
             Login
           </button>
-
           <button
-            className="text-xs underline"
+            className="text-xs underline text-content-muted hover:text-content-primary transition-colors"
             onClick={() => setMode("forgot")}
           >
             Forgot password?
@@ -110,18 +102,16 @@ export default function AdminLogin({ onSuccess }) {
         </>
       )}
 
-      {/* Forgot Password Mode Buttons **/}
       {mode === "forgot" && (
         <>
           <button
-            className="w-full bg-gray-600 text-white rounded-xl py-2"
+            className="w-full bg-surface-raised text-content-primary border border-surface-border rounded-xl py-2 hover:bg-surface-border transition-colors"
             onClick={sendCode}
           >
             Send reset code
           </button>
-
           <button
-            className="text-xs underline"
+            className="text-xs underline text-content-muted hover:text-content-primary transition-colors"
             onClick={() => setMode("login")}
           >
             Back to login
@@ -129,10 +119,9 @@ export default function AdminLogin({ onSuccess }) {
         </>
       )}
 
-      {/* Reset Mode Button */}
       {mode === "reset" && (
         <button
-          className="w-full bg-green-600 text-white rounded-xl py-2"
+          className="w-full bg-bio-green text-white rounded-xl py-2 hover:opacity-90 transition-opacity"
           onClick={resetPassword}
         >
           Update password

@@ -1,9 +1,58 @@
 @import "tailwindcss";
 
-/* Use class-based dark mode toggling ("dark" on <html>) instead of OS preference */
+/* Class-based dark mode - "dark" class on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Global reset for React */
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+
+@theme {
+  /* --- Brand (Braude institutional identity) --- */
+  --color-brand-navy:       #162A5A;
+  --color-brand-navy-deep:  #0B1220;
+  --color-brand-gold:       #F5B301;
+  --color-brand-gold-hover: #FFC107;
+
+  /* --- Biology accent palette --- */
+  --color-bio-green:      #15803D; /* chlorophyll green - light mode interactive */
+  --color-bio-green-glow: #34D399; /* bioluminescent emerald - dark mode interactive */
+  --color-bio-teal:       #0D9488; /* lab/scientific teal */
+  --color-bio-teal-glow:  #2DD4BF;
+
+  /* --- Semantic surfaces (auto-switch via CSS custom properties) --- */
+  --color-surface-page:   var(--surface-page);
+  --color-surface-card:   var(--surface-card);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-border: var(--surface-border);
+  --color-content-primary: var(--content-primary);
+  --color-content-muted:   var(--content-muted);
+}
+
+/* --- Light mode surfaces (biology lab: clean, clinical, organic green tint) --- */
+:root {
+  --surface-page:    #EFF6EF;
+  --surface-card:    #FFFFFF;
+  --surface-raised:  #E2EEE4;
+  --surface-border:  #BFCFC1;
+  --content-primary: #1A2B1C;
+  --content-muted:   #4E6A52;
+}
+
+/* --- Dark mode surfaces (bioluminescent lab: deep navy-black, clearly distinct) --- */
+.dark {
+  --surface-page:    #060D18;
+  --surface-card:    #0C1A2E;
+  --surface-raised:  #112034;
+  --surface-border:  #1C3050;
+  --content-primary: #DEE9F4;
+  --content-muted:   #7BA8C4;
+}
+
+/* ============================================================
+   GLOBAL RESET
+   ============================================================ */
+
 html,
 body,
 #root {
@@ -12,8 +61,18 @@ body,
   width: 100%;
 }
 
-/* Override inline colors from bot-rendered HTML so text is readable in dark mode */
-.dark .bot-bubble * { color: rgb(241 245 249) !important; } /* slate-100 */
-.dark .bot-bubble .text-gray-700 { color: rgb(226 232 240) !important; } /* slate-200 */
-.dark .bot-bubble .text-gray-600 { color: rgb(203 213 225) !important; } /* slate-300 */
-.dark .bot-bubble .text-gray-500 { color: rgb(148 163 184) !important; } /* slate-400 */
+/* ============================================================
+   BOT BUBBLE DARK MODE OVERRIDES
+   (dangerouslySetInnerHTML content cannot use Tailwind dark: variants)
+   ============================================================ */
+
+.dark .bot-bubble { color: var(--content-primary); }
+.dark .bot-bubble a { color: var(--color-bio-green-glow); }
+.dark .bot-bubble .text-gray-800,
+.dark .bot-bubble .text-gray-700 { color: var(--content-primary); }
+.dark .bot-bubble .text-gray-600,
+.dark .bot-bubble .text-gray-500 { color: var(--content-muted); }
+.dark .bot-bubble .bg-white    { background-color: var(--surface-card); }
+.dark .bot-bubble .bg-blue-50  { background-color: var(--surface-raised); }
+.dark .bot-bubble .border-blue-100,
+.dark .bot-bubble .border-blue-200 { border-color: var(--surface-border); }

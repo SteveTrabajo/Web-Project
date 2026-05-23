@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
@@ -11,13 +9,13 @@ export default function App() {
   const [view, setView] = useState("home");
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-surface-page text-content-primary">
       <Navbar view={view} onNavigate={setView} />
 
       {view === "home" && <Hero onStart={() => setView("chat")} />}
 
       {view !== "home" && (
-        <main className="bg-linear-to-b from-blue-50 to-white dark:from-slate-950 dark:to-slate-900 min-h-screen">
+        <main className="min-h-screen bg-surface-page">
           <div className="max-w-6xl mx-auto px-4 py-8">
             {view === "chat" && <ChatBot />}
             {view === "labs" && <LabsViewer />}
@@ -28,5 +26,3 @@ export default function App() {
     </div>
   );
 }
-
-
