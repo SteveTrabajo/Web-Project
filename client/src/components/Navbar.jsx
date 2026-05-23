@@ -1,56 +1,34 @@
-// Navbar.jsx
-// ----------
-// Top navigation bar of BIO-BOT.
-// Displays logo, navigation buttons, admin link, and a Light/Dark mode toggle.
-//
-// Props:
-// - view: current active view key ("home" | "chat" | "labs" | "admin")
-// - onNavigate(key): callback to switch views
-//
-// Includes ThemeToggle button to switch between Light/Dark mode.
-
-import ThemeToggle from "./ThemeToggle"; // Light/Dark mode toggle button
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar({ view, onNavigate }) {
   const item = (key, label) => {
     const isActive = view === key;
 
     return (
-      <button
-        type="button"
-        onClick={() => onNavigate(key)}
-        className={`relative px-5 py-2 text-sm font-bold transition-all duration-300 rounded-full
-          ${
-            isActive
-              ? "text-[#F5B301] bg-white/10 shadow-[inset_0_0_0_1px_rgba(245,179,1,0.2)]"
-              : "text-white/90 hover:text-white hover:bg-white/5"
-          }`}
+      <a
+        href="#"
+        onClick={(e) => { e.preventDefault(); onNavigate(key); }}
+        className={`relative p-0.5 inline-flex items-center justify-center font-bold overflow-hidden group rounded-md text-sm
+          ${isActive ? "opacity-100" : "opacity-80 hover:opacity-100"}`}
       >
-        {label}
-
-        {/* Active underline indicator */}
-        {isActive && (
-          <span className="absolute inset-x-5 -bottom-0.5 h-0.5 bg-[#F5B301] rounded-full shadow-[0_0_10px_#F5B301]" />
-        )}
-      </button>
+        <span className="w-full h-full bg-gradient-to-br from-[#F5B301] via-blue-500 to-[#162A5A] group-hover:from-[#162A5A] group-hover:via-blue-500 group-hover:to-[#F5B301] absolute transition-all duration-400" />
+        <span className={`relative px-5 py-2 transition-all ease-out rounded-md duration-400
+          ${isActive ? "bg-opacity-0 bg-[#0B1220]" : "bg-[#162A5A] group-hover:bg-opacity-0"}`}>
+          <span className="relative text-white">{label}</span>
+        </span>
+      </a>
     );
   };
 
   return (
-    <header
-      className="
-        sticky top-0 z-50 
-        bg-[#162A5A]
-        dark:bg-[#0B1220]
-        border-b border-[#F5B301]/40 
-        shadow-xl
-      "
-    >
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        {/* Logo & Brand */}
-        <div
-          className="flex items-center gap-4 cursor-pointer group"
-          onClick={() => onNavigate("home")}
+    <header className="sticky top-0 z-50 bg-[#162A5A] dark:bg-[#0B1220] border-b border-[#F5B301]/40 shadow-xl">
+      <div className="w-full px-6 h-20 flex items-center">
+
+        {/* Left - logo & brand */}
+        <a
+          href="#"
+          onClick={(e) => { e.preventDefault(); onNavigate("home"); }}
+          className="flex items-center gap-4 group shrink-0"
         >
           <img
             src="/assets/logo.png"
@@ -65,23 +43,25 @@ export default function Navbar({ view, onNavigate }) {
               Braude Biotechnology Assistant
             </span>
           </div>
-        </div>
+        </a>
 
-        {/* Navigation (RTL for Hebrew) */}
-        <nav className="flex items-center gap-2" dir="rtl">
-          {item("home", "בית")}
-          {item("chat", "צ׳אט")}
-          {item("labs", "לוח מעבדות")}
+        {/* Right - nav + theme toggle */}
+        <div className="ml-auto flex items-center gap-4">
+          <nav className="flex items-center gap-2" dir="rtl">
+            {item("home", "בית")}
+            {item("chat", "צ׳אט")}
+            {item("labs", "לוח מעבדות")}
 
-          <div className="w-px h-6 bg-white/10 mx-3" />
+            <div className="w-px h-6 bg-white/20 mx-1" />
 
-          {item("admin", "אזור מנהל")}
-        </nav>
+            {item("admin", "אזור מנהל")}
+          </nav>
 
-        {/* Theme toggle button */}
-        <div className="flex items-center">
+          <div className="w-px h-6 bg-white/20" />
+
           <ThemeToggle />
         </div>
+
       </div>
     </header>
   );
