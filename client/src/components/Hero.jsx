@@ -3,40 +3,37 @@ import React from "react";
 export default function Hero({ onStart }) {
   return (
     <section
-      className="relative w-full min-h-[calc(100vh-64px)] bg-cover bg-center flex items-center overflow-hidden"
+      className="relative w-full h-[calc(100vh-72px)] bg-cover bg-center bg-no-repeat overflow-hidden flex items-center"
       style={{ backgroundImage: "url(/assets/background.png)" }}
       dir="rtl"
     >
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-brand-navy/60 pointer-events-none" />
+      {/* Subtle dark overlay to deepen the image */}
+      <div className="absolute inset-0 bg-brand-navy/40 pointer-events-none" />
 
-      <div className="relative z-10 w-full py-12">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+      {/* Content centered on screen */}
+      <div className="relative z-10 w-full flex justify-center px-6">
 
-            <div className="flex-1 text-center md:text-right text-white space-y-6">
-              <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
-                עוזר חכם לסטודנטים <br className="hidden md:block" />
-                <span className="text-brand-gold">הנדסת ביוטכנולוגיה</span>
-              </h1>
+        {/* Semi-transparent bounding box */}
+        <div className="backdrop-blur-sm bg-brand-navy/55 border border-white/10 rounded-2xl px-10 py-12 max-w-xl w-full text-center text-white space-y-6 shadow-2xl">
 
-              <p className="text-lg md:text-xl text-blue-100 max-w-2xl">
-                מלווה סטודנטים בקורסים, יועצים ולוחות מעבדה -{" "}
-                <span className="font-bold">BIO BOT</span>
-              </p>
+          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
+            עוזר חכם לסטודנטים
+            <br />
+            <span className="text-brand-gold">הנדסת ביוטכנולוגיה</span>
+          </h1>
 
-              <div className="pt-4">
-                <button
-                  onClick={onStart}
-                  className="px-10 py-4 rounded-full bg-brand-gold text-brand-navy font-bold text-lg shadow-lg transition-all hover:scale-105 hover:bg-brand-gold-hover active:scale-95"
-                >
-                  התחלת צ׳אט
-                </button>
-              </div>
-            </div>
+          <p className="text-lg text-blue-100/90">
+            מלווה סטודנטים בקורסים, יועצים ולוחות מעבדה -{" "}
+            <span className="font-bold">BIO BOT 2.0</span>
+          </p>
 
-            <div className="flex-1 hidden md:block" />
-          </div>
+          <button
+            onClick={onStart}
+            className="mt-2 px-10 py-4 rounded-full bg-brand-gold text-brand-navy font-bold text-lg shadow-lg transition-all duration-200 hover:scale-105 hover:bg-brand-gold-hover active:scale-95"
+          >
+            התחלת צ׳אט
+          </button>
+
         </div>
       </div>
     </section>
