@@ -1,96 +1,26 @@
 import express from "express";
+import bcrypt from "bcrypt";
 import { db } from "../../server.js";
-import nodemailer from "nodemailer";
 
 const router = express.Router();
 const ADMIN_ID = "admin1";
 
-// Send reset code to admin email
-router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body;
-
-  const adminRef = db.collection("admins").doc(ADMIN_ID);
-  const snap = await adminRef.get();
-
-  if (!snap.exists || snap.data().email !== email) {
-    return res.status(404).json({ error: "אימייל לא קיים" });
-  }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  await adminRef.update({
-    resetCode: code,
-    resetAt: Date.now(),
-  });
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
-
-  await transporter.sendMail({
-    from: "BIO-BOT",
-    to: email,
-    subject: "קוד לאיפוס סיסמה",
-    text: `קוד האימות שלך הוא: ${code}`,
-  });
-
-  res.json({ ok: true });
-});
-
-// Verify reset code and set new password
-router.post("/reset-password", async (req, res) => {
-  const { code, newPassword } = req.body;
-
-  const adminRef = db.collection("admins").doc(ADMIN_ID);
-  const snap = await adminRef.get();
-  const admin = snap.data();
-
-  if (
-    admin.resetCode !== code ||
-    Date.now() - admin.resetAt > 10 * 60 * 1000
-  ) {
-    return res.status(400).json({ error: "קוד שגוי או פג תוקף" });
-  }
-
-  await adminRef.update({
-    password: newPassword,
-    resetCode: null,
-    resetAt: null,
-  });
-
-  res.json({ ok: true });
-});
-
-// Update admin email
+// Change email (requires JWT - enforced by requireAdmin middleware in server.js)
 router.post("/change-email", async (req, res) => {
   const { newEmail } = req.body;
+  if (!newEmail) return res.status(400).json({ error: "חסר אימייל" });
 
-  if (!newEmail) {
-    return res.status(400).json({ error: "חסר אימייל" });
-  }
-
-  await db.collection("admins").doc(ADMIN_ID).update({
-    email: newEmail,
-  });
-
+  await db.collection("admins").doc(ADMIN_ID).update({ email: newEmail });
   res.json({ ok: true });
 });
-// Update admin password
+
+// Change password (requires JWT - enforced by requireAdmin middleware in server.js)
 router.post("/change-password", async (req, res) => {
   const { newPassword } = req.body;
+  if (!newPassword) return res.status(400).json({ error: "חסרה סיסמה חדשה" });
 
-  if (!newPassword) {
-    return res.status(400).json({ error: "חסרה סיסמה חדשה" });
-  }
-
-  await db.collection("admins").doc(ADMIN_ID).update({
-    password: newPassword,
-  });
-
+  const hashed = await bcrypt.hash(newPassword, 12);
+  await db.collection("admins").doc(ADMIN_ID).update({ password: hashed });
   res.json({ ok: true });
 });
 

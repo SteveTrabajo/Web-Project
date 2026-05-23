@@ -26,36 +26,30 @@ const API_BASE =
  * - It assumes the backend enforces authorization/validation.
  * - "adminId" is passed from parent (AdminPanel). In your codebase, it replaces "uid".
  */
+function getAdminToken() {
+  try {
+    return JSON.parse(sessionStorage.getItem("bio_admin") || "null")?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminSecurity({ adminId }) {
-  // Controlled inputs for new credentials
   const [newPassword, setNewPassword] = useState("");
   const [newEmail, setNewEmail] = useState("");
-
-  // Feedback message shown to the admin (success / error)
   const [msg, setMsg] = useState("");
 
-  // Base path for all security actions
   const API = `${API_BASE}/api/admin/security`;
 
-  /**
-   * post(url, body)
-   * --------------
-   * Generic helper to POST JSON to the backend.
-   * - Clears the current message
-   * - Sends request and parses JSON response
-   * - Displays error message from server if request fails
-   * - Displays success message if request succeeds
-   *
-   * Important:
-   * - No authorization header is added here.
-   *   If your backend expects a token, it must be added at a higher layer or here.
-   */
   const post = async (url, body) => {
     setMsg("");
-
+    const token = getAdminToken();
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     });
 

@@ -1,40 +1,17 @@
 import { useState } from "react";
 
-/**
- * AdminLogin Component
- * --------------------
- * This component handles administrator authentication and password recovery.
- * 
- * Supported modes:
- * - login  : Standard email + password login
- * - forgot : Request a password reset code via email
- * - reset  : Enter received code and set a new password
- * 
- * The component communicates with backend admin authentication endpoints.
- * On successful login, it calls the `onSuccess` callback with admin data.
- */
-
 const API_BASE =
   import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 const ADMIN_API = `${API_BASE}/api/admin`;
 
 export default function AdminLogin({ onSuccess }) {
-  // Form state fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-
-  // Current UI mode: "login" | "forgot" | "reset"
   const [mode, setMode] = useState("login");
-
-  // Message for success / error feedback
   const [msg, setMsg] = useState("");
 
-  /**
-   * Sends login request to backend.
-   * If successful → passes returned admin data to parent component.
-   */
   const login = async () => {
     setMsg("");
     const res = await fetch(`${ADMIN_API}/auth/login`, {
@@ -47,13 +24,9 @@ export default function AdminLogin({ onSuccess }) {
     onSuccess(data);
   };
 
-  /**
-   * Requests a password reset code to be sent to the admin email.
-   * On success → switches UI to "reset" mode.
-   */
   const sendCode = async () => {
     setMsg("");
-    const res = await fetch(`${ADMIN_API}/security/forgot-password`, {
+    const res = await fetch(`${ADMIN_API}/auth/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -64,13 +37,9 @@ export default function AdminLogin({ onSuccess }) {
     setMsg("📧 Reset code sent to email");
   };
 
-  /**
-   * Sends the received reset code and new password to backend.
-   * On success → returns user to login mode.
-   */
   const resetPassword = async () => {
     setMsg("");
-    const res = await fetch(`${ADMIN_API}/security/reset-password`, {
+    const res = await fetch(`${ADMIN_API}/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, newPassword: password }),
@@ -81,10 +50,6 @@ export default function AdminLogin({ onSuccess }) {
     setMsg("✅ Password updated successfully");
   };
 
-  /**
-   * UI Rendering:
-   * The displayed inputs and buttons depend on the current mode.
-   */
   return (
     <div className="space-y-4">
 

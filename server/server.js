@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import firebase_admin from "firebase-admin";
+import rateLimit from "express-rate-limit";
 
 // routes
 import yearbooksRoutes from "./routes/public/yearbooks.js";
@@ -16,6 +17,8 @@ import uploadAdminRoutes from "./routes/admin/uploadAdmin.js";
 import adminSecurityRoutes from "./routes/admin/adminSecurity.js";
 import adminAuthRoutes from "./routes/admin/auth.js";
 import registrationGuidelinesAdmin from "./routes/admin/registrationGuidelinesAdmin.js";
+import yearbooksAdminRoutes from "./routes/admin/yearbooksAdmin.js";
+import { requireAdmin } from "./middleware/authMiddleware.js";
 
 /* ======================
    App init
@@ -30,19 +33,17 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:3000",
-      "https://web-app-navy-five.vercel.app"
-     
+      "https://web-app-navy-five.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
-
 /* ======================
    Middlewares
 ====================== */
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 app.use("/files", express.static("files"));
 
 /* ======================
@@ -68,31 +69,45 @@ app.get("/health", (req, res) => {
 });
 
 /* ======================
+   Rate limiting (public ask endpoint)
+====================== */
+const askLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { html: "⚠️ יותר מדי בקשות. אנא המתן דקה ונסה שוב." },
+});
+
+/* ======================
    Public Routes
 ====================== */
 app.use("/api", yearbooksRoutes);
 app.use("/api", labsRoutes);
 app.use("/api", advisorRoutes);
-app.use("/api", askRoutes);
+app.use("/api", askLimiter, askRoutes);
 
 /* ======================
-   Admin Routes
+   Admin Auth Routes (public - no JWT required)
+   Includes login, forgot-password, reset-password
 ====================== */
-app.use("/api/admin", coursesAdminRoutes);
-app.use("/api/admin", advisorsAdminRoutes);
-app.use("/api/admin", labsAdminRoutes);
-app.use("/api/admin", uploadAdminRoutes);
-app.use("/api/admin/security", adminSecurityRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
-app.use(
-  "/api/admin/registration-guidelines",
-  registrationGuidelinesAdmin
-);
+
+/* ======================
+   Protected Admin Routes (JWT required)
+====================== */
+app.use("/api/admin/security", requireAdmin, adminSecurityRoutes);
+app.use("/api/admin", requireAdmin, coursesAdminRoutes);
+app.use("/api/admin", requireAdmin, advisorsAdminRoutes);
+app.use("/api/admin", requireAdmin, labsAdminRoutes);
+app.use("/api/admin", requireAdmin, uploadAdminRoutes);
+app.use("/api/admin", requireAdmin, yearbooksAdminRoutes);
+app.use("/api/admin/registration-guidelines", requireAdmin, registrationGuidelinesAdmin);
 
 /* ======================
    Start server (Local + Render)
 ====================== */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

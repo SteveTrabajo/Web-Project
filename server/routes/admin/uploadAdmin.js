@@ -1,7 +1,8 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import { exec } from "child_process";
+import fs from "fs";
+import { execFile } from "child_process";
 import os from "os";
 
 const router = express.Router();
@@ -21,6 +22,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+function cleanupFile(filePath) {
+  fs.unlink(filePath, () => {});
+}
+
 // ======================
 // Upload yearbook
 // ======================
@@ -32,9 +37,12 @@ router.post("/upload/yearbook", upload.single("file"), (req, res) => {
     return res.status(400).json({ error: "No file uploaded" });
   }
 
-  exec(
-    `${PYTHON_CMD} parsers/yearbook_parser.py "${filePath}" "${yearbookId}" "${yearbookLabel}"`,
+  // execFile passes args as an array - no shell interpolation, immune to injection
+  execFile(
+    PYTHON_CMD,
+    ["parsers/yearbook_parser.py", filePath, yearbookId, yearbookLabel],
     (err, stdout, stderr) => {
+      cleanupFile(filePath);
       if (err) {
         console.error(stderr || err.message);
         return res.status(500).json({
@@ -42,7 +50,6 @@ router.post("/upload/yearbook", upload.single("file"), (req, res) => {
           details: stderr || err.message,
         });
       }
-
       res.json({ ok: true });
     }
   );
@@ -59,9 +66,11 @@ router.post("/upload/labs", upload.single("file"), (req, res) => {
     return res.status(400).json({ error: "No file uploaded" });
   }
 
-  exec(
-    `${PYTHON_CMD} parsers/labs_parser.py "${filePath}" "${yearId}" "${yearLabel}" "${semester}"`,
+  execFile(
+    PYTHON_CMD,
+    ["parsers/labs_parser.py", filePath, yearId, yearLabel, semester],
     (err, stdout, stderr) => {
+      cleanupFile(filePath);
       if (err) {
         console.error(stderr || err.message);
         return res.status(500).json({
@@ -69,7 +78,6 @@ router.post("/upload/labs", upload.single("file"), (req, res) => {
           details: stderr || err.message,
         });
       }
-
       res.json({ ok: true });
     }
   );

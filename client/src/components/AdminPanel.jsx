@@ -38,10 +38,20 @@ const API_BASE =
  *
  * 
  */
+function getAdminToken() {
+  try {
+    return JSON.parse(sessionStorage.getItem("bio_admin") || "null")?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function apiFetch(path, options = {}) {
+  const token = getAdminToken();
   const res = await fetch(API_BASE + path, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     method: options.method || "GET",
     body: options.body ? JSON.stringify(options.body) : undefined,
