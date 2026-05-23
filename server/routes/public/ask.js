@@ -172,11 +172,13 @@ async function getAllCoursesCached(yearbookId) {
   const coursesRef = db.collection("yearbooks").doc(yearbookId).collection("requiredCourses");
   const semestersSnap = await coursesRef.get();
 
-  const coursePromises = semestersSnap.docs.map((sem) => sem.ref.collection("courses").get());
+  const semesterDocs = semestersSnap.docs;
+  const coursePromises = semesterDocs.map((sem) => sem.ref.collection("courses").get());
   const coursesSnaps = await Promise.all(coursePromises);
 
   const allCourses = [];
-  coursesSnaps.forEach((snap) => {
+  coursesSnaps.forEach((snap, idx) => {
+    const semesterKey = semesterDocs[idx].id;
     snap.forEach((doc) => {
       const data = doc.data() || {};
       const courseCode = String(data.courseCode || doc.id);
@@ -184,6 +186,7 @@ async function getAllCoursesCached(yearbookId) {
       allCourses.push({
         courseCode,
         courseName,
+        semesterKey,
         nameNorm: normalizeHebrew(courseName),
         codeNorm: courseCode.replace(/\s+/g, ""),
       });
@@ -244,61 +247,77 @@ function extractMultipleCourses(question, allCourses, qNorm = null) {
    Firestore relations
 ============================= */
 const _relationTypeCache = new Map();
+const RELATION_CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function getRelationType(yearbookId, courseA_code, courseB_code) {
   const key = `${yearbookId}:${courseA_code}:${courseB_code}`;
-  if (_relationTypeCache.has(key)) return _relationTypeCache.get(key);
+  const now = Date.now();
+  const cached = _relationTypeCache.get(key);
+  if (cached && now - cached.ts < RELATION_CACHE_TTL_MS) return cached.val;
 
-  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
+  // Use the course cache to find the semester key directly — no full semester scan
+  const courses = await getAllCoursesCached(yearbookId);
+  const courseA = courses.find((c) => c.courseCode === courseA_code);
 
-  for (const sem of semSnap.docs) {
-    const relRef = sem.ref
-      .collection("courses")
-      .doc(courseA_code)
-      .collection("relations")
-      .doc(courseB_code);
-
-    const relSnap = await relRef.get();
-    if (relSnap.exists) {
-      const val = relSnap.data()?.type || null;
-      _relationTypeCache.set(key, val);
-      return val;
-    }
+  if (!courseA?.semesterKey) {
+    _relationTypeCache.set(key, { ts: now, val: null });
+    return null;
   }
 
-  _relationTypeCache.set(key, null);
-  return null;
+  const relSnap = await db
+    .collection("yearbooks")
+    .doc(yearbookId)
+    .collection("requiredCourses")
+    .doc(courseA.semesterKey)
+    .collection("courses")
+    .doc(courseA_code)
+    .collection("relations")
+    .doc(courseB_code)
+    .get();
+
+  const val = relSnap.exists ? relSnap.data()?.type || null : null;
+  _relationTypeCache.set(key, { ts: now, val });
+  return val;
 }
 
 // Recursive prerequisite walk — very expensive without the cache.
 const _prereqCache = new Map();
 const PREREQ_CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function getAllPrerequisitesRecursive(yearbookId, courseCode, visited = new Set()) {
+async function getAllPrerequisitesRecursive(yearbookId, courseCode, visited = new Set(), courseMap = null) {
   if (visited.has(courseCode)) return [];
   visited.add(courseCode);
 
+  // Build the course map once and pass it through all recursive calls
+  if (!courseMap) {
+    const courses = await getAllCoursesCached(yearbookId);
+    courseMap = new Map(courses.map((c) => [c.courseCode, c]));
+  }
+
+  const course = courseMap.get(courseCode);
+  if (!course?.semesterKey) return [];
+
   const prereqs = [];
 
-  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
+  // Direct path query — no semester scan
+  const relsSnap = await db
+    .collection("yearbooks")
+    .doc(yearbookId)
+    .collection("requiredCourses")
+    .doc(course.semesterKey)
+    .collection("courses")
+    .doc(courseCode)
+    .collection("relations")
+    .where("type", "==", "PREREQUISITE")
+    .get();
 
-  for (const sem of semSnap.docs) {
-    const relsSnap = await sem.ref
-      .collection("courses")
-      .doc(courseCode)
-      .collection("relations")
-      .where("type", "==", "PREREQUISITE")
-      .get();
+  for (const doc of relsSnap.docs) {
+    const prereqCode = doc.id;
+    const prereqName = doc.data().courseName || prereqCode;
+    prereqs.push({ code: prereqCode, name: prereqName });
 
-    for (const doc of relsSnap.docs) {
-      const prereqCode = doc.id;
-      const prereqName = doc.data().courseName || prereqCode;
-
-      prereqs.push({ code: prereqCode, name: prereqName });
-
-      const deeper = await getAllPrerequisitesRecursive(yearbookId, prereqCode, visited);
-      prereqs.push(...deeper);
-    }
+    const deeper = await getAllPrerequisitesRecursive(yearbookId, prereqCode, visited, courseMap);
+    prereqs.push(...deeper);
   }
 
   return prereqs;

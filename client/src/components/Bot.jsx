@@ -291,124 +291,53 @@ addBot(html + "</div>");
 
   const showExceptionalRegistration = () => {
     addBot(`
-  <div class="
-    rounded-2xl p-5 shadow-sm space-y-4
-    bg-white border border-blue-100
-    text-gray-800
-    dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100
-  ">
-    <div class="text-lg font-bold text-blue-700 dark:text-sky-300">📝 רישום או ביטול חריג לקורסים</div>
+<div class="rounded-2xl p-5 shadow-sm space-y-4 bg-white border border-blue-100 text-gray-800 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100">
+  <div class="text-lg font-bold text-blue-700 dark:text-sky-300">רישום או ביטול חריג לקורסים</div>
 
-    <div class="text-sm text-gray-800 dark:text-slate-200">
-      משתמשים ברישום חריג כאשר <strong>לא ניתן להירשם לקורס דרך תחנת מידע</strong>.
+  <div class="text-sm text-gray-800 dark:text-slate-200">
+    משתמשים ברישום חריג כאשר <strong>לא ניתן להירשם לקורס דרך תחנת מידע</strong>.
+  </div>
+
+  <div class="rounded-xl p-3 text-sm space-y-1 bg-blue-50 border border-blue-200 dark:bg-slate-950 dark:border-slate-700">
+    <div class="font-semibold mb-1 dark:text-slate-100">מתי זה קורה בדרך כלל?</div>
+    <div>אין מקום פנוי בקורס</div>
+    <div>נכשלת בקורס פעמיים</div>
+    <div>מועד הרישום/הביטול הסתיים</div>
+  </div>
+
+  <div class="text-sm font-semibold">תהליך הגשת בקשה לרישום חריג:</div>
+
+  <div class="text-sm space-y-3" dir="rtl">
+    <div class="flex items-start gap-3">
+      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white text-sm font-bold">1</span>
+      <span>מורידים את הטופס.</span>
     </div>
-
-    <div class="
-      rounded-xl p-3 text-sm space-y-1
-      bg-blue-50 border border-blue-200
-      dark:bg-slate-950 dark:border-slate-700
-    ">
-      <div class="font-semibold mb-1 dark:text-slate-100">מתי זה קורה בדרך כלל?</div>
-      <div>❌ אין מקום פנוי בקורס</div>
-      <div>📉 נכשלת בקורס פעמיים</div>
-      <div>⏰ מועד הרישום/הביטול הסתיים</div>
+    <div class="flex items-start gap-3">
+      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white text-sm font-bold">2</span>
+      <span>ממלאים פרטי הקורס והסיבה לבקשה.</span>
     </div>
-
-    <div class="
-      rounded-xl p-3 text-sm space-y-2
-      border border-gray-200 bg-white
-      dark:bg-slate-950 dark:border-slate-700
-    ">
-    <div
-  dir="rtl"
-  class="
-    rounded-xl p-4 text-sm space-y-3
-    border border-gray-200 bg-white
-    text-right
-    dark:bg-slate-950 dark:border-slate-700
-  "
->
-  <div
-  dir="rtl"
-  class="
-    rounded-xl p-4 text-sm space-y-4
-    border border-gray-200 bg-white
-    text-right
-    dark:bg-slate-950 dark:border-slate-700
-  "
->
-  <div class="font-semibold mb-2 text-base">
-  תהליך הגשת בקשה לרישום חריג:
-</div>
-
-<div class="flex items-start gap-3">
-  <span
-    class="
-      shrink-0 w-8 h-8 flex items-center justify-center
-      rounded-md bg-blue-600 text-white text-sm font-bold
-    "
-  >
-    1
-  </span>
-  <span>מורידים את הטופס.</span>
-</div>
-
-<div class="flex items-start gap-3">
-  <span
-    class="
-      shrink-0 w-8 h-8 flex items-center justify-center
-      rounded-md bg-blue-600 text-white text-sm font-bold
-    "
-  >
-    2
-  </span>
-  <span>ממלאים פרטי הקורס והסיבה לבקשה.</span>
-</div>
-
-<div class="flex items-start gap-3">
-  <span
-    class="
-      shrink-0 w-8 h-8 flex items-center justify-center
-      rounded-md bg-blue-600 text-white text-sm font-bold
-    "
-  >
-    3
-  </span>
-  <span>שולחים מייל מנומס ליועץ ומסבירים את הבקשה שלכם כולל צירוף הטופס.</span>
-</div>
-
-<div class="flex items-start gap-3">
-  <span
-    class="
-      shrink-0 w-8 h-8 flex items-center justify-center
-      rounded-md bg-blue-600 text-white text-sm font-bold
-    "
-  >
-    4
-  </span>
-  <span>היועץ מאשר/דוחה את הבקשה וממשיך את הטיפול.</span>
-</div>
-
-
-
-
-    <div class="border-t border-gray-200 pt-3 text-sm space-y-2 dark:border-slate-700">
-      <div>
-        📄 <strong>טופס רישום/ביטול קורס:</strong><br/>
-        👉 <a href="${EXCEPTION_FORM_URL}" class="underline text-blue-700 dark:text-sky-300" target="_blank" rel="noreferrer">
-          להורדת הטופס
-        </a>
-      </div>
-
-      <div class="text-gray-700 dark:text-slate-200">
-        📞 <strong>מזכירות:</strong> ${SECRETARY_PHONE}<br/>
-        ✉️ <strong>מייל:</strong>
-        <a class="underline text-blue-700 dark:text-sky-300" href="mailto:${SECRETARY_EMAIL}">
-          ${SECRETARY_EMAIL}
-        </a>
-      </div>
+    <div class="flex items-start gap-3">
+      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white text-sm font-bold">3</span>
+      <span>שולחים מייל מנומס ליועץ ומסבירים את הבקשה שלכם כולל צירוף הטופס.</span>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white text-sm font-bold">4</span>
+      <span>היועץ מאשר/דוחה את הבקשה וממשיך את הטיפול.</span>
     </div>
   </div>
+
+  <div class="border-t border-gray-200 pt-3 text-sm space-y-2 dark:border-slate-700">
+    <div>
+      <strong>טופס רישום/ביטול קורס:</strong><br/>
+      <a href="${EXCEPTION_FORM_URL}" class="underline text-blue-700 dark:text-sky-300" target="_blank" rel="noreferrer">להורדת הטופס</a>
+    </div>
+    <div class="text-gray-700 dark:text-slate-200">
+      <strong>מזכירות:</strong> ${SECRETARY_PHONE}<br/>
+      <strong>מייל:</strong>
+      <a class="underline text-blue-700 dark:text-sky-300" href="mailto:${SECRETARY_EMAIL}">${SECRETARY_EMAIL}</a>
+    </div>
+  </div>
+</div>
 `);
 
   };
