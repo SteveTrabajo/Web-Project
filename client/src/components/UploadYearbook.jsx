@@ -63,8 +63,10 @@ export default function UploadYearbook() {
       form.append("yearbookLabel", sanitizeDisplayName(yearbookLabel));
       form.append("file", file);
 
+      const token = JSON.parse(sessionStorage.getItem("bio_admin") || "null")?.token;
       const res = await fetch(`${API_BASE}/api/admin/upload/yearbook`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
 

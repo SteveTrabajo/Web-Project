@@ -1,3 +1,20 @@
+2026-05-25
+
+### Added
+- FeedbackModal component: anonymous end-of-session feedback flow
+  - client/src/components/FeedbackModal.jsx — rating + reason checkboxes + comment textarea
+  - client/src/components/docs/FeedbackModal.md — component documentation
+  - server/routes/public/feedback.js — POST /api/feedback 
+  - server/routes/admin/feedbackAdmin.js — GET /api/admin/feedback
+  - Firestore: new feedback collection
+
+### Modified
+- server/server.js — registered feedbackRoutes and feedbackAdminRoutes
+- client/src/components/Bot.jsx — "סיים שיחה" button (visible after first exchange) triggers FeedbackModal, chat resets on submit
+- client/src/components/AdminPanel.jsx — feedback tab with paginated FeedbackCard list and relative timestamps
+
+---
+
 2026-05-23
 
 - All admin routes now require a JWT token (Authorization: Bearer) - unauthenticated requests return 401

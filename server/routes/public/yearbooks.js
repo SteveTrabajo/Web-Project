@@ -11,7 +11,8 @@ router.get("/yearbooks", async (req, res) => {
       label: doc.data().displayName,
     }));
     res.json({ yearbooks });
-  } catch {
+  } catch (err) {
+    console.error("yearbooks error:", err.message);
     res.status(500).json({ error: "failed to load yearbooks" });
   }
 });

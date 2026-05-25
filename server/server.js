@@ -18,6 +18,8 @@ import adminSecurityRoutes from "./routes/admin/adminSecurity.js";
 import adminAuthRoutes from "./routes/admin/auth.js";
 import registrationGuidelinesAdmin from "./routes/admin/registrationGuidelinesAdmin.js";
 import yearbooksAdminRoutes from "./routes/admin/yearbooksAdmin.js";
+import feedbackRoutes from "./routes/public/feedback.js";
+import feedbackAdminRoutes from "./routes/admin/feedbackAdmin.js";
 import { requireAdmin } from "./middleware/authMiddleware.js";
 
 /* ======================
@@ -86,6 +88,7 @@ app.use("/api", yearbooksRoutes);
 app.use("/api", labsRoutes);
 app.use("/api", advisorRoutes);
 app.use("/api", askLimiter, askRoutes);
+app.use("/api", feedbackRoutes);
 
 /* ======================
    Admin Auth Routes (public - no JWT required)
@@ -103,6 +106,7 @@ app.use("/api/admin", requireAdmin, labsAdminRoutes);
 app.use("/api/admin", requireAdmin, uploadAdminRoutes);
 app.use("/api/admin", requireAdmin, yearbooksAdminRoutes);
 app.use("/api/admin/registration-guidelines", requireAdmin, registrationGuidelinesAdmin);
+app.use("/api/admin", requireAdmin, feedbackAdminRoutes);
 
 /* ======================
    Start server (Local + Render)

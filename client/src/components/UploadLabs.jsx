@@ -57,8 +57,10 @@ export default function UploadLabs() {
       form.append("semester", semester);
       form.append("file", file);
 
+      const token = JSON.parse(sessionStorage.getItem("bio_admin") || "null")?.token;
       const res = await fetch(`${API_BASE}/api/admin/upload/labs`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
 

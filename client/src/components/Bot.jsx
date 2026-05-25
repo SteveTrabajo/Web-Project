@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import FeedbackModal from "./FeedbackModal.jsx";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
@@ -24,6 +25,8 @@ export default function ChatBot() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [hasExchange, setHasExchange] = useState(false);
 
   const fetchSuggestions = async (val) => {
     if (val.length < 2 || !context.yearbook) {
@@ -57,6 +60,7 @@ export default function ChatBot() {
 
   const startChat = () => {
     setMessages([]);
+    setHasExchange(false);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
     addBot(`
   <div class="space-y-2">
@@ -104,6 +108,7 @@ export default function ChatBot() {
       const data = await res.json();
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot(data.html || "לא נמצאה תשובה בבסיס הנתונים.");
+      setHasExchange(true);
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
@@ -172,6 +177,7 @@ export default function ChatBot() {
       });
 
       addBot(html + "</div>");
+      setHasExchange(true);
     } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
   };
 
@@ -211,6 +217,7 @@ export default function ChatBot() {
     </div>
   </div>
 `);
+        setHasExchange(true);
       } else {
         addBot("<div class='font-sans text-red-500'>לא נמצא יועץ מתאים לאות זו.</div>");
       }
@@ -295,13 +302,24 @@ export default function ChatBot() {
           <div className="w-10 h-10 rounded-full bg-white text-brand-navy flex items-center justify-center font-black text-xl shadow-inner">B</div>
         </div>
 
-        <button
-          onClick={startChat}
-          className="text-xs bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
-        >
-          <span>איפוס שיחה</span>
-          <span className="text-sm">↺</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {hasExchange && (
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="text-xs bg-[#F5B301] text-[#162A5A] font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-all border border-yellow-300 shadow-sm active:scale-95 font-sans flex items-center gap-2"
+            >
+              <span>סיים שיחה</span>
+              <span>✓</span>
+            </button>
+          )}
+          <button
+            onClick={startChat}
+            className="text-xs bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
+          >
+            <span>איפוס שיחה</span>
+            <span className="text-sm">↺</span>
+          </button>
+        </div>
       </div>
 
       {/* Chat area */}
@@ -445,6 +463,12 @@ export default function ChatBot() {
           </div>
         </div>
       </div>
+
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        onSubmit={() => { setShowFeedback(false); startChat(); }}
+      />
     </div>
   );
 }
