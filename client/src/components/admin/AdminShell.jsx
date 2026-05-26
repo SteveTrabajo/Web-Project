@@ -81,10 +81,10 @@ export default function AdminShell() {
       {/* Header bar */}
       <header className="flex items-center justify-between gap-4 flex-wrap mb-6" dir="rtl">
         <div className="space-y-0.5 min-w-0">
-          <h1 className="text-2xl font-extrabold text-brand-navy dark:text-bio-green-glow truncate">
+          <h1 className="text-page-title text-brand-navy dark:text-bio-green-glow truncate">
             אזור מנהל
           </h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption">
             ניהול יועצים, לוחות מעבדה, שנתון וקורסים
           </p>
         </div>

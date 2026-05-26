@@ -72,22 +72,24 @@
    ============================================================ */
 
 @theme inline {
-  --color-background:         var(--background);
-  --color-foreground:         var(--foreground);
-  --color-card:               var(--card);
-  --color-card-foreground:    var(--card-foreground);
-  --color-primary:            var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary:          var(--secondary);
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted:              var(--muted);
-  --color-muted-foreground:   var(--muted-foreground);
-  --color-accent:             var(--accent);
-  --color-accent-foreground:  var(--accent-foreground);
-  --color-destructive:        var(--destructive);
-  --color-border:             var(--border);
-  --color-input:              var(--input);
-  --color-ring:               var(--ring);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
   --radius-sm:  calc(var(--radius) * 0.6);
   --radius-md:  calc(var(--radius) * 0.8);
   --radius-lg:  var(--radius);
@@ -95,12 +97,14 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-/* shadcn token values — light mode */
+/* shadcn token values - light mode */
 :root {
   --background:           #EFF6EF;  /* surface-page */
   --foreground:           #1A2B1C;  /* content-primary */
   --card:                 #FFFFFF;  /* surface-card */
   --card-foreground:      #1A2B1C;
+  --popover:              #FFFFFF;  /* solid white - fixes Dialog/Select transparency */
+  --popover-foreground:   #1A2B1C;
   --primary:              #162A5A;  /* brand-navy */
   --primary-foreground:   #FFFFFF;
   --secondary:            #E2EEE4;  /* surface-raised */
@@ -116,12 +120,14 @@
   --radius:               0.75rem;
 }
 
-/* shadcn token values — dark mode */
+/* shadcn token values - dark mode */
 .dark {
   --background:           #060D18;
   --foreground:           #DEE9F4;
   --card:                 #0C1A2E;
   --card-foreground:      #DEE9F4;
+  --popover:              #0C1A2E;  /* solid navy - matches card */
+  --popover-foreground:   #DEE9F4;
   --primary:              #34D399;  /* bio-green-glow */
   --primary-foreground:   #0B1220;
   --secondary:            #112034;
@@ -146,8 +152,14 @@
 }
 
 /* ============================================================
-   GLOBAL RESET
+   GLOBAL RESET + TYPOGRAPHY BASE
+   Bumping html font-size scales the whole Tailwind rem-based
+   text scale up ~6% (16px -> 17px).
    ============================================================ */
+
+html {
+  font-size: 17px;
+}
 
 html,
 body,
@@ -156,6 +168,25 @@ body,
   padding: 0;
   width: 100%;
   font-family: "Heebo", ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: weight style;
+}
+
+/* ============================================================
+   TYPOGRAPHY SCALE
+   4 semantic levels, ~2px steps for a uniform ladder.
+   At 17px base:  21px -> 17px -> 15px -> 13px
+     .text-page-title - top-of-page (h1)
+     .text-heading    - all section / card / dialog headings (h2-h3)
+     .text-body       - default body text (form labels, table cells, buttons)
+     .text-caption    - hints, metadata, footnotes
+   Use these in place of raw text-xl / text-lg / text-base / etc.
+   ============================================================ */
+
+@layer components {
+  .text-page-title { @apply text-xl  font-extrabold tracking-tight; }
+  .text-heading    { @apply text-base font-bold; }
+  .text-body       { @apply text-sm; }
+  .text-caption    { @apply text-xs  text-muted-foreground; }
 }
 
 /* ============================================================

@@ -94,8 +94,8 @@ export default function SettingsTab({ toast }) {
       <CardContent className="p-6 space-y-6">
 
         <div className="space-y-1">
-          <h2 className="text-lg font-bold">הגדרות</h2>
-          <p className="text-sm text-muted-foreground">ניהול חשבון מנהל</p>
+          <h2 className="text-heading">הגדרות</h2>
+          <p className="text-body text-muted-foreground">ניהול חשבון מנהל</p>
         </div>
 
         <Separator />
@@ -103,8 +103,8 @@ export default function SettingsTab({ toast }) {
         {/* Password section */}
         <section className="space-y-3 max-w-md">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">שינוי סיסמה</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">בחר סיסמה חדשה לחשבון המנהל</p>
+            <h3 className="text-heading text-foreground">שינוי סיסמה</h3>
+            <p className="text-caption mt-0.5">בחר סיסמה חדשה לחשבון המנהל</p>
           </div>
 
           <div className="space-y-1.5">
@@ -130,8 +130,8 @@ export default function SettingsTab({ toast }) {
         {/* Email section */}
         <section className="space-y-3 max-w-md">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">שינוי אימייל</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">עדכן את כתובת המייל של חשבון המנהל</p>
+            <h3 className="text-heading text-foreground">שינוי אימייל</h3>
+            <p className="text-caption mt-0.5">עדכן את כתובת המייל של חשבון המנהל</p>
           </div>
 
           <div className="space-y-1.5">

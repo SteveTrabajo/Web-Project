@@ -72,7 +72,7 @@ export default function AdvisorsTab({ toast }) {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <h2 className="text-lg font-bold">יועצים</h2>
+            <h2 className="text-heading">יועצים</h2>
             <div className="flex gap-2 flex-wrap">
               <Input
                 className="w-60 h-8 text-xs rounded-full"

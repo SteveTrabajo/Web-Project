@@ -123,7 +123,7 @@ export default function LabsTab({ toast }) {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <h2 className="text-lg font-bold">עריכת לוחות מעבדה</h2>
+            <h2 className="text-heading">עריכת לוחות מעבדה</h2>
             <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={loadLab}>רענון</Button>
               <Button

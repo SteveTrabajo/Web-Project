@@ -120,7 +120,7 @@ export default function YearbooksTab({ toast }) {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-            <h2 className="text-lg font-bold">שנתון / קורסי חובה</h2>
+            <h2 className="text-heading">שנתון / קורסי חובה</h2>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={loadCourses}>רענון</Button>
               <Button size="sm" onClick={newCourse}>+ קורס חדש</Button>

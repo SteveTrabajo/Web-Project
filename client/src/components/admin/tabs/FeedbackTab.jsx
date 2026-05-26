@@ -75,7 +75,7 @@ export default function FeedbackTab({ toast }) {
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <h2 className="text-lg font-bold">משובים</h2>
+          <h2 className="text-heading">משובים</h2>
           <Button size="sm" variant="outline" onClick={() => loadFeedback(1)} disabled={feedbackLoading}>
             רענון
           </Button>
