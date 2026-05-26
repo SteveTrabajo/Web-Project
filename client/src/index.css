@@ -90,11 +90,13 @@
   --color-border:               var(--border);
   --color-input:                var(--input);
   --color-ring:                 var(--ring);
-  --radius-sm:  calc(var(--radius) * 0.6);
-  --radius-md:  calc(var(--radius) * 0.8);
-  --radius-lg:  var(--radius);
-  --radius-xl:  calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  /* Flat 8px radius across cards, inputs, dropdowns, dialogs.
+     Buttons override to 2px via the [data-slot="button"] rule below. */
+  --radius-sm:  8px;
+  --radius-md:  8px;
+  --radius-lg:  8px;
+  --radius-xl:  8px;
+  --radius-2xl: 8px;
 }
 
 /* shadcn token values - light mode */
@@ -188,6 +190,72 @@ body,
   .text-heading    { @apply text-base font-bold; }
   .text-body       { @apply text-sm; }
   .text-caption    { @apply text-xs; }
+}
+
+/* ============================================================
+   CHAT INPUT GLOW
+   Animated green + white gradient outline around the chat input.
+     default                  - dominant outward glow (waiting for input)
+     .input-glow--responding  - subtle (bot is replying)
+     .input-glow--off         - hidden (user is actively typing)
+   All transitions are opacity-based to avoid flicker between states.
+   ============================================================ */
+
+@keyframes input-glow-flow {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.input-glow {
+  position: relative;
+  isolation: isolate;
+}
+
+.input-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    #15803D,
+    #34D399,
+    #FFFFFF,
+    #6EE7B7,
+    #34D399,
+    #FFFFFF,
+    #15803D
+  );
+  background-size: 200% 100%;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+          mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: input-glow-flow 6s linear infinite;
+  opacity: 0.95;
+  /* Layered drop-shadows create a wide outward bloom */
+  filter:
+    drop-shadow(0  0  6px rgba(52, 211, 153, 0.65))
+    drop-shadow(0  0 18px rgba(52, 211, 153, 0.45))
+    drop-shadow(0  0 36px rgba(52, 211, 153, 0.25));
+  transition: opacity 600ms ease, filter 600ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-glow--responding::before {
+  opacity: 0.22;
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.2));
+}
+
+.input-glow--off::before {
+  opacity: 0;
+  filter: drop-shadow(0 0 0 rgba(52, 211, 153, 0));
 }
 
 /* ============================================================

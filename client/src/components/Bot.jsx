@@ -27,6 +27,9 @@ export default function ChatBot() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasExchange, setHasExchange] = useState(false);
+  const [isBotResponding, setIsBotResponding] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const typingTimerRef = useRef(null);
 
   const fetchSuggestions = async (val) => {
     if (val.length < 2 || !context.yearbook) {
@@ -96,6 +99,7 @@ export default function ChatBot() {
     }
     addUser(q);
     setInput("");
+    setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
     setMessages((p) => [...p, { id: loadingId, sender: "bot", html: "רגע אני חושב..." }]);
 
@@ -112,6 +116,8 @@ export default function ChatBot() {
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
+    } finally {
+      setIsBotResponding(false);
     }
   };
 
@@ -437,28 +443,32 @@ export default function ChatBot() {
                 </div>
               )}
 
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setInput(val);
-                  fetchSuggestions(val);
-                }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                className="w-full bg-surface-page border border-surface-border rounded-2xl px-6 py-4 text-body text-content-primary focus:ring-2 focus:ring-brand-navy focus:bg-surface-card transition-all outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted"
-              />
-              <button
-                onClick={sendMessage}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95"
+              <div
+                className={`relative rounded-2xl input-glow ${isBotResponding ? "input-glow--responding" : ""}`}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-              </button>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInput(val);
+                    fetchSuggestions(val);
+                  }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
+                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-0"
+                />
+                <button
+                  onClick={sendMessage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-10"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
