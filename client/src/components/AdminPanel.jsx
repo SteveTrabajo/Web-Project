@@ -600,6 +600,23 @@ export default function AdminPanel() {
   };
 
   // ---------- UI ----------
+if (!isAuthed) {
+  return (
+    <div className="min-h-[calc(100vh-72px)] bg-surface-page flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <Card className="p-6 dark:bg-slate-900 dark:border-slate-700">
+          <AdminLogin
+            onSuccess={(adminData) => {
+              setAdmin(adminData);
+              sessionStorage.setItem("bio_admin", JSON.stringify(adminData));
+            }}
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 return (
   <div
     className="max-w-6xl mx-auto px-4 md:px-8 py-8 text-right text-gray-900 dark:text-slate-100"
@@ -616,36 +633,27 @@ return (
       </div>
     </div>
 
-    <Card className="p-4 w-[320px] dark:bg-slate-900 dark:border-slate-700">
-      {!isAuthed ? (
-        <AdminLogin
-          onSuccess={(adminData) => {
-            setAdmin(adminData);
-            sessionStorage.setItem("bio_admin", JSON.stringify(adminData));
-          }}
-        />
-      ) : (
-        <div className="space-y-3 text-center">
-          <div className="text-sm font-semibold text-green-700 dark:text-emerald-300">
-            מחובר כמנהל  ✅
-          </div>
-          <div className="text-xs text-gray-500 dark:text-slate-400">{admin.email}</div>
-
-          <button
-            className="w-full bg-gray-100 dark:bg-slate-800 dark:text-slate-100 rounded-lg py-2 text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition"
-            onClick={() => setShowSecurity(true)}
-          >
-            ⚙️ הגדרות אבטחה
-          </button>
-
-          <button
-            className="w-full bg-red-600 dark:bg-red-500 text-white rounded-lg py-2 text-sm hover:bg-red-700 dark:hover:bg-red-600 transition"
-            onClick={handleLogout}
-          >
-            התנתקות
-          </button>
+    <Card className="p-6 w-[380px] dark:bg-slate-900 dark:border-slate-700">
+      <div className="space-y-3 text-center">
+        <div className="text-sm font-semibold text-green-700 dark:text-emerald-300">
+          מחובר כמנהל  ✅
         </div>
-      )}
+        <div className="text-xs text-gray-500 dark:text-slate-400">{admin.email}</div>
+
+        <button
+          className="w-full bg-gray-100 dark:bg-slate-800 dark:text-slate-100 rounded-lg py-2 text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+          onClick={() => setShowSecurity(true)}
+        >
+          ⚙️ הגדרות אבטחה
+        </button>
+
+        <button
+          className="w-full bg-red-600 dark:bg-red-500 text-white rounded-lg py-2 text-sm hover:bg-red-700 dark:hover:bg-red-600 transition"
+          onClick={handleLogout}
+        >
+          התנתקות
+        </button>
+      </div>
     </Card>
 
     {showSecurity && (
