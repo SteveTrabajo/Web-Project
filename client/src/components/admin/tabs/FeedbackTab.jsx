@@ -33,16 +33,16 @@ function FeedbackCard({ item }) {
         {item.reasons?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {item.reasons.map((r) => (
-              <Badge key={r} variant="secondary" className="text-[11px]">
+              <Badge key={r} variant="secondary" className="text-caption">
                 {REASON_LABELS[r] ?? r}
               </Badge>
             ))}
           </div>
         )}
         {item.comment && (
-          <p className="text-xs text-foreground break-words">{item.comment}</p>
+          <p className="text-caption text-foreground break-words">{item.comment}</p>
         )}
-        <div className="text-[11px] text-muted-foreground">{relativeTime}</div>
+        <div className="text-caption text-muted-foreground">{relativeTime}</div>
       </div>
     </div>
   );
@@ -82,9 +82,9 @@ export default function FeedbackTab({ toast }) {
         </div>
 
         {feedbackLoading && feedback.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground animate-pulse">טוען משובים...</div>
+          <div className="py-10 text-center text-body text-muted-foreground animate-pulse">טוען משובים...</div>
         ) : feedback.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">אין משובים עדיין</div>
+          <div className="py-10 text-center text-body text-muted-foreground">אין משובים עדיין</div>
         ) : (
           <div className="space-y-3">
             {feedback.map((f) => <FeedbackCard key={f.id} item={f} />)}

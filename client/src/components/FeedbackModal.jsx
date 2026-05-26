@@ -68,10 +68,10 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-foreground">
+          <DialogTitle className="text-heading text-foreground">
             איך הייתה החוויה?
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <DialogDescription className="text-caption text-muted-foreground">
             המשוב אנונימי לחלוטין
           </DialogDescription>
         </DialogHeader>
@@ -83,7 +83,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
             <div className="flex gap-3">
               <button
                 onClick={() => pickRating("positive")}
-                className={`flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                className={`flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 text-body font-medium transition-all ${
                   rating === "positive"
                     ? "border-brand-gold bg-brand-gold/10"
                     : "border-border hover:border-primary"
@@ -94,7 +94,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
               </button>
               <button
                 onClick={() => pickRating("negative")}
-                className={`flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                className={`flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 text-body font-medium transition-all ${
                   rating === "negative"
                     ? "border-destructive bg-destructive/10"
                     : "border-border hover:border-destructive"
@@ -108,7 +108,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
             {/* Reason checkboxes */}
             {rating === "negative" && (
               <div className="rounded-xl border border-border p-3 bg-muted/40 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                <p className="text-caption font-semibold text-muted-foreground mb-2">
                   מה הייתה הבעיה? (אפשר לסמן כמה)
                 </p>
                 {REASON_OPTIONS.map(({ key, label }) => (
@@ -120,7 +120,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
                     />
                     <Label
                       htmlFor={`reason-${key}`}
-                      className="text-sm text-foreground cursor-pointer"
+                      className="text-body text-foreground cursor-pointer"
                     >
                       {label}
                     </Label>
@@ -155,7 +155,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
         {phase === "submitting" && (
           <div className="py-8 flex flex-col items-center gap-3 text-muted-foreground">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">שולח...</span>
+            <span className="text-body">שולח...</span>
           </div>
         )}
 
@@ -163,14 +163,14 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
         {phase === "done" && (
           <div className="py-8 flex flex-col items-center gap-3">
             <span className="text-4xl">🙏</span>
-            <p className="text-base font-semibold text-foreground">תודה על המשוב!</p>
+            <p className="text-heading text-foreground">תודה על המשוב!</p>
           </div>
         )}
 
         {/* Error */}
         {phase === "error" && (
           <div className="py-6 flex flex-col items-center gap-4">
-            <p className="text-sm text-destructive">שגיאת שרת. אנא נסה שוב.</p>
+            <p className="text-body text-destructive">שגיאת שרת. אנא נסה שוב.</p>
             <Button onClick={() => setPhase("form")}>נסה שוב</Button>
           </div>
         )}

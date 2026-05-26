@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FeedbackModal from "./FeedbackModal.jsx";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -279,13 +279,13 @@ export default function ChatBot() {
   };
 
   const pillBtn =
-    "px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-sm font-medium " +
+    "px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-body font-medium " +
     "hover:bg-surface-raised transition-colors shadow-sm active:scale-95 font-sans " +
     "dark:border-bio-green-glow dark:text-bio-green-glow dark:hover:bg-surface-raised";
 
   const letterBtn =
     "w-9 h-9 flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary " +
-    "hover:border-brand-navy hover:text-brand-navy transition-all text-sm font-bold font-sans shadow-sm " +
+    "hover:border-brand-navy hover:text-brand-navy transition-all text-body font-bold font-sans shadow-sm " +
     "dark:hover:border-bio-green-glow dark:hover:text-bio-green-glow";
 
   return (
@@ -297,7 +297,7 @@ export default function ChatBot() {
       <div className="bg-brand-navy text-white px-8 py-5 flex flex-row-reverse items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="font-bold text-lg leading-none tracking-tight text-left">BIO BOT</h1>
+            <h1 className="text-heading leading-none text-left">BIO BOT</h1>
           </div>
           <div className="w-10 h-10 rounded-full bg-white text-brand-navy flex items-center justify-center font-black text-xl shadow-inner">B</div>
         </div>
@@ -306,7 +306,7 @@ export default function ChatBot() {
           {hasExchange && (
             <button
               onClick={() => setShowFeedback(true)}
-              className="text-xs bg-[#F5B301] text-[#162A5A] font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-all border border-yellow-300 shadow-sm active:scale-95 font-sans flex items-center gap-2"
+              className="text-caption bg-brand-gold text-brand-navy font-bold px-4 py-2 rounded-lg hover:bg-brand-gold-hover transition-all border border-yellow-300 shadow-sm active:scale-95 font-sans flex items-center gap-2"
             >
               <span>סיים שיחה</span>
               <span>✓</span>
@@ -314,10 +314,10 @@ export default function ChatBot() {
           )}
           <button
             onClick={startChat}
-            className="text-xs bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
+            className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
           >
             <span>איפוס שיחה</span>
-            <span className="text-sm">↺</span>
+            <span className="text-body">↺</span>
           </button>
         </div>
       </div>
@@ -331,7 +331,7 @@ export default function ChatBot() {
           {messages.map((m) => (
             <div key={m.id} className={`flex ${m.sender === "user" ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed ${
+                className={`max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-body ${
                   m.sender === "user"
                     ? "bg-brand-navy text-white rounded-tl-none font-sans"
                     : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
@@ -353,7 +353,7 @@ export default function ChatBot() {
 
             {context.yearbook && !context.topic && (
               <div className="flex flex-col items-end gap-3 w-full">
-                <div className="flex items-center gap-2 mb-1 text-brand-navy dark:text-bio-green-glow font-bold text-lg px-1 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="flex items-center gap-2 mb-1 text-brand-navy dark:text-bio-green-glow text-heading px-1 animate-in fade-in slide-in-from-right-2 duration-300">
                   <span>אפשר לבחור נושא כמו</span>
                 </div>
                 <div className="flex flex-wrap gap-3 justify-end">
@@ -397,13 +397,13 @@ export default function ChatBot() {
           {context.topic && (
             <div className="flex gap-4 px-2">
               <button
-                className="text-[11px] font-bold text-bio-green dark:text-bio-green-glow hover:underline uppercase tracking-wider font-sans"
+                className="text-caption font-bold text-bio-green dark:text-bio-green-glow hover:underline uppercase tracking-wider font-sans"
                 onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
               >
                 החלפת נושא
               </button>
               <button
-                className="text-[11px] font-bold text-content-muted hover:underline uppercase tracking-wider font-sans"
+                className="text-caption font-bold text-content-muted hover:underline uppercase tracking-wider font-sans"
                 onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
               >
                 שינוי סמסטר
@@ -418,7 +418,7 @@ export default function ChatBot() {
                   {suggestions.map((s, idx) => (
                     <button
                       key={idx}
-                      className="w-full text-right px-4 py-3 text-sm hover:bg-surface-raised border-b border-surface-border last:border-none flex justify-between items-center transition-colors"
+                      className="w-full text-right px-4 py-3 text-body hover:bg-surface-raised border-b border-surface-border last:border-none flex justify-between items-center transition-colors"
                       onMouseDown={(e) => {
                         e.preventDefault();
                         setInput(prev => {
@@ -431,7 +431,7 @@ export default function ChatBot() {
                       }}
                     >
                       <span className="font-medium text-content-primary">{s.courseName}</span>
-                      <span className="text-xs font-mono text-content-muted bg-surface-raised px-1.5 py-0.5 rounded">{s.courseCode}</span>
+                      <span className="text-caption font-mono text-content-muted bg-surface-raised px-1.5 py-0.5 rounded">{s.courseCode}</span>
                     </button>
                   ))}
                 </div>
@@ -448,7 +448,7 @@ export default function ChatBot() {
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                className="w-full bg-surface-page border border-surface-border rounded-2xl px-6 py-4 text-sm text-content-primary focus:ring-2 focus:ring-brand-navy focus:bg-surface-card transition-all outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted"
+                className="w-full bg-surface-page border border-surface-border rounded-2xl px-6 py-4 text-body text-content-primary focus:ring-2 focus:ring-brand-navy focus:bg-surface-card transition-all outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted"
               />
               <button
                 onClick={sendMessage}

@@ -69,7 +69,7 @@ export default function UploadLabs() {
   return (
     <Card dir="rtl">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">ייבוא לוח מעבדות (Excel)</CardTitle>
+        <CardTitle className="text-heading">ייבוא לוח מעבדות (Excel)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
 
@@ -123,7 +123,7 @@ export default function UploadLabs() {
             בחירת קובץ Excel
           </Button>
           {file && (
-            <span dir="ltr" className="text-xs text-muted-foreground">{file.name}</span>
+            <span dir="ltr" className="text-caption text-muted-foreground">{file.name}</span>
           )}
         </div>
 
@@ -131,12 +131,12 @@ export default function UploadLabs() {
           {loading ? "מייבא..." : "ייבוא לוח מעבדות"}
         </Button>
 
-        <p className="text-[11px] text-amber-700 dark:text-amber-300">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           Import overrides existing labs for the same year and semester.
         </p>
 
         {msg.text && (
-          <p className={`text-sm font-semibold ${
+          <p className={`text-body font-semibold ${
             msg.type === "error" ? "text-destructive" : "text-bio-green dark:text-bio-green-glow"
           }`}>
             {msg.text}

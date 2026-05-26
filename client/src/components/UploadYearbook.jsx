@@ -65,7 +65,7 @@ export default function UploadYearbook() {
   return (
     <Card dir="rtl">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">ייבוא שנתון (DOCX)</CardTitle>
+        <CardTitle className="text-heading">ייבוא שנתון (DOCX)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
 
@@ -102,7 +102,7 @@ export default function UploadYearbook() {
             בחירת קובץ DOCX
           </Button>
           {file && (
-            <span dir="ltr" className="text-xs text-muted-foreground">{file.name}</span>
+            <span dir="ltr" className="text-caption text-muted-foreground">{file.name}</span>
           )}
         </div>
 
@@ -111,7 +111,7 @@ export default function UploadYearbook() {
         </Button>
 
         {msg.text && (
-          <p className={`text-sm font-semibold ${
+          <p className={`text-body font-semibold ${
             msg.type === "error" ? "text-destructive" : "text-bio-green dark:text-bio-green-glow"
           }`}>
             {msg.text}

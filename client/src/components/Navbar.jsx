@@ -8,7 +8,7 @@ export default function Navbar({ view, onNavigate }) {
       <button
         type="button"
         onClick={() => onNavigate(key)}
-        className={`px-5 py-2 rounded-lg text-base tracking-wide transition-all duration-250 ease-out
+        className={`px-5 py-2 rounded-lg text-body tracking-wide transition-all duration-250 ease-out
           hover:-translate-y-px active:translate-y-0 active:scale-95
           ${isActive
             ? "text-bio-green-glow bg-bio-green-glow/10 border border-bio-green-glow/50 shadow-[0_0_12px_rgba(52,211,153,0.15)]"
@@ -37,10 +37,10 @@ export default function Navbar({ view, onNavigate }) {
               className="w-11 h-11 object-contain bg-white rounded-full p-1 ring-2 ring-white/10 group-hover:ring-bio-green-glow/60 transition-all duration-300 group-hover:scale-105"
             />
             <div className="flex flex-col gap-0.5">
-              <span className="text-xl font-black text-white tracking-tight leading-none uppercase">
+              <span className="text-page-title text-white leading-none uppercase">
                 BIO BOT 2.0
               </span>
-              <span className="text-[11px] text-blue-200/70 tracking-widest uppercase">
+              <span className="text-caption text-blue-200/70 tracking-widest uppercase">
                 Braude Biotechnology Assistant
               </span>
             </div>

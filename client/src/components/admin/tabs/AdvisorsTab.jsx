@@ -75,7 +75,7 @@ export default function AdvisorsTab({ toast }) {
             <h2 className="text-heading">יועצים</h2>
             <div className="flex gap-2 flex-wrap">
               <Input
-                className="w-60 h-8 text-xs rounded-full"
+                className="w-60 h-8 text-caption rounded-full"
                 placeholder="חיפוש לפי שם / מייל..."
                 value={advisorSearch}
                 onChange={(e) => setAdvisorSearch(e.target.value)}
@@ -84,7 +84,7 @@ export default function AdvisorsTab({ toast }) {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-caption">
               <thead>
                 <tr className="text-muted-foreground border-b border-border">
                   <th className="text-right py-2 whitespace-nowrap">ID</th>
@@ -153,7 +153,7 @@ export default function AdvisorsTab({ toast }) {
                     }))
                   }
                 />
-                <p className="text-[11px] text-muted-foreground">דוגמה: "א-כ" או "א-ת"</p>
+                <p className="text-caption text-muted-foreground">דוגמה: "א-כ" או "א-ת"</p>
               </div>
 
               <div className="space-y-1.5">
@@ -167,7 +167,7 @@ export default function AdvisorsTab({ toast }) {
                     }))
                   }
                 />
-                <p className="text-[11px] text-muted-foreground">דוגמה: "1,2" או "5,6,7,8"</p>
+                <p className="text-caption text-muted-foreground">דוגמה: "1,2" או "5,6,7,8"</p>
               </div>
 
               <div className="space-y-1.5">

@@ -76,10 +76,10 @@ export default function AdminLogin({ onSuccess }) {
           <span className="text-xl font-extrabold text-brand-gold">B</span>
         </div>
         <div>
-          <h2 className="text-center text-lg font-extrabold text-brand-navy dark:text-bio-green-glow tracking-tight">
+          <h2 className="text-center text-page-title text-brand-navy dark:text-bio-green-glow">
             {titles[mode]}
           </h2>
-          <p className="text-center text-xs text-muted-foreground mt-0.5">{subtitles[mode]}</p>
+          <p className="text-center text-caption text-muted-foreground mt-0.5">{subtitles[mode]}</p>
         </div>
       </div>
 
@@ -88,7 +88,7 @@ export default function AdminLogin({ onSuccess }) {
       {/* Fields */}
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs uppercase tracking-wide text-muted-foreground">
+          <Label htmlFor="email" className="text-caption uppercase tracking-wide text-muted-foreground">
             Email
           </Label>
           <Input
@@ -102,7 +102,7 @@ export default function AdminLogin({ onSuccess }) {
 
         {(mode === "login" || mode === "reset") && (
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs uppercase tracking-wide text-muted-foreground">
+            <Label htmlFor="password" className="text-caption uppercase tracking-wide text-muted-foreground">
               {mode === "login" ? "Password" : "New Password"}
             </Label>
             <Input
@@ -117,7 +117,7 @@ export default function AdminLogin({ onSuccess }) {
 
         {mode === "reset" && (
           <div className="space-y-1.5">
-            <Label htmlFor="code" className="text-xs uppercase tracking-wide text-muted-foreground">
+            <Label htmlFor="code" className="text-caption uppercase tracking-wide text-muted-foreground">
               Reset Code
             </Label>
             <Input
@@ -133,7 +133,7 @@ export default function AdminLogin({ onSuccess }) {
       {/* Feedback */}
       {msg && (
         <div
-          className={`text-xs rounded-xl px-3 py-2.5 border ${
+          className={`text-caption rounded-xl px-3 py-2.5 border ${
             isSuccess
               ? "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
               : "text-destructive bg-destructive/10 border-destructive/20"
@@ -153,7 +153,7 @@ export default function AdminLogin({ onSuccess }) {
             <div className="text-center">
               <Button
                 variant="link"
-                className="text-xs text-muted-foreground h-auto p-0"
+                className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("forgot"); setMsg(""); setIsSuccess(false); }}
               >
                 Forgot password?
@@ -170,7 +170,7 @@ export default function AdminLogin({ onSuccess }) {
             <div className="text-center">
               <Button
                 variant="link"
-                className="text-xs text-muted-foreground h-auto p-0"
+                className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
               >
                 Back to login
@@ -187,7 +187,7 @@ export default function AdminLogin({ onSuccess }) {
             <div className="text-center">
               <Button
                 variant="link"
-                className="text-xs text-muted-foreground h-auto p-0"
+                className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
               >
                 Back to login
@@ -197,7 +197,7 @@ export default function AdminLogin({ onSuccess }) {
         )}
       </div>
 
-      <p className="text-center text-[10px] text-muted-foreground pt-1">
+      <p className="text-center text-caption text-muted-foreground pt-1">
         BIO-BOT 2.0 - Admin Portal
       </p>
     </div>

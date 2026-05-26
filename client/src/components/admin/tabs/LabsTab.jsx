@@ -14,7 +14,7 @@ const EMPTY_LAB = {
 const LAB_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const TBL_INPUT =
-  "h-7 text-xs px-2 rounded border border-input bg-background text-foreground " +
+  "h-7 text-caption px-2 rounded border border-input bg-background text-foreground " +
   "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-full";
 
 export default function LabsTab({ toast }) {
@@ -162,10 +162,10 @@ export default function LabsTab({ toast }) {
           </div>
 
           {labLoading ? (
-            <div className="py-10 text-center text-sm text-muted-foreground animate-pulse">טוען נתוני מעבדות...</div>
+            <div className="py-10 text-center text-body text-muted-foreground animate-pulse">טוען נתוני מעבדות...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-[11px] border-collapse">
+              <table className="w-full text-caption border-collapse">
                 <thead>
                   <tr className="bg-muted text-muted-foreground border-b-2 border-border">
                     <th className="p-2 text-right w-24">קוד קורס*</th>
@@ -208,7 +208,7 @@ export default function LabsTab({ toast }) {
 
           <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
             <Button size="sm" variant="outline" onClick={addLabRow}>+ הוספת שורה חדשה</Button>
-            <p className="text-[10px] text-muted-foreground italic">* קוד קורס חייב להתאים לקורס קיים בשנתון</p>
+            <p className="text-caption text-muted-foreground italic">* קוד קורס חייב להתאים לקורס קיים בשנתון</p>
           </div>
         </CardContent>
       </Card>

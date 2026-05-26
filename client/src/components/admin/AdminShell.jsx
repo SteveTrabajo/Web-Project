@@ -84,17 +84,17 @@ export default function AdminShell() {
           <h1 className="text-page-title text-brand-navy dark:text-bio-green-glow truncate">
             אזור מנהל
           </h1>
-          <p className="text-caption">
+          <p className="text-caption text-muted-foreground">
             ניהול יועצים, לוחות מעבדה, שנתון וקורסים
           </p>
         </div>
 
         <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
           <div className="text-right min-w-0">
-            <p className="text-[11px] font-semibold text-bio-green dark:text-bio-green-glow">
+            <p className="text-caption font-semibold text-bio-green dark:text-bio-green-glow">
               מחובר כמנהל ✓
             </p>
-            <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+            <p className="text-caption text-muted-foreground truncate max-w-[160px]">
               {admin.email}
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function AdminShell() {
         <div
           dir="rtl"
           className={cn(
-            "mb-4 text-sm rounded-2xl border px-4 py-3",
+            "mb-4 text-body rounded-2xl border px-4 py-3",
             status.type === "error"
               ? "text-destructive bg-destructive/10 border-destructive/20"
               : status.type === "ok"
@@ -135,7 +135,7 @@ export default function AdminShell() {
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-right shrink-0 md:w-full",
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-body transition-colors text-right shrink-0 md:w-full",
                       isActive
                         ? "bg-primary text-primary-foreground font-semibold"
                         : "text-foreground hover:bg-muted"

@@ -16,20 +16,21 @@ export default function Hero({ onStart }) {
         {/* Semi-transparent bounding box */}
         <div className="backdrop-blur-sm bg-brand-navy/55 border border-white/10 rounded-2xl px-10 py-12 max-w-xl w-full text-center text-white space-y-6 shadow-2xl">
 
+          {/* Hero display text intentionally larger than the standard scale */}
           <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
             עוזר חכם לסטודנטים
             <br />
             <span className="text-brand-gold">הנדסת ביוטכנולוגיה</span>
           </h1>
 
-          <p className="text-lg text-blue-100/90">
+          <p className="text-body text-blue-100/90">
             מלווה סטודנטים בקורסים, יועצים ולוחות מעבדה -{" "}
             <span className="font-bold">BIO BOT 2.0</span>
           </p>
 
           <button
             onClick={onStart}
-            className="mt-2 px-10 py-4 rounded-full bg-brand-gold text-brand-navy font-bold text-lg shadow-lg transition-all duration-200 hover:scale-105 hover:bg-brand-gold-hover active:scale-95"
+            className="mt-2 px-10 py-4 rounded-full bg-brand-gold text-brand-navy text-heading shadow-lg transition-all duration-200 hover:scale-105 hover:bg-brand-gold-hover active:scale-95"
           >
             התחלת צ׳אט
           </button>

@@ -183,10 +183,11 @@ body,
    ============================================================ */
 
 @layer components {
-  .text-page-title { @apply text-xl  font-extrabold tracking-tight; }
+  /* Size + weight only. Apply text-muted-foreground (or any color) separately. */
+  .text-page-title { @apply text-xl   font-extrabold tracking-tight; }
   .text-heading    { @apply text-base font-bold; }
   .text-body       { @apply text-sm; }
-  .text-caption    { @apply text-xs  text-muted-foreground; }
+  .text-caption    { @apply text-xs; }
 }
 
 /* ============================================================

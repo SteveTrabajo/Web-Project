@@ -121,8 +121,8 @@ export default function LabsViewer() {
   return (
     <div className="max-w-250 mx-auto p-4 text-right text-content-primary" dir="rtl">
       <header className="mb-6">
-        <h2 className="text-3xl font-extrabold mb-1 text-content-primary">לוח מעבדות</h2>
-        <p className="text-content-muted">ריכוז כל מועדי המעבדות לפי קורס, תאריך וקבוצה</p>
+        <h2 className="text-page-title mb-1 text-content-primary">לוח מעבדות</h2>
+        <p className="text-body text-content-muted">ריכוז כל מועדי המעבדות לפי קורס, תאריך וקבוצה</p>
       </header>
 
       {/* Filters */}
@@ -145,10 +145,10 @@ export default function LabsViewer() {
         </select>
       </div>
 
-      {loading && <div className="text-bio-green animate-pulse">טוען נתונים...</div>}
-      {error && <div className="text-red-600 font-bold">{error}</div>}
+      {loading && <div className="text-body text-bio-green animate-pulse">טוען נתונים...</div>}
+      {error && <div className="text-body text-red-600 font-bold">{error}</div>}
       {!loading && !error && grouped.length === 0 && (
-        <div className="text-red-600 mt-4">לא נמצאו נתונים</div>
+        <div className="text-body text-red-600 mt-4">לא נמצאו נתונים</div>
       )}
 
       {/* Course cards */}
@@ -159,17 +159,17 @@ export default function LabsViewer() {
             className="border border-surface-border rounded-xl overflow-hidden bg-surface-card shadow-sm"
           >
             <div className="p-4 bg-surface-raised border-b border-surface-border flex justify-between items-center">
-              <div className="text-lg font-bold text-content-primary">
+              <div className="text-heading text-content-primary">
                 {group.courseCode}{" "}
                 <span className="font-medium text-content-muted">- {group.courseName}</span>
               </div>
-              <div className="text-xs bg-bio-green/10 text-bio-green dark:bg-bio-green-glow/10 dark:text-bio-green-glow px-3 py-1 rounded-full font-semibold">
+              <div className="text-caption bg-bio-green/10 text-bio-green dark:bg-bio-green-glow/10 dark:text-bio-green-glow px-3 py-1 rounded-full font-semibold">
                 {group.rows.length} מפגשים
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-212.5 text-sm text-right border-collapse">
+              <table className="w-full min-w-212.5 text-body text-right border-collapse">
                 <thead>
                   <tr className="bg-surface-raised border-b border-surface-border text-content-muted">
                     {["מפגש", "תאריך", "יום", "שעה", "קבוצה", "צוות"].map((h) => (

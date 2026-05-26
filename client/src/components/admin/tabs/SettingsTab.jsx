@@ -12,7 +12,7 @@ function FeedbackBanner({ msg, isError }) {
   return (
     <div
       className={cn(
-        "text-xs rounded-xl px-3 py-2.5 border",
+        "text-caption rounded-xl px-3 py-2.5 border",
         isError
           ? "text-destructive bg-destructive/10 border-destructive/20"
           : "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
@@ -104,7 +104,7 @@ export default function SettingsTab({ toast }) {
         <section className="space-y-3 max-w-md">
           <div>
             <h3 className="text-heading text-foreground">שינוי סיסמה</h3>
-            <p className="text-caption mt-0.5">בחר סיסמה חדשה לחשבון המנהל</p>
+            <p className="text-caption text-muted-foreground mt-0.5">בחר סיסמה חדשה לחשבון המנהל</p>
           </div>
 
           <div className="space-y-1.5">
@@ -131,7 +131,7 @@ export default function SettingsTab({ toast }) {
         <section className="space-y-3 max-w-md">
           <div>
             <h3 className="text-heading text-foreground">שינוי אימייל</h3>
-            <p className="text-caption mt-0.5">עדכן את כתובת המייל של חשבון המנהל</p>
+            <p className="text-caption text-muted-foreground mt-0.5">עדכן את כתובת המייל של חשבון המנהל</p>
           </div>
 
           <div className="space-y-1.5">

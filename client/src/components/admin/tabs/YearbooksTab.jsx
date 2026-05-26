@@ -13,10 +13,10 @@ import UploadYearbook from "../../UploadYearbook.jsx";
 import { apiFetch } from "../utils/adminApi";
 
 const TBL_INPUT =
-  "h-7 text-xs px-2 rounded border border-input bg-background text-foreground " +
+  "h-7 text-caption px-2 rounded border border-input bg-background text-foreground " +
   "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-full";
 const TBL_SELECT =
-  "h-7 text-xs px-2 rounded border border-input bg-background text-foreground w-full outline-none focus:ring-1 focus:ring-ring";
+  "h-7 text-caption px-2 rounded border border-input bg-background text-foreground w-full outline-none focus:ring-1 focus:ring-ring";
 
 export default function YearbooksTab({ toast }) {
   const [yearbooks, setYearbooks]     = useState([]);
@@ -154,7 +154,7 @@ export default function YearbooksTab({ toast }) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-caption">
               <thead>
                 <tr className="text-muted-foreground border-b border-border">
                   <th className="text-right py-2 whitespace-nowrap">קוד</th>
@@ -172,7 +172,7 @@ export default function YearbooksTab({ toast }) {
                     <td className="py-2">{c.courseName}</td>
                     <td className="py-2 whitespace-nowrap">ה:{c.lectureHours ?? "-"} · ת:{c.practiceHours ?? "-"} · מ:{c.labHours ?? "-"}</td>
                     <td className="py-2 whitespace-nowrap">{c.credits ?? "-"}</td>
-                    <td className="py-2 text-[11px] text-muted-foreground">
+                    <td className="py-2 text-caption text-muted-foreground">
                       {(c.relations || []).length
                         ? (c.relations || []).map((r) => `${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseCode}`).join(" | ")
                         : "-"}
@@ -245,7 +245,7 @@ export default function YearbooksTab({ toast }) {
                   <Button size="sm" variant="outline" onClick={addRelation}>+ הוספה</Button>
                 </div>
                 {(courseDraft.relations || []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">אין relations</p>
+                  <p className="text-caption text-muted-foreground">אין relations</p>
                 )}
                 {(courseDraft.relations || []).map((r, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
@@ -259,7 +259,7 @@ export default function YearbooksTab({ toast }) {
                     </select>
                     <input className={`${TBL_INPUT} col-span-3 font-mono`} placeholder="קוד" value={r.courseCode} onChange={(e) => updateRelation(i, "courseCode", e.target.value)} />
                     <input className={`${TBL_INPUT} col-span-4`} placeholder="שם" value={r.courseName} onChange={(e) => updateRelation(i, "courseName", e.target.value)} />
-                    <Button size="sm" variant="destructive" className="col-span-2 h-7 text-xs px-2" onClick={() => removeRelation(i)}>🗑</Button>
+                    <Button size="sm" variant="destructive" className="col-span-2 h-7 text-caption px-2" onClick={() => removeRelation(i)}>🗑</Button>
                   </div>
                 ))}
               </div>
