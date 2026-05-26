@@ -63,7 +63,9 @@ function SelectContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  // Standard HTML-select behavior: menu opens fully below the trigger,
+  // first item at the top - NOT aligned to the selected item.
+  alignItemWithTrigger = false,
   ...props
 }) {
   return (

@@ -1,4 +1,13 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const SEMESTERS = [2, 3, 4, 5, 6, 7];
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -115,8 +124,7 @@ export default function LabsViewer() {
     return Object.values(groups);
   }, [labs, courseFilter]);
 
-  const selectClass =
-    "p-2 border border-surface-border rounded-md bg-surface-card text-content-primary outline-none focus:ring-2 focus:ring-brand-navy transition-colors";
+  const yearOptions = yearbooks.length ? yearbooks : [{ id: yearbookId, label: yearbookId }];
 
   return (
     <div className="max-w-250 mx-auto p-4 text-right text-content-primary" dir="rtl">
@@ -126,24 +134,56 @@ export default function LabsViewer() {
       </header>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center mb-6 p-3 bg-surface-raised border border-surface-border rounded-xl">
-        <select value={yearbookId} onChange={(e) => setYearbookId(e.target.value)} className={selectClass}>
-          {(yearbooks.length ? yearbooks : [{ id: yearbookId, label: yearbookId }]).map((y) => (
-            <option key={y.id} value={y.id}>{y.label}</option>
-          ))}
-        </select>
+      <Card className="mb-6">
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
 
-        <select value={semester} onChange={(e) => setSemester(Number(e.target.value))} className={selectClass}>
-          {SEMESTERS.map((s) => <option key={s} value={s}>סמסטר {s}</option>)}
-        </select>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-caption text-content-muted h-4 leading-4">שנתון</Label>
+              <Select value={yearbookId} onValueChange={setYearbookId}>
+                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className={selectClass}>
-          <option value="ALL">כל הקורסים</option>
-          {coursesList.map((c) => (
-            <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
-          ))}
-        </select>
-      </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-caption text-content-muted h-4 leading-4">סמסטר</Label>
+              <Select value={String(semester)} onValueChange={(v) => setSemester(Number(v))}>
+                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEMESTERS.map((s) => (
+                    <SelectItem key={s} value={String(s)}>סמסטר {s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-caption text-content-muted h-4 leading-4">קורס</Label>
+              <Select value={courseFilter} onValueChange={setCourseFilter}>
+                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">כל הקורסים</SelectItem>
+                  {coursesList.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.code} - {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+          </div>
+        </CardContent>
+      </Card>
 
       {loading && <div className="text-body text-bio-green animate-pulse">טוען נתונים...</div>}
       {error && <div className="text-body text-red-600 font-bold">{error}</div>}
