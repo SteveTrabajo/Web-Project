@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 const ADMIN_API = `${API_BASE}/api/admin`;
@@ -51,10 +55,6 @@ export default function AdminLogin({ onSuccess }) {
     setMsg("Password updated successfully");
   };
 
-  const inputClass =
-    "w-full border border-surface-border bg-surface-page text-content-primary rounded-xl px-4 py-3 text-sm outline-none " +
-    "focus:ring-2 focus:ring-brand-navy dark:focus:ring-bio-green-glow transition-colors placeholder:text-content-muted";
-
   const titles = {
     login: "Admin Login",
     forgot: "Reset Password",
@@ -79,36 +79,36 @@ export default function AdminLogin({ onSuccess }) {
           <h2 className="text-center text-lg font-extrabold text-brand-navy dark:text-bio-green-glow tracking-tight">
             {titles[mode]}
           </h2>
-          <p className="text-center text-xs text-content-muted mt-0.5">{subtitles[mode]}</p>
+          <p className="text-center text-xs text-muted-foreground mt-0.5">{subtitles[mode]}</p>
         </div>
       </div>
 
-      <hr className="border-surface-border" />
+      <Separator />
 
       {/* Fields */}
       <div className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-content-muted uppercase tracking-wide">
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-xs uppercase tracking-wide text-muted-foreground">
             Email
-          </label>
-          <input
+          </Label>
+          <Input
+            id="email"
             type="email"
             placeholder="admin@example.com"
-            className={inputClass}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
         {(mode === "login" || mode === "reset") && (
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-content-muted uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs uppercase tracking-wide text-muted-foreground">
               {mode === "login" ? "Password" : "New Password"}
-            </label>
-            <input
+            </Label>
+            <Input
+              id="password"
               type="password"
               placeholder={mode === "login" ? "••••••••" : "Choose a new password"}
-              className={inputClass}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -116,13 +116,13 @@ export default function AdminLogin({ onSuccess }) {
         )}
 
         {mode === "reset" && (
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-content-muted uppercase tracking-wide">
+          <div className="space-y-1.5">
+            <Label htmlFor="code" className="text-xs uppercase tracking-wide text-muted-foreground">
               Reset Code
-            </label>
-            <input
+            </Label>
+            <Input
+              id="code"
               placeholder="Paste code from email"
-              className={inputClass}
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
@@ -136,7 +136,7 @@ export default function AdminLogin({ onSuccess }) {
           className={`text-xs rounded-xl px-3 py-2.5 border ${
             isSuccess
               ? "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
-              : "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              : "text-destructive bg-destructive/10 border-destructive/20"
           }`}
         >
           {msg}
@@ -147,64 +147,58 @@ export default function AdminLogin({ onSuccess }) {
       <div className="space-y-2 pt-1">
         {mode === "login" && (
           <>
-            <button
-              className="w-full bg-brand-navy dark:bg-bio-green-glow dark:text-brand-navy-deep text-white text-sm font-semibold rounded-xl py-2.5 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
-              onClick={login}
-            >
+            <Button className="w-full" onClick={login}>
               Sign In
-            </button>
+            </Button>
             <div className="text-center">
-              <button
-                className="text-xs text-content-muted hover:text-content-primary underline underline-offset-2 transition-colors"
+              <Button
+                variant="link"
+                className="text-xs text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("forgot"); setMsg(""); setIsSuccess(false); }}
               >
                 Forgot password?
-              </button>
+              </Button>
             </div>
           </>
         )}
 
         {mode === "forgot" && (
           <>
-            <button
-              className="w-full bg-brand-navy dark:bg-bio-green-glow dark:text-brand-navy-deep text-white text-sm font-semibold rounded-xl py-2.5 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
-              onClick={sendCode}
-            >
+            <Button className="w-full" onClick={sendCode}>
               Send Reset Code
-            </button>
+            </Button>
             <div className="text-center">
-              <button
-                className="text-xs text-content-muted hover:text-content-primary underline underline-offset-2 transition-colors"
+              <Button
+                variant="link"
+                className="text-xs text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
               >
                 Back to login
-              </button>
+              </Button>
             </div>
           </>
         )}
 
         {mode === "reset" && (
           <>
-            <button
-              className="w-full bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep text-white text-sm font-semibold rounded-xl py-2.5 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
-              onClick={resetPassword}
-            >
+            <Button className="w-full bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep hover:opacity-90" onClick={resetPassword}>
               Update Password
-            </button>
+            </Button>
             <div className="text-center">
-              <button
-                className="text-xs text-content-muted hover:text-content-primary underline underline-offset-2 transition-colors"
+              <Button
+                variant="link"
+                className="text-xs text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
               >
                 Back to login
-              </button>
+              </Button>
             </div>
           </>
         )}
       </div>
 
-      <p className="text-center text-[10px] text-content-muted pt-1">
-        BIO-BOT 2.0 &mdash; Admin Portal
+      <p className="text-center text-[10px] text-muted-foreground pt-1">
+        BIO-BOT 2.0 - Admin Portal
       </p>
     </div>
   );

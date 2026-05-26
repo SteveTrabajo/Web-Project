@@ -2,13 +2,17 @@
 
 ### Added
 - shadcn/ui (canary) initialized for Tailwind v4 - components land in src/components/ui/
-- Primitive components added: Button, Input, Label, Card, Badge, Separator
+- Primitives: Button, Input, Label, Card, Badge, Separator, Dialog, Checkbox, Textarea, Select
 - src/lib/utils.js - shadcn cn() helper
-- client/jsconfig.json - @/* import alias for shadcn compatibility
+- client/jsconfig.json - @/* import alias
 
 ### Modified
-- vite.config.js — added path alias (@/ → src/)
-- index.css — added tw-animate-css import, shadcn @theme inline token block, and shadcn :root/.dark variable mapping wired to existing project colors (brand-navy → --primary light, bio-green-glow → --primary dark)
-- App.css — gutted (content moved to index.css; file was never imported)
-- AdminLogin.jsx — full visual redesign: brand logo badge, mode-aware title/subtitle, labeled inputs, colored success/error feedback banners, polished buttons with dark mode variants
-- AdminPanel.jsx — login now renders in a standalone full-page centered layout; dashboard card widened to 380px
+- vite.config.js - added path alias (@/ -> src/)
+- index.css - tw-animate-css import, shadcn @theme inline token block, :root/.dark variable mapping to project colors
+- App.css - gutted (was never imported; content moved to index.css)
+- AdminLogin.jsx - migrated to shadcn Button/Input/Label/Separator; visual redesign with brand header and centered layout
+- AdminPanel.jsx - login renders as standalone full-page centered layout
+- AdminSecurityUI.jsx - migrated to shadcn Button/Input/Label/Separator; consistent feedback banner
+- FeedbackModal.jsx - migrated to shadcn Dialog/Button/Checkbox/Textarea/Label; Escape + backdrop handled natively
+- UploadYearbook.jsx - migrated to shadcn Card/Button/Input/Label
+- UploadLabs.jsx - migrated to shadcn Card/Button/Input/Label/Select; replaced raw select + custom arrow CSS

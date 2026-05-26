@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:3000";
-
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 /**
  * AdminSecurity.jsx
@@ -11,20 +13,9 @@ const API_BASE =
  * - Change admin password
  * - Change admin email
  *
- * This component is typically shown inside a modal (e.g., from AdminPanel).
- *
  * Backend endpoints used (POST):
  * - {API_BASE}/api/admin/security/change-password
  * - {API_BASE}/api/admin/security/change-email
- *
- * Request body:
- * - change-password: { adminId, newPassword }
- * - change-email:    { adminId, newEmail }
- *
- * Notes:
- * - This component does NOT manage authentication itself.
- * - It assumes the backend enforces authorization/validation.
- * - "adminId" is passed from parent (AdminPanel). In your codebase, it replaces "uid".
  */
 function getAdminToken() {
   try {
@@ -38,6 +29,7 @@ export default function AdminSecurity({ adminId }) {
   const [newPassword, setNewPassword] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [msg, setMsg] = useState("");
+  const [isError, setIsError] = useState(false);
 
   const API = `${API_BASE}/api/admin/security`;
 
@@ -52,75 +44,80 @@ export default function AdminSecurity({ adminId }) {
       },
       body: JSON.stringify(body),
     });
-
     const data = await res.json();
-
     if (!res.ok) {
+      setIsError(true);
       setMsg(data.error || "שגיאה");
       return;
     }
-
-    setMsg("✅ נשמר בהצלחה");
+    setIsError(false);
+    setMsg("נשמר בהצלחה");
   };
 
   return (
-    <div className="space-y-6">
-      {/* Password Update Section */}
-      <div>
-        <div className="font-semibold mb-1">🔐 שינוי סיסמה</div>
+    <div className="space-y-5" dir="rtl">
 
-        {/* New password input (controlled) */}
-        <input
-          type="password"
-          placeholder="סיסמה חדשה"
-          className="w-full border rounded-xl px-3 py-2"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
-
-        {/* Trigger password update request */}
-        <button
-          className="mt-2 text-sm text-blue-600 underline"
-          onClick={() =>
-            post(`${API}/change-password`, {
-              adminId,      // admin identifier (used instead of uid)
-              newPassword,  // new password to be set
-            })
-          }
+      {/* Password section */}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-foreground">שינוי סיסמה</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="new-password" className="text-xs text-muted-foreground">
+            סיסמה חדשה
+          </Label>
+          <Input
+            id="new-password"
+            type="password"
+            placeholder="סיסמה חדשה"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => post(`${API}/change-password`, { adminId, newPassword })}
         >
           עדכן סיסמה
-        </button>
+        </Button>
       </div>
 
-      {/* Email Update Section */}
-      <div>
-        <div className="font-semibold mb-1">✉️ שינוי אימייל</div>
+      <Separator />
 
-        {/* New email input (controlled) */}
-        <input
-          type="email"
-          placeholder="אימייל חדש"
-          className="w-full border rounded-xl px-3 py-2"
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-        />
-
-        {/* Trigger email update request */}
-        <button
-          className="mt-2 text-sm text-blue-600 underline"
-          onClick={() =>
-            post(`${API}/change-email`, {
-              adminId,    // admin identifier (used instead of uid)
-              newEmail,   // new email to be set
-            })
-          }
+      {/* Email section */}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-foreground">שינוי אימייל</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="new-email" className="text-xs text-muted-foreground">
+            אימייל חדש
+          </Label>
+          <Input
+            id="new-email"
+            type="email"
+            placeholder="אימייל חדש"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => post(`${API}/change-email`, { adminId, newEmail })}
         >
           עדכן אימייל
-        </button>
+        </Button>
       </div>
 
-      {/* Feedback message (success/error) */}
-      {msg && <div className="text-sm text-green-600">{msg}</div>}
+      {msg && (
+        <div
+          className={`text-xs rounded-xl px-3 py-2.5 border ${
+            isError
+              ? "text-destructive bg-destructive/10 border-destructive/20"
+              : "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
+          }`}
+        >
+          {msg}
+        </div>
+      )}
     </div>
   );
 }
