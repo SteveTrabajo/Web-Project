@@ -1,11 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
-export function getAdminToken() {
+export function getAdmin() {
   try {
-    return JSON.parse(sessionStorage.getItem("bio_admin") || "null")?.token ?? null;
+    return JSON.parse(sessionStorage.getItem("bio_admin") || "null");
   } catch {
     return null;
   }
+}
+
+export function getAdminToken() {
+  return getAdmin()?.token ?? null;
 }
 
 export async function apiFetch(path, options = {}) {

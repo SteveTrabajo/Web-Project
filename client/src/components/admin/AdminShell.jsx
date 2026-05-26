@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import AdminLogin from "../AdminLogin.jsx";
-import AdminSecurity from "../AdminSecurityUI.jsx";
 
 import AdvisorsTab     from "./tabs/AdvisorsTab.jsx";
 import LabsTab         from "./tabs/LabsTab.jsx";
 import YearbooksTab    from "./tabs/YearbooksTab.jsx";
 import RegistrationTab from "./tabs/RegistrationTab.jsx";
 import FeedbackTab     from "./tabs/FeedbackTab.jsx";
+import SettingsTab     from "./tabs/SettingsTab.jsx";
 
 const NAV_ITEMS = [
   { id: "advisors",     icon: "👨‍🏫", label: "יועצים" },
@@ -18,6 +17,7 @@ const NAV_ITEMS = [
   { id: "yearbooks",    icon: "📚",  label: "שנתון / קורסים" },
   { id: "registration", icon: "📝",  label: "הנחיות רישום" },
   { id: "feedback",     icon: "💬",  label: "משובים" },
+  { id: "settings",     icon: "⚙️",  label: "הגדרות" },
 ];
 
 const TAB_COMPONENTS = {
@@ -26,6 +26,7 @@ const TAB_COMPONENTS = {
   yearbooks:    YearbooksTab,
   registration: RegistrationTab,
   feedback:     FeedbackTab,
+  settings:     SettingsTab,
 };
 
 /**
@@ -45,9 +46,8 @@ export default function AdminShell() {
   const [admin, setAdmin] = useState(() =>
     JSON.parse(sessionStorage.getItem("bio_admin") || "null")
   );
-  const [showSecurity, setShowSecurity] = useState(false);
-  const [activeTab, setActiveTab]       = useState("advisors");
-  const [status, setStatus]             = useState({ type: "idle", msg: "" });
+  const [activeTab, setActiveTab] = useState("advisors");
+  const [status, setStatus]       = useState({ type: "idle", msg: "" });
 
   const isAuthed = !!admin;
   const toast = (type, msg) => setStatus({ type, msg });
@@ -98,24 +98,11 @@ export default function AdminShell() {
               {admin.email}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowSecurity(true)}>
-            אבטחה
-          </Button>
           <Button variant="destructive" size="sm" onClick={handleLogout}>
             התנתקות
           </Button>
         </div>
       </header>
-
-      {/* Security Dialog */}
-      <Dialog open={showSecurity} onOpenChange={setShowSecurity}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle>הגדרות אבטחה</DialogTitle>
-          </DialogHeader>
-          <AdminSecurity adminId={admin.id ?? admin.uid} />
-        </DialogContent>
-      </Dialog>
 
       {/* Status banner */}
       {status.msg && (
