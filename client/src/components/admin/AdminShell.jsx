@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import AdminLogin from "../AdminLogin.jsx";
 import AdminSecurity from "../AdminSecurityUI.jsx";
 
@@ -12,17 +12,33 @@ import YearbooksTab    from "./tabs/YearbooksTab.jsx";
 import RegistrationTab from "./tabs/RegistrationTab.jsx";
 import FeedbackTab     from "./tabs/FeedbackTab.jsx";
 
+const NAV_ITEMS = [
+  { id: "advisors",     icon: "👨‍🏫", label: "יועצים" },
+  { id: "labs",         icon: "🧪",  label: "לוחות מעבדה" },
+  { id: "yearbooks",    icon: "📚",  label: "שנתון / קורסים" },
+  { id: "registration", icon: "📝",  label: "הנחיות רישום" },
+  { id: "feedback",     icon: "💬",  label: "משובים" },
+];
+
+const TAB_COMPONENTS = {
+  advisors:     AdvisorsTab,
+  labs:         LabsTab,
+  yearbooks:    YearbooksTab,
+  registration: RegistrationTab,
+  feedback:     FeedbackTab,
+};
+
 /**
  * AdminShell
  * ----------
- * Top-level admin layout. Owns:
- * - Authentication gate (login screen when not authed)
- * - Page header (title + admin info card with security/logout buttons)
- * - Security settings dialog
- * - Global status toast banner
- * - Tab navigation strip
+ * Dashboard shell with right-side vertical sidebar and single-column main area.
+ * - Auth gate (login screen when not authed)
+ * - Header with page title and inline admin info bar
+ * - Status banner (toast)
+ * - Sticky sidebar nav on the right (RTL)
+ * - Each tab fills the remaining width with no overflow
  *
- * Each tab component manages its own data fetching and CRUD state.
+ * Each tab component manages its own data fetching, CRUD, and editor state.
  * `toast(type, msg)` is passed down so any tab can report success/error.
  */
 export default function AdminShell() {
@@ -57,31 +73,39 @@ export default function AdminShell() {
     );
   }
 
+  const ActiveTabComponent = TAB_COMPONENTS[activeTab];
+
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 text-foreground">
 
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-4" dir="rtl">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold text-brand-navy dark:text-bio-green-glow">אזור מנהל</h1>
-          <p className="text-sm text-muted-foreground">הנחיות רישום · ניהול יועצים · לוחות מעבדה · שנתון וקורסים</p>
+      {/* Header bar */}
+      <header className="flex items-center justify-between gap-4 flex-wrap mb-6" dir="rtl">
+        <div className="space-y-0.5 min-w-0">
+          <h1 className="text-2xl font-extrabold text-brand-navy dark:text-bio-green-glow truncate">
+            אזור מנהל
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            ניהול יועצים, לוחות מעבדה, שנתון וקורסים
+          </p>
         </div>
 
-        <Card className="p-3 w-fit min-w-[220px]">
-          <CardContent className="p-0 space-y-2 text-center">
-            <p className="text-sm font-semibold text-bio-green dark:text-bio-green-glow">מחובר כמנהל ✅</p>
-            <p className="text-xs text-muted-foreground break-all">{admin.email}</p>
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowSecurity(true)}>
-                אבטחה
-              </Button>
-              <Button variant="destructive" size="sm" className="flex-1" onClick={handleLogout}>
-                התנתקות
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
+          <div className="text-right min-w-0">
+            <p className="text-[11px] font-semibold text-bio-green dark:text-bio-green-glow">
+              מחובר כמנהל ✓
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+              {admin.email}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowSecurity(true)}>
+            אבטחה
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleLogout}>
+            התנתקות
+          </Button>
+        </div>
+      </header>
 
       {/* Security Dialog */}
       <Dialog open={showSecurity} onOpenChange={setShowSecurity}>
@@ -97,40 +121,53 @@ export default function AdminShell() {
       {status.msg && (
         <div
           dir="rtl"
-          className={`mb-4 text-sm rounded-2xl border px-4 py-3 ${
+          className={cn(
+            "mb-4 text-sm rounded-2xl border px-4 py-3",
             status.type === "error"
               ? "text-destructive bg-destructive/10 border-destructive/20"
               : status.type === "ok"
               ? "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
               : "text-muted-foreground bg-muted border-border"
-          }`}
+          )}
         >
           {status.msg}
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {/* Tab strip rendered LTR so flex order matches reading order,
-            even though tab content is RTL */}
-        <div dir="ltr">
-          <TabsList className="flex flex-wrap h-auto justify-start gap-1 mb-4 p-1 w-full">
-            <TabsTrigger value="advisors">👨‍🏫 יועצים</TabsTrigger>
-            <TabsTrigger value="labs">🧪 לוחות מעבדה</TabsTrigger>
-            <TabsTrigger value="yearbooks">📚 שנתון / קורסי חובה</TabsTrigger>
-            <TabsTrigger value="registration">📝 הנחיות רישום</TabsTrigger>
-            <TabsTrigger value="feedback">💬 משובים</TabsTrigger>
-          </TabsList>
-        </div>
+      {/* Dashboard layout: sidebar on right, content on left */}
+      <div dir="rtl" className="flex flex-col md:flex-row gap-4 items-start">
 
-        <div dir="rtl">
-          <TabsContent value="advisors"><AdvisorsTab toast={toast} /></TabsContent>
-          <TabsContent value="labs"><LabsTab toast={toast} /></TabsContent>
-          <TabsContent value="yearbooks"><YearbooksTab toast={toast} /></TabsContent>
-          <TabsContent value="registration"><RegistrationTab toast={toast} /></TabsContent>
-          <TabsContent value="feedback"><FeedbackTab toast={toast} /></TabsContent>
-        </div>
-      </Tabs>
+        {/* Right sidebar (visible right in RTL) */}
+        <aside className="w-full md:w-56 md:shrink-0">
+          <Card className="p-2 md:sticky md:top-4">
+            <nav className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-right shrink-0 md:w-full",
+                      isActive
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </Card>
+        </aside>
+
+        {/* Main content area */}
+        <main className="flex-1 min-w-0 w-full">
+          <ActiveTabComponent toast={toast} />
+        </main>
+      </div>
     </div>
   );
 }
