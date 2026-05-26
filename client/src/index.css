@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* Class-based dark mode - "dark" class on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -62,6 +63,86 @@
   --surface-border:  #1C3050;
   --content-primary: #DEE9F4;
   --content-muted:   #7BA8C4;
+}
+
+/* ============================================================
+   SHADCN TOKEN MAPPING
+   Maps shadcn's CSS variable contract onto project colors.
+   shadcn components read from --background, --primary, etc.
+   ============================================================ */
+
+@theme inline {
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:          var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* shadcn token values — light mode */
+:root {
+  --background:           #EFF6EF;  /* surface-page */
+  --foreground:           #1A2B1C;  /* content-primary */
+  --card:                 #FFFFFF;  /* surface-card */
+  --card-foreground:      #1A2B1C;
+  --primary:              #162A5A;  /* brand-navy */
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #E2EEE4;  /* surface-raised */
+  --secondary-foreground: #1A2B1C;
+  --muted:                #E2EEE4;
+  --muted-foreground:     #4E6A52;  /* content-muted */
+  --accent:               #E2EEE4;
+  --accent-foreground:    #1A2B1C;
+  --destructive:          #DC2626;
+  --border:               #BFCFC1;  /* surface-border */
+  --input:                #BFCFC1;
+  --ring:                 #162A5A;
+  --radius:               0.75rem;
+}
+
+/* shadcn token values — dark mode */
+.dark {
+  --background:           #060D18;
+  --foreground:           #DEE9F4;
+  --card:                 #0C1A2E;
+  --card-foreground:      #DEE9F4;
+  --primary:              #34D399;  /* bio-green-glow */
+  --primary-foreground:   #0B1220;
+  --secondary:            #112034;
+  --secondary-foreground: #DEE9F4;
+  --muted:                #112034;
+  --muted-foreground:     #7BA8C4;
+  --accent:               #112034;
+  --accent-foreground:    #DEE9F4;
+  --destructive:          #F87171;
+  --border:               #1C3050;
+  --input:                #1C3050;
+  --ring:                 #34D399;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 /* ============================================================
