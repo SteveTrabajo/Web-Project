@@ -281,7 +281,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 bg-slate-50/50 min-h-screen dark:bg-black/20 font-sans">
       
       {/* Sticky Header */}
-      <div className="sticky top-4 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-lg shadow-slate-200/50 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap transition-all">
+      <div className="sticky top-4 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap transition-all">
         <div className="flex flex-col">
           <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
             <span className="w-2 h-6 bg-indigo-500 rounded-full inline-block"></span>
