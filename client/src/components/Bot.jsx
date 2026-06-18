@@ -452,7 +452,8 @@ export default function ChatBot() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setInput(val);
-                    fetchSuggestions(val);
+                    clearTimeout(typingTimerRef.current);
+                    typingTimerRef.current = setTimeout(() => fetchSuggestions(val), 300);
                   }}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}

@@ -87,7 +87,8 @@ const askLimiter = rateLimit({
 app.use("/api", yearbooksRoutes);
 app.use("/api", labsRoutes);
 app.use("/api", advisorRoutes);
-app.use("/api", askLimiter, askRoutes);
+app.use("/api/ask", askLimiter);
+app.use("/api", askRoutes);
 app.use("/api", feedbackRoutes);
 
 /* ======================
