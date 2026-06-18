@@ -20,6 +20,8 @@ import registrationGuidelinesAdmin from "./routes/admin/registrationGuidelinesAd
 import yearbooksAdminRoutes from "./routes/admin/yearbooksAdmin.js";
 import feedbackRoutes from "./routes/public/feedback.js";
 import feedbackAdminRoutes from "./routes/admin/feedbackAdmin.js";
+import reportsAdminRoutes from "./routes/admin/reports.js";
+import cronRoutes from "./routes/internal/cron.js";
 import { requireAdmin } from "./middleware/authMiddleware.js";
 
 /* ======================
@@ -92,6 +94,12 @@ app.use("/api", askRoutes);
 app.use("/api", feedbackRoutes);
 
 /* ======================
+   Internal Routes
+   Triggered by the scheduled GitHub Action
+====================== */
+app.use("/api/internal", cronRoutes);
+
+/* ======================
    Admin Auth Routes (public - no JWT required)
    Includes login, forgot-password, reset-password
 ====================== */
@@ -108,6 +116,7 @@ app.use("/api/admin", requireAdmin, uploadAdminRoutes);
 app.use("/api/admin", requireAdmin, yearbooksAdminRoutes);
 app.use("/api/admin/registration-guidelines", requireAdmin, registrationGuidelinesAdmin);
 app.use("/api/admin", requireAdmin, feedbackAdminRoutes);
+app.use("/api/admin", requireAdmin, reportsAdminRoutes);
 
 /* ======================
    Start server (Local + Render)

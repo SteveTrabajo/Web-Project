@@ -1,8 +1,8 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import { db } from "../../server.js";
+import { transporter } from "../../services/mailer.js";
 
 const router = express.Router();
 const ADMIN_ID = "admin1";
@@ -69,11 +69,6 @@ router.post("/forgot-password", async (req, res) => {
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   await adminRef.update({ resetCode: code, resetAt: Date.now() });
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
-  });
 
   await transporter.sendMail({
     from: "BIO-BOT",

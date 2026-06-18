@@ -1,0 +1,18 @@
+name: Weekly Report
+
+on:
+  schedule:
+    - cron: "0 8 * * 0" # Sundays at 08:00 UTC
+  workflow_dispatch: {} # allows manual runs from the Actions tab
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call report endpoint
+        run: |
+          curl -fsS -X POST "$SERVER_URL/api/internal/run-report" \
+            -H "x-cron-secret: $CRON_SECRET"
+        env:
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
