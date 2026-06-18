@@ -36,6 +36,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
       "https://web-app-navy-five.vercel.app",
+      "https://web-project-gules-sigma.vercel.app/"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
