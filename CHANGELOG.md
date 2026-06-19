@@ -1,15 +1,12 @@
-2026-05-26
+2026-06-19
 
 ### Added
-- tabs/SettingsTab.jsx - admin settings page with password + email change sections
-- index.css typography scale: text-page-title, text-heading, text-body, text-caption (4 levels, ~2px steps)
-- --popover / --popover-foreground tokens (solid white light / solid navy dark)
+- routes/admin/unansweredAdmin.js - GET (paginated + date filters) and DELETE for unanswered questions
+- tabs/UnansweredTab.jsx - admin dashboard to view and delete questions flagged as unhelpful
 
 ### Modified
-- index.css - bumped html font-size to 17px; added font-synthesis so font-bold renders bolder under Heebo Light
-- AdminShell.jsx - added "settings" nav item; removed security button, dialog, and AdminSecurity import
-- adminApi.js - added getAdmin() helper; getAdminToken() now reuses it
-- All admin tabs migrated to the new typography scale
-
-### Removed
-- AdminSecurityUI.jsx - content migrated to SettingsTab
+- routes/public/feedback.js - negative feedback now also stores last 5 questions in unansweredQuestions collection
+- server.js - mounted unansweredAdmin route behind requireAdmin
+- FeedbackModal.jsx - sends questions + yearbook in the feedback payload
+- Bot.jsx - tracks last 5 typed questions per session and passes them to the modal
+- AdminShell.jsx - added "unanswered" nav item and tab

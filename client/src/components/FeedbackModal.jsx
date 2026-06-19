@@ -24,9 +24,9 @@ const REASON_OPTIONS = [
 
 /**
  * FeedbackModal
- * Props: isOpen, onClose, onSubmit
+ * Props: isOpen, onClose, onSubmit, questions, yearbook
  */
-export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
+export default function FeedbackModal({ isOpen, onClose, onSubmit, questions = [], yearbook = null }) {
   const [rating,  setRating]  = useState(null);
   const [reasons, setReasons] = useState([]);
   const [comment, setComment] = useState("");
@@ -50,7 +50,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit }) {
       const res = await fetch(`${API_BASE}/api/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, reasons, comment }),
+        body: JSON.stringify({ rating, reasons, comment, questions, yearbook }),
       });
       if (!res.ok) throw new Error("server error");
       setPhase("done");

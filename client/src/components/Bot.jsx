@@ -27,6 +27,7 @@ export default function ChatBot() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasExchange, setHasExchange] = useState(false);
+  const [recentQuestions, setRecentQuestions] = useState([]);
   const [isBotResponding, setIsBotResponding] = useState(false);
   const [isUserTyping, setIsUserTyping] = useState(false);
   const typingTimerRef = useRef(null);
@@ -64,6 +65,7 @@ export default function ChatBot() {
   const startChat = () => {
     setMessages([]);
     setHasExchange(false);
+    setRecentQuestions([]);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
     addBot(`
   <div class="space-y-2">
@@ -98,6 +100,7 @@ export default function ChatBot() {
       return;
     }
     addUser(q);
+    setRecentQuestions((prev) => [...prev, q].slice(-5));
     setInput("");
     setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
@@ -479,6 +482,8 @@ export default function ChatBot() {
         isOpen={showFeedback}
         onClose={() => setShowFeedback(false)}
         onSubmit={() => { setShowFeedback(false); startChat(); }}
+        questions={recentQuestions}
+        yearbook={context.yearbook}
       />
     </div>
   );

@@ -20,6 +20,7 @@ import registrationGuidelinesAdmin from "./routes/admin/registrationGuidelinesAd
 import yearbooksAdminRoutes from "./routes/admin/yearbooksAdmin.js";
 import feedbackRoutes from "./routes/public/feedback.js";
 import feedbackAdminRoutes from "./routes/admin/feedbackAdmin.js";
+import unansweredAdminRoutes from "./routes/admin/unansweredAdmin.js";
 import reportsAdminRoutes from "./routes/admin/reports.js";
 import cronRoutes from "./routes/internal/cron.js";
 import { requireAdmin } from "./middleware/authMiddleware.js";
@@ -118,6 +119,7 @@ app.use("/api/admin", requireAdmin, uploadAdminRoutes);
 app.use("/api/admin", requireAdmin, yearbooksAdminRoutes);
 app.use("/api/admin/registration-guidelines", requireAdmin, registrationGuidelinesAdmin);
 app.use("/api/admin", requireAdmin, feedbackAdminRoutes);
+app.use("/api/admin", requireAdmin, unansweredAdminRoutes);
 app.use("/api/admin", requireAdmin, reportsAdminRoutes);
 
 /* ======================
