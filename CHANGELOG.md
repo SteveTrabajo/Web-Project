@@ -1,8 +1,11 @@
 2026-06-20
 
+### Added
+- Curated answers feature - admin answers an unanswered question and publishes it; the bot serves it as a safety net (keyword + Gemini match) before the "didn't understand" fallback
+- routes/admin/curatedAnswers.js + tabs/FaqTab.jsx ("תשובות מוכנות") - create/edit/publish/unpublish curated answers, with server-side sanitization
+- ask.js findCuratedAnswer lookup (5-min cache) hooked in just before the generic fallback
+
 ### Modified
-- index.css - raised text contrast (muted-foreground) in light + dark, lifted base/body font weight (no more hairline text)
-- index.css - added dark bot-bubble overrides so brand-navy/gray-900 answer text is no longer invisible
-- AdminRegistrationGuidelines.jsx - split into segmented sub-views (general / contacts / rules+links); contacts now full-width multi-column and de-densified
-- AdminShell.jsx - renamed the "הנחיות רישום" tab to "ניהול סמסטר"
-- tabs/UnansweredTab.jsx - unified card layout: numbered question list, yearbook, and timestamp
+- tabs/UnansweredTab.jsx - "ענה ופרסם" dialog; yearbook now shown as Hebrew name, not id
+- AdminRegistrationGuidelines.jsx - contacts laid out on full-width rows; each category collapsible
+- YearbooksTab.jsx / LabsTab.jsx - selector trigger shows the Hebrew yearbook name, not the id
