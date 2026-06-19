@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { apiFetch } from "../utils/adminApi";
 
 const REASON_LABELS = {
@@ -53,15 +57,24 @@ export default function FeedbackTab({ toast }) {
   const [feedbackPage, setFeedbackPage]       = useState(1);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackHasMore, setFeedbackHasMore] = useState(true);
+  const [exporting, setExporting]             = useState(false);
+  const [emailing, setEmailing]               = useState(false);
+  const [ratingFilter, setRatingFilter]       = useState("all");
+  const [fromDate, setFromDate]               = useState("");
+  const [toDate, setToDate]                   = useState("");
 
   const loadFeedback = async (page = 1) => {
     setFeedbackLoading(true);
     try {
-      const data = await apiFetch(`/api/admin/feedback?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page, limit: 20 });
+      if (ratingFilter !== "all") params.set("rating", ratingFilter);
+      if (fromDate) params.set("from", `${fromDate}T00:00:00.000Z`);
+      if (toDate)   params.set("to",   `${toDate}T23:59:59.999Z`);
+      const data = await apiFetch(`/api/admin/feedback?${params}`);
       const items = data.feedback || [];
       setFeedback((prev) => (page === 1 ? items : [...prev, ...items]));
       setFeedbackPage(page);
-      setFeedbackHasMore(items.length === 20);
+      setFeedbackHasMore(data.hasMore ?? false);
     } catch (e) {
       toast("error", e.message);
     } finally {
@@ -69,16 +82,132 @@ export default function FeedbackTab({ toast }) {
     }
   };
 
-  useEffect(() => { loadFeedback(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pulls every page so the export covers all feedback, not just the loaded ones.
+  const fetchAllFeedback = async () => {
+    const all = [];
+    let page = 1;
+    while (true) {
+      const data = await apiFetch(`/api/admin/feedback?page=${page}&limit=100`);
+      const items = data.feedback || [];
+      all.push(...items);
+      if (items.length < 100) break;
+      page++;
+    }
+    return all;
+  };
+
+  // Filter values shared by the CSV download and the email export.
+  const filterBounds = () => ({
+    rating: ratingFilter === "all" ? undefined : ratingFilter,
+    from: fromDate ? `${fromDate}T00:00:00.000Z` : undefined,
+    to: toDate ? `${toDate}T23:59:59.999Z` : undefined,
+  });
+
+  const applyFilters = (items) => {
+    const { rating, from, to } = filterBounds();
+    return items.filter((f) => {
+      if (rating && f.rating !== rating) return false;
+      if (from && (f.createdAt || "") < from) return false;
+      if (to && (f.createdAt || "") > to) return false;
+      return true;
+    });
+  };
+
+  const toCsv = (rows) => {
+    const header = ["דירוג", "סיבות", "הערה", "תאריך"];
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [header.map(esc).join(",")];
+    for (const r of rows) {
+      const rating = r.rating === "positive" ? "חיובי" : "שלילי";
+      const reasons = (r.reasons || []).map((x) => REASON_LABELS[x] ?? x).join("; ");
+      const date = r.createdAt ? new Date(r.createdAt).toLocaleString("he-IL") : "";
+      lines.push([rating, reasons, r.comment, date].map(esc).join(","));
+    }
+    // BOM so Excel reads the Hebrew as UTF-8.
+    return "﻿" + lines.join("\r\n");
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const rows = applyFilters(await fetchAllFeedback());
+      if (rows.length === 0) {
+        toast("error", "אין משובים לייצוא");
+        return;
+      }
+      const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("ok", `יוצאו ${rows.length} משובים`);
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleEmailExport = async () => {
+    setEmailing(true);
+    try {
+      const data = await apiFetch("/api/admin/feedback/export-email", {
+        method: "POST",
+        body: filterBounds(),
+      });
+      toast("ok", `נשלחו ${data.count} משובים למייל`);
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setEmailing(false);
+    }
+  };
+
+  // Reload from page 1 whenever a filter changes, and on initial mount.
+  useEffect(() => { loadFeedback(1); }, [ratingFilter, fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
           <h2 className="text-heading">משובים</h2>
-          <Button size="sm" variant="outline" onClick={() => loadFeedback(1)} disabled={feedbackLoading}>
-            רענון
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={exporting || feedbackLoading}>
+              {exporting ? "מייצא..." : "ייצוא CSV"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleEmailExport} disabled={emailing || feedbackLoading}>
+              {emailing ? "שולח..." : "שליחה למייל"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => loadFeedback(1)} disabled={feedbackLoading}>
+              רענון
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3 mb-4">
+          <div className="space-y-1">
+            <label className="text-caption text-muted-foreground">דירוג</label>
+            <Select value={ratingFilter} onValueChange={setRatingFilter}>
+              <SelectTrigger dir="rtl" className="w-36">
+                <span>{{ all: "הכל", positive: "חיובי", negative: "שלילי" }[ratingFilter]}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">הכל</SelectItem>
+                <SelectItem value="positive">חיובי</SelectItem>
+                <SelectItem value="negative">שלילי</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-caption text-muted-foreground">מתאריך</label>
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-40" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-caption text-muted-foreground">עד תאריך</label>
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40" />
+          </div>
         </div>
 
         {feedbackLoading && feedback.length === 0 ? (

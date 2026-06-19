@@ -14,7 +14,7 @@ router.post("/run-report", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("cron report error:", err);
-    res.status(500).json({ error: "report failed", detail: err.message });
+    res.status(500).json({ error: "report failed" });
   }
 });
 
