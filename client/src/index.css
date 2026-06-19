@@ -51,8 +51,8 @@
   --surface-card:    #FFFFFF;
   --surface-raised:  #E2EEE4;
   --surface-border:  #BFCFC1;
-  --content-primary: #1A2B1C;
-  --content-muted:   #4E6A52;
+  --content-primary: #142117;
+  --content-muted:   #36513B;
 }
 
 /* --- Dark mode surfaces (bioluminescent lab: deep navy-black, clearly distinct) --- */
@@ -61,8 +61,8 @@
   --surface-card:    #0C1A2E;
   --surface-raised:  #112034;
   --surface-border:  #1C3050;
-  --content-primary: #DEE9F4;
-  --content-muted:   #7BA8C4;
+  --content-primary: #EAF2FB;
+  --content-muted:   #AFCBDF;
 }
 
 /* ============================================================
@@ -102,19 +102,19 @@
 /* shadcn token values - light mode */
 :root {
   --background:           #EFF6EF;  /* surface-page */
-  --foreground:           #1A2B1C;  /* content-primary */
+  --foreground:           #142117;  /* content-primary */
   --card:                 #FFFFFF;  /* surface-card */
-  --card-foreground:      #1A2B1C;
+  --card-foreground:      #142117;
   --popover:              #FFFFFF;  /* solid white - fixes Dialog/Select transparency */
-  --popover-foreground:   #1A2B1C;
+  --popover-foreground:   #142117;
   --primary:              #162A5A;  /* brand-navy */
   --primary-foreground:   #FFFFFF;
   --secondary:            #E2EEE4;  /* surface-raised */
-  --secondary-foreground: #1A2B1C;
+  --secondary-foreground: #142117;
   --muted:                #E2EEE4;
-  --muted-foreground:     #4E6A52;  /* content-muted */
+  --muted-foreground:     #36513B;  /* content-muted */
   --accent:               #E2EEE4;
-  --accent-foreground:    #1A2B1C;
+  --accent-foreground:    #142117;
   --destructive:          #DC2626;
   --border:               #BFCFC1;  /* surface-border */
   --input:                #BFCFC1;
@@ -125,19 +125,19 @@
 /* shadcn token values - dark mode */
 .dark {
   --background:           #060D18;
-  --foreground:           #DEE9F4;
+  --foreground:           #EAF2FB;
   --card:                 #0C1A2E;
-  --card-foreground:      #DEE9F4;
+  --card-foreground:      #EAF2FB;
   --popover:              #0C1A2E;  /* solid navy - matches card */
-  --popover-foreground:   #DEE9F4;
+  --popover-foreground:   #EAF2FB;
   --primary:              #34D399;  /* bio-green-glow */
   --primary-foreground:   #0B1220;
   --secondary:            #112034;
-  --secondary-foreground: #DEE9F4;
+  --secondary-foreground: #EAF2FB;
   --muted:                #112034;
-  --muted-foreground:     #7BA8C4;
+  --muted-foreground:     #AFCBDF;
   --accent:               #112034;
-  --accent-foreground:    #DEE9F4;
+  --accent-foreground:    #EAF2FB;
   --destructive:          #F87171;
   --border:               #1C3050;
   --input:                #1C3050;
@@ -170,6 +170,9 @@ body,
   padding: 0;
   width: 100%;
   font-family: "Heebo", ui-sans-serif, system-ui, sans-serif;
+  /* Only Heebo Light (300) is shipped; lift the baseline to 400 and let
+     font-synthesis thicken it so default text is not hairline-thin. */
+  font-weight: 400;
   font-synthesis: weight style;
 }
 
@@ -188,8 +191,8 @@ body,
   /* Size + weight only. Apply text-muted-foreground (or any color) separately. */
   .text-page-title { @apply text-xl   font-extrabold tracking-tight; }
   .text-heading    { @apply text-base font-bold; }
-  .text-body       { @apply text-sm; }
-  .text-caption    { @apply text-xs; }
+  .text-body       { @apply text-sm   font-medium; }
+  .text-caption    { @apply text-xs   font-medium; }
 }
 
 /* ============================================================
@@ -265,6 +268,9 @@ body,
 
 .dark .bot-bubble { color: var(--content-primary); }
 .dark .bot-bubble a { color: var(--color-bio-green-glow); }
+/* brand-navy headings collide with the dark card; remap to the green accent. */
+.dark .bot-bubble .text-brand-navy { color: var(--color-bio-green-glow); }
+.dark .bot-bubble .text-gray-900,
 .dark .bot-bubble .text-gray-800,
 .dark .bot-bubble .text-gray-700 { color: var(--content-primary); }
 .dark .bot-bubble .text-gray-600,
