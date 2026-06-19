@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Call report endpoint
         run: |
-          curl -sS -X POST "$SERVER_URL/api/internal/run-report" \
+          curl -fsS -X POST "$SERVER_URL/api/internal/run-report" \
             -H "x-cron-secret: $CRON_SECRET" \
             -w "\nHTTP %{http_code}\n"
         env:
