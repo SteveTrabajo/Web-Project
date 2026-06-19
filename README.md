@@ -103,24 +103,29 @@ If a student expresses emotional or academic distress, the system responds **emp
 
 ### Key API Routes
 - `/api/ask` – Main question answering endpoint  
-- `/api/courses/suggest` – Course autocomplete  
 - `/api/labs/*` – Lab-related queries  
+- `/api/feedback` – Anonymous student feedback (no auth)  
+- `/api/admin/*` – Admin CRUD, uploads, feedback export, reports (JWT)  
+- `/api/internal/run-report` – Weekly report trigger (GitHub Actions, secret-gated)  
 
 ### Data Sources (Firestore)
 - `yearbooks/{id}/requiredCourses` – Courses & relations  
 - `registrationGuidelines/semester_X` – Registration rules  
 - `labs` – Lab schedules  
+- `feedback` – Anonymous student feedback  
+- `admins` – Admin accounts (bcrypt-hashed passwords)  
 
 ---
 
 ## 🧩 Technologies Used
 
-- Node.js
-- Express
-- Firebase Firestore
-- Google Gemini (Generative AI)
-- REST API
-- ES Modules
+- Node.js + Express (ES Modules)
+- Firebase Firestore (Admin SDK)
+- Google Gemini (intent classification)
+- React 19 + Vite + Tailwind CSS v4
+- shadcn/ui (@base-ui/react)
+- Brevo HTTP API (transactional email)
+- GitHub Actions (weekly scheduled report)
 
 ---
 
@@ -130,10 +135,15 @@ If a student expresses emotional or academic distress, the system responds **emp
 
 Create a `.env` file inside the `server` directory:
 
-GEMINI_API_KEY=your_gemini_api_key  
-FIREBASE_PROJECT_ID=your_firebase_project_id  
-FIREBASE_CLIENT_EMAIL=your_firebase_client_email  
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GEMINI_API_KEY=  
+FIREBASE_PROJECT_ID=  
+FIREBASE_CLIENT_EMAIL=  
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"  
+JWT_SECRET=  
+BREVO_API_KEY=  
+BREVO_SENDER=  
+CRON_SECRET=  
+PORT=5000
 
 
 ---
@@ -146,7 +156,7 @@ VITE_API_BASE=http://localhost:5000
 
 Production (Render backend):
 
-VITE_API_BASE=https://web-app-k033.onrender.com
+VITE_API_BASE=https://web-project-dz5u.onrender.com
 
 ---
 
@@ -156,12 +166,17 @@ VITE_API_BASE=https://web-app-k033.onrender.com
 
 cd server  
 npm install  
-pip install -r requirements.txt  
-npm start  
+node server.js  
 
-Server will run on:
+Server will run on http://localhost:5000 (or `PORT` if set).
 
-http://localhost:5000
+First run — seed the admin account:
+
+node seed-admin.js
+
+Python parsers (only needed for DOCX/Excel uploads):
+
+pip install python-docx firebase-admin
 
 ---
 
@@ -188,7 +203,7 @@ client
 
 3. Add environment variable:
 
-VITE_API_BASE=https://web-app-k033.onrender.com
+VITE_API_BASE=https://web-project-dz5u.onrender.com
 
 4. Deploy normally.
 
@@ -198,13 +213,13 @@ VITE_API_BASE=https://web-app-k033.onrender.com
 
 Build Command:
 
-pip install -r requirements.txt && npm install
+npm install
 
 Start Command:
 
-npm start
+node server.js
 
-Make sure all environment variables are configured in Render.
+Add all `server/.env` variables in the Render dashboard. For the GitHub Actions weekly report, set `RENDER_URL` and `CRON_SECRET` as repository secrets.
 
 ---
 
@@ -212,17 +227,18 @@ Make sure all environment variables are configured in Render.
 
 Frontend:
 
-https://web-app-navy-five.vercel.app
+https://web-project-gules-sigma.vercel.app
 
 Backend:
 
-https://web-app-k033.onrender.com
+https://web-project-dz5u.onrender.com
 
 ---
 
 ## ⚠️ Notes
 
-- Frontend deployed on Vercel.  
-- Backend deployed on Render.  
-- Firestore is used as the database.  
-- Google Gemini is used for AI intent classification.
+- Frontend deployed on Vercel, backend on Render (free tier — cold starts possible).  
+- Render free tier blocks outbound SMTP; email is sent via Brevo HTTP API instead.  
+- Firestore is used as the database (no SQL).  
+- Google Gemini is used for AI intent classification.  
+
