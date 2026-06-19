@@ -33,12 +33,14 @@ const app = express();
    CORS (Local + Vercel)
 ====================== */
 app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://web-project-gules-sigma.vercel.app"
-    ],
+    cors({
+    origin: (origin, cb) => {
+      const allowed =
+        !origin ||
+        /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+        origin === "https://web-project-gules-sigma.vercel.app";
+      cb(allowed ? null : new Error("CORS"), allowed);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })

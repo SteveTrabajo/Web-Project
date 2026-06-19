@@ -66,11 +66,15 @@ export default function FeedbackTab({ toast }) {
   const loadFeedback = async (page = 1) => {
     setFeedbackLoading(true);
     try {
-      const data = await apiFetch(`/api/admin/feedback?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page, limit: 20 });
+      if (ratingFilter !== "all") params.set("rating", ratingFilter);
+      if (fromDate) params.set("from", `${fromDate}T00:00:00.000Z`);
+      if (toDate)   params.set("to",   `${toDate}T23:59:59.999Z`);
+      const data = await apiFetch(`/api/admin/feedback?${params}`);
       const items = data.feedback || [];
       setFeedback((prev) => (page === 1 ? items : [...prev, ...items]));
       setFeedbackPage(page);
-      setFeedbackHasMore(items.length === 20);
+      setFeedbackHasMore(data.hasMore ?? false);
     } catch (e) {
       toast("error", e.message);
     } finally {
@@ -161,7 +165,8 @@ export default function FeedbackTab({ toast }) {
     }
   };
 
-  useEffect(() => { loadFeedback(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Reload from page 1 whenever a filter changes, and on initial mount.
+  useEffect(() => { loadFeedback(1); }, [ratingFilter, fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card>
@@ -185,7 +190,9 @@ export default function FeedbackTab({ toast }) {
           <div className="space-y-1">
             <label className="text-caption text-muted-foreground">דירוג</label>
             <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger dir="rtl" className="w-36"><SelectValue /></SelectTrigger>
+              <SelectTrigger dir="rtl" className="w-36">
+                <span>{{ all: "הכל", positive: "חיובי", negative: "שלילי" }[ratingFilter]}</span>
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">הכל</SelectItem>
                 <SelectItem value="positive">חיובי</SelectItem>
