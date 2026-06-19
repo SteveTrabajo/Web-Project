@@ -10,11 +10,6 @@ const REASON_LABELS = {
   other:         "אחר",
 };
 
-// Aggregates feedback created since the given timestamp into a stats object.
-export async function buildReportStats(sinceMs) {
-  const sinceIso = new Date(sinceMs).toISOString();
-}
-
 // Fetches feedback filtered by rating and an ISO date range.
 // rating: "positive" | "negative" | undefined (all). from/to: ISO strings.
 export async function fetchFeedback({ rating, from, to } = {}) {
