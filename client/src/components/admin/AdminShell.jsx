@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { id: "advisors",     icon: "👨‍🏫", label: "יועצים" },
   { id: "labs",         icon: "🧪",  label: "לוחות מעבדה" },
   { id: "yearbooks",    icon: "📚",  label: "שנתון / קורסים" },
-  { id: "registration", icon: "📝",  label: "הנחיות רישום" },
+  { id: "registration", icon: "📝",  label: "ניהול סמסטר" },
   { id: "feedback",     icon: "💬",  label: "משובים" },
   { id: "unanswered",   icon: "❓",  label: "שאלות ללא מענה" },
   { id: "settings",     icon: "⚙️",  label: "הגדרות" },

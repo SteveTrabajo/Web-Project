@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 const SEMS = [1, 2, 3, 4, 5, 6, 7, 8];
 
+const SUBVIEWS = [
+  { id: "general",  label: "מידע כללי" },
+  { id: "contacts", label: "אנשי קשר" },
+  { id: "rules",    label: "כללים וקישורים" },
+];
+
 const emptyDoc = (semesterNumber = 1) => ({
   semesterNumber,
   term: "",
@@ -36,7 +42,7 @@ const emptyLink = () => ({ label: "", url: "" });
 
 const deepClone = (x) => JSON.parse(JSON.stringify(x));
 
-// --- Icons (Inline SVGs for zero dependencies) 
+// --- Icons (Inline SVGs for zero dependencies)
 const Icons = {
   Save: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
   Refresh: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>,
@@ -180,6 +186,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   const [doc, setDoc] = useState(emptyDoc(1));
   const [loading, setLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [view, setView] = useState("general");
 
   const docId = useMemo(() => `semester_${semester}`, [semester]);
 
@@ -278,14 +285,14 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 bg-slate-50/50 min-h-screen dark:bg-black/20 font-sans">
-      
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 bg-slate-50/50 min-h-screen dark:bg-black/20 font-sans">
+
       {/* Sticky Header */}
       <div className="sticky top-4 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap transition-all">
         <div className="flex flex-col">
           <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
             <span className="w-2 h-6 bg-indigo-500 rounded-full inline-block"></span>
-            הנחיות רישום
+            ניהול סמסטר
           </h1>
           <div className="text-[11px] font-medium text-slate-400 flex items-center gap-2 mt-1">
             <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{docId}</span>
@@ -322,165 +329,79 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        
-        {/* Left Column: General Info & Window */}
-        <div className="xl:col-span-8 space-y-6">
-          <Card>
-            <SectionHeader title="מידע כללי" icon={Icons.FileText} />
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              <div className="md:col-span-8">
-                <Field label="כותרת ראשית להצגה">
-                  <TextInput
-                    value={doc.title || ""}
-                    onChange={(e) => update("title", e.target.value)}
-                    placeholder='לדוגמה: "הנחיות רישום מחושב לקורסים — סמסטר 1"'
-                    className="font-bold text-base"
-                  />
-                </Field>
-              </div>
-              <div className="md:col-span-4">
-                <Field label="סמסטר משנה">
-                  <TextInput
-                    value={doc.term || ""}
-                    onChange={(e) => update("term", e.target.value)}
-                    placeholder="A או B"
-                    className="text-center font-mono"
-                  />
-                </Field>
-              </div>
-
-              <div className="md:col-span-12">
-                <Field label="קהל יעד / קבוצה">
-                  <TextInput
-                    value={doc.audience?.cohortText || ""}
-                    onChange={(e) => update("audience.cohortText", e.target.value)}
-                    placeholder='לדוגמה: "שנתון חורף 2026 · ביוטכנולוגיה"'
-                  />
-                </Field>
-              </div>
-
-              <div className="md:col-span-12">
-                <Field label="הנחיות נ״ז" hint="מופיע כטקסט בולט בממשק הסטודנט">
-                  <TextArea
-                    value={doc.audience?.creditsRuleText ?? ""}
-                    onChange={(e) => update("audience.creditsRuleText", e.target.value || null)}
-                    placeholder='לדוגמה: "מקסימום 24 נ״ז בסמסטר. מעל זה – באישור יועץ."'
-                  />
-                </Field>
-              </div>
-            </div>
-          </Card>
-
-          {/* Key Rules */}
-          <Card>
-            <SectionHeader 
-              title="כללים חשובים" 
-              icon={Icons.Info} 
-              action={
-                <Btn onClick={() => add("keyRules", emptyRule())}>
-                  <Icons.Plus className="w-3.5 h-3.5" /> הוספה
-                </Btn>
-              }
-            />
-            
-            <div className="space-y-4">
-             {(doc.keyRules || []).map((r, idx) => {
-  const internalCode = r.code || `RULE_${idx + 1}`;
-
-  return (
-    <div
-      key={idx}
-      className="group relative bg-slate-50/50 rounded-xl p-4 border border-slate-200 transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700"
-    >
-      <div className="flex gap-4 items-start">
-        <div className="grow">
-          <Field
-            label="מה יופיע לסטודנטים (הנחיה חשובה)"
-            hint="לכתוב כאן את הכלל כפי שיופיע בעמוד ההנחיות."
+      {/* Sub-view segmented control */}
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-fit">
+        {SUBVIEWS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setView(t.id)}
+            className={
+              "px-4 py-2 rounded-lg text-sm font-semibold transition-all " +
+              (view === t.id
+                ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-900 dark:text-indigo-400"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200")
+            }
           >
-            <TextArea
-              value={r.text || ""}
-              onChange={(e) => {
-                // Always persist the internal code alongside the display text; code is not shown in the UI.
-                updateItem("keyRules", idx, "code", internalCode);
-                updateItem("keyRules", idx, "text", e.target.value);
-              }}
-              placeholder="לדוגמה: חובה להירשם לקורסי חובה לפני בחירה חופשית..."
-              className="min-h-27.5 bg-white leading-6"
-            />
-          </Field>
-
-          {/* Displays the auto-generated internal ID as read-only text rather than an editable code field */}
-          <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            מזהה פנימי אוטומטי: <span className="font-mono">{internalCode}</span>
-          </div>
-        </div>
-
-        <div className="pt-7">
-          <DangerBtn onClick={() => remove("keyRules", idx)} title="מחיקת כלל">
-            <Icons.Trash />
-          </DangerBtn>
-        </div>
+            {t.label}
+          </button>
+        ))}
       </div>
-    </div>
-  );
-})}
 
-            </div>
-          </Card>
-
-          {/* Links */}
-          <Card>
-             <SectionHeader 
-              title="קישורים שימושיים" 
-              icon={Icons.Link} 
-              action={
-                <Btn onClick={() => add("links", emptyLink())}>
-                  <Icons.Plus className="w-3.5 h-3.5" /> הוספה
-                </Btn>
-              }
-            />
-            <div className="space-y-3">
-              {(doc.links || []).map((l, idx) => (
-                <div key={idx} className="flex flex-col md:flex-row gap-3 items-end md:items-start p-3 rounded-xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md hover:border-indigo-100 dark:bg-slate-800 dark:border-slate-700">
-                  <div className="w-full md:w-1/3">
-                    <Field label="כותרת">
-                      <TextInput 
-                        value={l.label || ""} 
-                        onChange={(e) => updateItem("links", idx, "label", e.target.value)} 
-                        placeholder="שם הקישור"
-                        className="bg-slate-50"
-                      />
-                    </Field>
-                  </div>
-                  <div className="w-full md:grow">
-                     <Field label="URL">
-                      <TextInput
-                        value={l.url || ""}
-                        onChange={(e) => updateItem("links", idx, "url", e.target.value)}
-                        placeholder="https://..."
-                        className="font-mono text-indigo-600 bg-slate-50 ltr"
-                      />
-                    </Field>
-                  </div>
-                   <div className="md:pt-6">
-                    <DangerBtn onClick={() => remove("links", idx)}><Icons.Trash /></DangerBtn>
-                  </div>
+      {/* --- General info + registration window --- */}
+      {view === "general" && (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2">
+            <Card>
+              <SectionHeader title="מידע כללי" icon={Icons.FileText} />
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                <div className="md:col-span-8">
+                  <Field label="כותרת ראשית להצגה">
+                    <TextInput
+                      value={doc.title || ""}
+                      onChange={(e) => update("title", e.target.value)}
+                      placeholder='לדוגמה: "הנחיות רישום מחושב לקורסים - סמסטר 1"'
+                      className="font-bold text-base"
+                    />
+                  </Field>
                 </div>
-              ))}
-              {!(doc.links || []).length && <p className="text-slate-400 text-xs italic text-center">אין קישורים</p>}
-            </div>
-          </Card>
-        </div>
+                <div className="md:col-span-4">
+                  <Field label="סמסטר משנה">
+                    <TextInput
+                      value={doc.term || ""}
+                      onChange={(e) => update("term", e.target.value)}
+                      placeholder="A או B"
+                      className="text-center font-mono"
+                    />
+                  </Field>
+                </div>
 
-        {/* Right Column: Time & Contacts */}
-        <div className="xl:col-span-4 space-y-6">
-          
-          {/* Registration Window */}
-          <Card className="border-t-4 border-t-indigo-500">
-             <SectionHeader title="חלון רישום" icon={Icons.Clock} />
-             <div className="space-y-4">
+                <div className="md:col-span-12">
+                  <Field label="קהל יעד / קבוצה">
+                    <TextInput
+                      value={doc.audience?.cohortText || ""}
+                      onChange={(e) => update("audience.cohortText", e.target.value)}
+                      placeholder='לדוגמה: "שנתון חורף 2026 · ביוטכנולוגיה"'
+                    />
+                  </Field>
+                </div>
+
+                <div className="md:col-span-12">
+                  <Field label="הנחיות נ״ז" hint="מופיע כטקסט בולט בממשק הסטודנט">
+                    <TextArea
+                      value={doc.audience?.creditsRuleText ?? ""}
+                      onChange={(e) => update("audience.creditsRuleText", e.target.value || null)}
+                      placeholder='לדוגמה: "מקסימום 24 נ״ז בסמסטר. מעל זה - באישור יועץ."'
+                    />
+                  </Field>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <div>
+            <Card className="border-t-4 border-t-indigo-500">
+              <SectionHeader title="חלון רישום" icon={Icons.Clock} />
+              <div className="space-y-4">
                 <Field label="תאריך פתיחה">
                   <div className="relative">
                     <TextInput
@@ -492,7 +413,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
                   </div>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                   <Field label="התחלה">
+                  <Field label="התחלה">
                     <TextInput
                       type="time"
                       value={doc.registrationWindow?.from || ""}
@@ -509,66 +430,160 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
                     />
                   </Field>
                 </div>
-             </div>
-          </Card>
-
-          {/* Contacts Area */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-2">אנשי קשר</h4>
-
-            {/* Support */}
-            <ContactSection
-              title="תמיכה ומזכירות"
-              items={doc.contacts?.registrationSupport}
-              onAdd={() => add("contacts.registrationSupport", emptyPerson())}
-              onRemove={(i) => remove("contacts.registrationSupport", i)}
-              onChange={(i, k, v) => updateItem("contacts.registrationSupport", i, k, v)}
-              type="simple"
-            />
-
-             {/* Advisors */}
-             <ContactSection
-              title="יועצים אקדמיים"
-              items={doc.contacts?.academicAdvisors}
-              onAdd={() => add("contacts.academicAdvisors", emptyAdvisor())}
-              onRemove={(i) => remove("contacts.academicAdvisors", i)}
-              onChange={(i, k, v) => updateItem("contacts.academicAdvisors", i, k, v)}
-              type="advisor"
-            />
-
-             {/* Mentors */}
-             <ContactSection
-              title="מלווים (מנטורים)"
-              items={doc.contacts?.mentors}
-              onAdd={() => add("contacts.mentors", emptyMentor())}
-              onRemove={(i) => remove("contacts.mentors", i)}
-              onChange={(i, k, v) => updateItem("contacts.mentors", i, k, v)}
-              type="simple"
-            />
-            
-            {/* Exemptions */}
-            <ContactSection
-              title="חריגים ופטורים"
-              items={doc.contacts?.exemptions}
-              onAdd={() => add("contacts.exemptions", emptyPerson())}
-              onRemove={(i) => remove("contacts.exemptions", i)}
-              onChange={(i, k, v) => updateItem("contacts.exemptions", i, k, v)}
-              type="simple"
-            />
-
-             {/* Labs */}
-             <ContactSection
-              title="מעבדות"
-              items={doc.contacts?.labs}
-              onAdd={() => add("contacts.labs", emptyLabContact())}
-              onRemove={(i) => remove("contacts.labs", i)}
-              onChange={(i, k, v) => updateItem("contacts.labs", i, k, v)}
-              type="lab"
-            />
-
+              </div>
+            </Card>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* --- Contacts (full width, multi-column) --- */}
+      {view === "contacts" && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <ContactSection
+            title="תמיכה ומזכירות"
+            items={doc.contacts?.registrationSupport}
+            onAdd={() => add("contacts.registrationSupport", emptyPerson())}
+            onRemove={(i) => remove("contacts.registrationSupport", i)}
+            onChange={(i, k, v) => updateItem("contacts.registrationSupport", i, k, v)}
+            type="simple"
+          />
+          <ContactSection
+            title="יועצים אקדמיים"
+            items={doc.contacts?.academicAdvisors}
+            onAdd={() => add("contacts.academicAdvisors", emptyAdvisor())}
+            onRemove={(i) => remove("contacts.academicAdvisors", i)}
+            onChange={(i, k, v) => updateItem("contacts.academicAdvisors", i, k, v)}
+            type="advisor"
+          />
+          <ContactSection
+            title="מלווים (מנטורים)"
+            items={doc.contacts?.mentors}
+            onAdd={() => add("contacts.mentors", emptyMentor())}
+            onRemove={(i) => remove("contacts.mentors", i)}
+            onChange={(i, k, v) => updateItem("contacts.mentors", i, k, v)}
+            type="simple"
+          />
+          <ContactSection
+            title="חריגים ופטורים"
+            items={doc.contacts?.exemptions}
+            onAdd={() => add("contacts.exemptions", emptyPerson())}
+            onRemove={(i) => remove("contacts.exemptions", i)}
+            onChange={(i, k, v) => updateItem("contacts.exemptions", i, k, v)}
+            type="simple"
+          />
+          <ContactSection
+            title="מעבדות"
+            items={doc.contacts?.labs}
+            onAdd={() => add("contacts.labs", emptyLabContact())}
+            onRemove={(i) => remove("contacts.labs", i)}
+            onChange={(i, k, v) => updateItem("contacts.labs", i, k, v)}
+            type="lab"
+          />
+        </div>
+      )}
+
+      {/* --- Key rules + links --- */}
+      {view === "rules" && (
+        <div className="space-y-6">
+          <Card>
+            <SectionHeader
+              title="כללים חשובים"
+              icon={Icons.Info}
+              action={
+                <Btn onClick={() => add("keyRules", emptyRule())}>
+                  <Icons.Plus className="w-3.5 h-3.5" /> הוספה
+                </Btn>
+              }
+            />
+
+            <div className="space-y-4">
+              {(doc.keyRules || []).map((r, idx) => {
+                const internalCode = r.code || `RULE_${idx + 1}`;
+
+                return (
+                  <div
+                    key={idx}
+                    className="group relative bg-slate-50/50 rounded-xl p-4 border border-slate-200 transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700"
+                  >
+                    <div className="flex gap-4 items-start">
+                      <div className="grow">
+                        <Field
+                          label="מה יופיע לסטודנטים (הנחיה חשובה)"
+                          hint="לכתוב כאן את הכלל כפי שיופיע בעמוד ההנחיות."
+                        >
+                          <TextArea
+                            value={r.text || ""}
+                            onChange={(e) => {
+                              // Always persist the internal code alongside the display text; code is not shown in the UI.
+                              updateItem("keyRules", idx, "code", internalCode);
+                              updateItem("keyRules", idx, "text", e.target.value);
+                            }}
+                            placeholder="לדוגמה: חובה להירשם לקורסי חובה לפני בחירה חופשית..."
+                            className="min-h-27.5 bg-white leading-6"
+                          />
+                        </Field>
+
+                        {/* Displays the auto-generated internal ID as read-only text rather than an editable code field */}
+                        <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          מזהה פנימי אוטומטי: <span className="font-mono">{internalCode}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-7">
+                        <DangerBtn onClick={() => remove("keyRules", idx)} title="מחיקת כלל">
+                          <Icons.Trash />
+                        </DangerBtn>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card>
+            <SectionHeader
+              title="קישורים שימושיים"
+              icon={Icons.Link}
+              action={
+                <Btn onClick={() => add("links", emptyLink())}>
+                  <Icons.Plus className="w-3.5 h-3.5" /> הוספה
+                </Btn>
+              }
+            />
+            <div className="space-y-3">
+              {(doc.links || []).map((l, idx) => (
+                <div key={idx} className="flex flex-col md:flex-row gap-3 items-end md:items-start p-3 rounded-xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md hover:border-indigo-100 dark:bg-slate-800 dark:border-slate-700">
+                  <div className="w-full md:w-1/3">
+                    <Field label="כותרת">
+                      <TextInput
+                        value={l.label || ""}
+                        onChange={(e) => updateItem("links", idx, "label", e.target.value)}
+                        placeholder="שם הקישור"
+                        className="bg-slate-50"
+                      />
+                    </Field>
+                  </div>
+                  <div className="w-full md:grow">
+                    <Field label="URL">
+                      <TextInput
+                        value={l.url || ""}
+                        onChange={(e) => updateItem("links", idx, "url", e.target.value)}
+                        placeholder="https://..."
+                        className="font-mono text-indigo-600 bg-slate-50 ltr"
+                      />
+                    </Field>
+                  </div>
+                  <div className="md:pt-6">
+                    <DangerBtn onClick={() => remove("links", idx)}><Icons.Trash /></DangerBtn>
+                  </div>
+                </div>
+              ))}
+              {!(doc.links || []).length && <p className="text-slate-400 text-xs italic text-center">אין קישורים</p>}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -578,79 +593,75 @@ function ContactSection({ title, items = [], onAdd, onRemove, onChange, type }) 
   const [isOpen, setIsOpen] = useState(false); // Collapsible for cleaner UI on mobile
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md">
-      <div className="p-4 flex items-center justify-between bg-slate-50/50 cursor-pointer" onClick={()=>setIsOpen(!isOpen)}>
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md self-start">
+      <div className="p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
         <div className="font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <Icons.Users className="w-4 h-4 text-slate-400" />
-          {title} 
-          <span className="bg-slate-200 text-slate-600 text-[10px] px-1.5 rounded-full min-w-[1.2rem] text-center">{items.length}</span>
+          {title}
+          <span className="bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-[10px] px-1.5 rounded-full min-w-[1.2rem] text-center">{items.length}</span>
         </div>
         <div className="flex gap-2">
-           <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onAdd(); setIsOpen(true); }}
-            className="p-1 hover:bg-indigo-100 text-indigo-600 rounded transition"
+            className="p-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded transition"
             title="הוסף איש קשר"
-           >
-             <Icons.Plus />
-           </button>
+          >
+            <Icons.Plus />
+          </button>
         </div>
       </div>
-      
+
       {/* List */}
       {(isOpen || items.length > 0) && (
         <div className="p-3 bg-white dark:bg-slate-900 space-y-3">
           {items.length === 0 && isOpen && <div className="text-center text-xs text-slate-400 py-2">אין אנשי קשר ברשימה</div>}
-          
+
           {items.map((item, idx) => (
-            <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50/30 text-xs space-y-2 group hover:border-indigo-200 hover:bg-white transition-colors relative">
-               <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DangerBtn onClick={() => onRemove(idx)}><Icons.Trash className="w-3 h-3" /></DangerBtn>
-               </div>
+            <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 space-y-3 group hover:border-indigo-200 hover:bg-white transition-colors relative dark:bg-slate-800/40 dark:border-slate-700">
+              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DangerBtn onClick={() => onRemove(idx)}><Icons.Trash className="w-3 h-3" /></DangerBtn>
+              </div>
 
-               <div className="grid grid-cols-2 gap-2">
-                 <div>
-                   <label className="block text-[10px] text-slate-400 mb-0.5">שם</label>
-                   <TextInput value={item.name||""} onChange={(e)=>onChange(idx, "name", e.target.value)} className="py-1 px-2 text-xs" />
-                 </div>
-                 <div>
-                   <label className="block text-[10px] text-slate-400 mb-0.5">אימייל</label>
-                   <TextInput value={item.email||""} onChange={(e)=>onChange(idx, "email", e.target.value)} className="py-1 px-2 text-xs" />
-                 </div>
-               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="שם">
+                  <TextInput value={item.name || ""} onChange={(e) => onChange(idx, "name", e.target.value)} />
+                </Field>
+                <Field label="אימייל">
+                  <TextInput value={item.email || ""} onChange={(e) => onChange(idx, "email", e.target.value)} className="ltr text-left" />
+                </Field>
+              </div>
 
-               {type === 'advisor' && (
-                 <div className="pt-2 border-t border-slate-100 mt-2">
-                   <label className="block text-[10px] text-slate-400 mb-1">שיוך אלפביתי ומסלול</label>
-                   <div className="flex gap-2">
-                      <TextInput value={item.assignment?.lastNameFrom||""} onChange={(e)=>{const n={...item.assignment, lastNameFrom:e.target.value}; onChange(idx,"assignment",n)}} placeholder="א" className="py-1 px-2 text-center w-10" />
+              {type === "advisor" && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
+                  <Field label="שיוך אלפביתי ומסלול">
+                    <div className="flex gap-2 items-center">
+                      <TextInput value={item.assignment?.lastNameFrom || ""} onChange={(e) => { const n = { ...item.assignment, lastNameFrom: e.target.value }; onChange(idx, "assignment", n); }} placeholder="א" className="text-center w-14" />
                       <span className="self-center text-slate-300">-</span>
-                      <TextInput value={item.assignment?.lastNameTo||""} onChange={(e)=>{const n={...item.assignment, lastNameTo:e.target.value}; onChange(idx,"assignment",n)}} placeholder="ת" className="py-1 px-2 text-center w-10" />
-                      <TextInput value={item.assignment?.track||""} onChange={(e)=>{const n={...item.assignment, track:e.target.value}; onChange(idx,"assignment",n)}} placeholder="מסלול" className="py-1 px-2 grow" />
-                   </div>
-                 </div>
-               )}
+                      <TextInput value={item.assignment?.lastNameTo || ""} onChange={(e) => { const n = { ...item.assignment, lastNameTo: e.target.value }; onChange(idx, "assignment", n); }} placeholder="ת" className="text-center w-14" />
+                      <TextInput value={item.assignment?.track || ""} onChange={(e) => { const n = { ...item.assignment, track: e.target.value }; onChange(idx, "assignment", n); }} placeholder="מסלול" className="grow" />
+                    </div>
+                  </Field>
+                </div>
+              )}
 
-               {type === 'lab' && (
-                  <div>
-                    <label className="block text-[10px] text-slate-400 mb-0.5">איך לפנות?</label>
-                    <TextInput value={item.howToContact||""} onChange={(e)=>onChange(idx, "howToContact", e.target.value)} className="py-1 px-2 text-xs" />
-                  </div>
-               )}
+              {(type === "simple" || type === "lab") && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="תפקיד">
+                    <TextInput value={item.role || ""} onChange={(e) => onChange(idx, "role", e.target.value)} />
+                  </Field>
+                  {item.phone !== undefined && (
+                    <Field label="טלפון">
+                      <TextInput value={item.phone || ""} onChange={(e) => onChange(idx, "phone", e.target.value)} className="ltr text-left" />
+                    </Field>
+                  )}
+                </div>
+              )}
 
-               {(type === 'simple' || type === 'lab') && (
-                  <div className="grid grid-cols-2 gap-2">
-                     <div>
-                       <label className="block text-[10px] text-slate-400 mb-0.5">תפקיד</label>
-                       <TextInput value={item.role||""} onChange={(e)=>onChange(idx, "role", e.target.value)} className="py-1 px-2 text-xs" />
-                     </div>
-                     {item.phone !== undefined && (
-                        <div>
-                        <label className="block text-[10px] text-slate-400 mb-0.5">טלפון</label>
-                        <TextInput value={item.phone||""} onChange={(e)=>onChange(idx, "phone", e.target.value)} className="py-1 px-2 text-xs" />
-                      </div>
-                     )}
-                  </div>
-               )}
+              {type === "lab" && (
+                <Field label="איך לפנות?">
+                  <TextInput value={item.howToContact || ""} onChange={(e) => onChange(idx, "howToContact", e.target.value)} />
+                </Field>
+              )}
             </div>
           ))}
         </div>
