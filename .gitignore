@@ -26,3 +26,4 @@ dist-ssr
 .env.*
 !.env.example
 CLAUDE.md
+project.md
