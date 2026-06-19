@@ -1,13 +1,19 @@
 import { db } from "../server.js";
 
 const REASON_LABELS = {
-  insufficient: "מידע לא מספיק",
-  unclear: "מידע לא ברור",
-  irrelevant: "תשובה לא רלוונטית",
-  outdated: "מידע לא עדכני",
+
+  insufficient:  "מידע לא מספיק",
+  unclear:       "מידע לא ברור",
+  irrelevant:    "תשובה לא רלוונטית",
+  outdated:      "מידע לא עדכני",
   missing_topic: "נושא לא מכוסה",
-  other: "אחר",
+  other:         "אחר",
 };
+
+// Aggregates feedback created since the given timestamp into a stats object.
+export async function buildReportStats(sinceMs) {
+  const sinceIso = new Date(sinceMs).toISOString();
+}
 
 // Fetches feedback filtered by rating and an ISO date range.
 // rating: "positive" | "negative" | undefined (all). from/to: ISO strings.
