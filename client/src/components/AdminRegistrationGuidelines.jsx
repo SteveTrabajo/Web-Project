@@ -53,6 +53,7 @@ const Icons = {
   Users: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   Link: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
   FileText: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  Chevron: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"/></svg>,
 };
 
 // --- Styled Components ---
@@ -436,9 +437,9 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
         </div>
       )}
 
-      {/* --- Contacts (full width, multi-column) --- */}
+      {/* --- Contacts (each category full-width on its own row) --- */}
       {view === "contacts" && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <ContactSection
             title="תמיכה ומזכירות"
             items={doc.contacts?.registrationSupport}
@@ -593,14 +594,19 @@ function ContactSection({ title, items = [], onAdd, onRemove, onChange, type }) 
   const [isOpen, setIsOpen] = useState(false); // Collapsible for cleaner UI on mobile
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md self-start">
-      <div className="p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md">
+      <div
+        className="p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer select-none"
+        onClick={() => setIsOpen(!isOpen)}
+        role="button"
+        aria-expanded={isOpen}
+      >
         <div className="font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <Icons.Users className="w-4 h-4 text-slate-400" />
           {title}
           <span className="bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-[10px] px-1.5 rounded-full min-w-[1.2rem] text-center">{items.length}</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); onAdd(); setIsOpen(true); }}
             className="p-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded transition"
@@ -608,60 +614,63 @@ function ContactSection({ title, items = [], onAdd, onRemove, onChange, type }) 
           >
             <Icons.Plus />
           </button>
+          <Icons.Chevron className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
         </div>
       </div>
 
       {/* List */}
-      {(isOpen || items.length > 0) && (
+      {isOpen && (
         <div className="p-3 bg-white dark:bg-slate-900 space-y-3">
-          {items.length === 0 && isOpen && <div className="text-center text-xs text-slate-400 py-2">אין אנשי קשר ברשימה</div>}
+          {items.length === 0 && <div className="text-center text-xs text-slate-400 py-2">אין אנשי קשר ברשימה</div>}
 
           {items.map((item, idx) => (
-            <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 space-y-3 group hover:border-indigo-200 hover:bg-white transition-colors relative dark:bg-slate-800/40 dark:border-slate-700">
-              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <DangerBtn onClick={() => onRemove(idx)}><Icons.Trash className="w-3 h-3" /></DangerBtn>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="שם">
-                  <TextInput value={item.name || ""} onChange={(e) => onChange(idx, "name", e.target.value)} />
-                </Field>
-                <Field label="אימייל">
-                  <TextInput value={item.email || ""} onChange={(e) => onChange(idx, "email", e.target.value)} className="ltr text-left" />
-                </Field>
-              </div>
-
-              {type === "advisor" && (
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
-                  <Field label="שיוך אלפביתי ומסלול">
-                    <div className="flex gap-2 items-center">
-                      <TextInput value={item.assignment?.lastNameFrom || ""} onChange={(e) => { const n = { ...item.assignment, lastNameFrom: e.target.value }; onChange(idx, "assignment", n); }} placeholder="א" className="text-center w-14" />
-                      <span className="self-center text-slate-300">-</span>
-                      <TextInput value={item.assignment?.lastNameTo || ""} onChange={(e) => { const n = { ...item.assignment, lastNameTo: e.target.value }; onChange(idx, "assignment", n); }} placeholder="ת" className="text-center w-14" />
-                      <TextInput value={item.assignment?.track || ""} onChange={(e) => { const n = { ...item.assignment, track: e.target.value }; onChange(idx, "assignment", n); }} placeholder="מסלול" className="grow" />
-                    </div>
-                  </Field>
-                </div>
-              )}
-
-              {(type === "simple" || type === "lab") && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="תפקיד">
-                    <TextInput value={item.role || ""} onChange={(e) => onChange(idx, "role", e.target.value)} />
-                  </Field>
-                  {item.phone !== undefined && (
-                    <Field label="טלפון">
-                      <TextInput value={item.phone || ""} onChange={(e) => onChange(idx, "phone", e.target.value)} className="ltr text-left" />
+            <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 group hover:border-indigo-200 hover:bg-white transition-colors dark:bg-slate-800/40 dark:border-slate-700">
+              <div className="flex gap-3 items-start">
+                <div className="grow space-y-3">
+                  {/* One row per person: name, email, and role-specific fields side by side */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <Field label="שם">
+                      <TextInput value={item.name || ""} onChange={(e) => onChange(idx, "name", e.target.value)} />
                     </Field>
+                    <Field label="אימייל">
+                      <TextInput value={item.email || ""} onChange={(e) => onChange(idx, "email", e.target.value)} className="ltr text-left" />
+                    </Field>
+
+                    {(type === "simple" || type === "lab") && (
+                      <Field label="תפקיד">
+                        <TextInput value={item.role || ""} onChange={(e) => onChange(idx, "role", e.target.value)} />
+                      </Field>
+                    )}
+                    {type === "simple" && item.phone !== undefined && (
+                      <Field label="טלפון">
+                        <TextInput value={item.phone || ""} onChange={(e) => onChange(idx, "phone", e.target.value)} className="ltr text-left" />
+                      </Field>
+                    )}
+                    {type === "lab" && (
+                      <Field label="איך לפנות?">
+                        <TextInput value={item.howToContact || ""} onChange={(e) => onChange(idx, "howToContact", e.target.value)} />
+                      </Field>
+                    )}
+                  </div>
+
+                  {type === "advisor" && (
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
+                      <Field label="שיוך אלפביתי ומסלול">
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <TextInput value={item.assignment?.lastNameFrom || ""} onChange={(e) => { const n = { ...item.assignment, lastNameFrom: e.target.value }; onChange(idx, "assignment", n); }} placeholder="א" className="text-center w-14" />
+                          <span className="self-center text-slate-300">-</span>
+                          <TextInput value={item.assignment?.lastNameTo || ""} onChange={(e) => { const n = { ...item.assignment, lastNameTo: e.target.value }; onChange(idx, "assignment", n); }} placeholder="ת" className="text-center w-14" />
+                          <TextInput value={item.assignment?.track || ""} onChange={(e) => { const n = { ...item.assignment, track: e.target.value }; onChange(idx, "assignment", n); }} placeholder="מסלול" className="grow min-w-40" />
+                        </div>
+                      </Field>
+                    </div>
                   )}
                 </div>
-              )}
 
-              {type === "lab" && (
-                <Field label="איך לפנות?">
-                  <TextInput value={item.howToContact || ""} onChange={(e) => onChange(idx, "howToContact", e.target.value)} />
-                </Field>
-              )}
+                <div className="pt-7 shrink-0">
+                  <DangerBtn onClick={() => onRemove(idx)} title="מחיקה"><Icons.Trash /></DangerBtn>
+                </div>
+              </div>
             </div>
           ))}
         </div>
