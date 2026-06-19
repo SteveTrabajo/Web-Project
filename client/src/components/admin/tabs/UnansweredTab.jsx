@@ -3,7 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { apiFetch } from "../utils/adminApi";
+
+// Seed trigger keywords from a question so the admin starts with sensible defaults.
+function deriveKeywords(text = "") {
+  return Array.from(
+    new Set(
+      String(text)
+        .replace(/["'`.,!?;:()]/g, " ")
+        .split(/\s+/)
+        .map((w) => w.trim())
+        .filter((w) => w.length > 2)
+    )
+  ).slice(0, 8).join(", ");
+}
 
 const REASON_LABELS = {
   insufficient:  "מידע לא מספיק",
@@ -33,7 +51,7 @@ function fullDate(createdAt) {
   });
 }
 
-function QuestionCard({ item, onDelete, yearbookLabel }) {
+function QuestionCard({ item, onDelete, onAnswer, yearbookLabel }) {
   const questions = item.questions || [];
   const lastIndex = questions.length - 1;
   const hasFooter = (item.reasons?.length > 0) || item.comment;
@@ -49,9 +67,12 @@ function QuestionCard({ item, onDelete, yearbookLabel }) {
             <div>{relativeTime(item.createdAt)}</div>
             <div className="opacity-70">{fullDate(item.createdAt)}</div>
           </div>
-          <Button size="sm" variant="destructive" onClick={() => onDelete(item.id)}>
-            מחיקה
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => onAnswer(item)}>ענה ופרסם</Button>
+            <Button size="sm" variant="destructive" onClick={() => onDelete(item.id)}>
+              מחיקה
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -113,6 +134,8 @@ export default function UnansweredTab({ toast }) {
   const [fromDate, setFromDate]   = useState("");
   const [toDate, setToDate]       = useState("");
   const [yearbookMap, setYearbookMap] = useState({});
+  const [answerDraft, setAnswerDraft] = useState(null);
+  const [publishing, setPublishing]   = useState(false);
 
   const loadQuestions = async (pageNum = 1) => {
     setLoading(true);
@@ -145,6 +168,48 @@ export default function UnansweredTab({ toast }) {
     }
   };
 
+  const openAnswer = (item) => {
+    const qs = item.questions || [];
+    const last = qs[qs.length - 1] || "";
+    setAnswerDraft({
+      sourceId: item.id,
+      questions: qs,
+      question: last,
+      yearbook: item.yearbook || "",
+      answerText: "",
+      keywords: deriveKeywords(last),
+      allYearbooks: !item.yearbook,
+    });
+  };
+
+  const publishAnswer = async () => {
+    if (!answerDraft?.answerText.trim()) {
+      toast("error", "חסרה תשובה");
+      return;
+    }
+    setPublishing(true);
+    try {
+      await apiFetch("/api/admin/curated-answers", {
+        method: "POST",
+        body: {
+          question: answerDraft.question,
+          answerText: answerDraft.answerText,
+          keywords: answerDraft.keywords.split(",").map((k) => k.trim()).filter(Boolean),
+          yearbook: answerDraft.allYearbooks ? null : (answerDraft.yearbook || null),
+          status: "published",
+          sourceId: answerDraft.sourceId,
+        },
+      });
+      toast("ok", "התשובה פורסמה והוסרה מרשימת השאלות.");
+      setAnswerDraft(null);
+      loadQuestions(1);
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   // Reload from page 1 whenever a filter changes, and on initial mount.
   useEffect(() => { loadQuestions(1); }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -160,6 +225,7 @@ export default function UnansweredTab({ toast }) {
   }, []);
 
   return (
+    <>
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -187,7 +253,7 @@ export default function UnansweredTab({ toast }) {
         ) : (
           <div className="space-y-3">
             {questions.map((q) => (
-              <QuestionCard key={q.id} item={q} onDelete={deleteQuestion} yearbookLabel={yearbookMap[q.yearbook]} />
+              <QuestionCard key={q.id} item={q} onDelete={deleteQuestion} onAnswer={openAnswer} yearbookLabel={yearbookMap[q.yearbook]} />
             ))}
             {hasMore && (
               <div className="pt-2 flex justify-center">
@@ -200,5 +266,66 @@ export default function UnansweredTab({ toast }) {
         )}
       </CardContent>
     </Card>
+
+    <Dialog open={!!answerDraft} onOpenChange={(o) => { if (!o) setAnswerDraft(null); }}>
+      <DialogContent dir="rtl" className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>ענה ופרסם לכלל הסטודנטים</DialogTitle>
+        </DialogHeader>
+        {answerDraft && (
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-1">
+              <p className="text-caption font-semibold text-muted-foreground">שאלות המשתמש</p>
+              <ol className="list-decimal pr-4 space-y-0.5">
+                {answerDraft.questions.map((q, i) => (
+                  <li key={i} className="text-caption text-foreground break-words">{q}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>תשובה (תוצג לסטודנטים)</Label>
+              <Textarea
+                rows={5}
+                value={answerDraft.answerText}
+                onChange={(e) => setAnswerDraft((p) => ({ ...p, answerText: e.target.value }))}
+                placeholder="כתוב/כתבי כאן את התשובה שתוצג בבוט..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>מילות מפתח (מופרדות בפסיק)</Label>
+              <Input
+                value={answerDraft.keywords}
+                onChange={(e) => setAnswerDraft((p) => ({ ...p, keywords: e.target.value }))}
+                placeholder="לדוגמה: רישום, מועד, פתיחה"
+              />
+              <p className="text-caption text-muted-foreground">הבוט משתמש בהן כדי לזהות שאלות דומות.</p>
+            </div>
+
+            <label className="flex items-center gap-2 text-body cursor-pointer">
+              <input
+                type="checkbox"
+                checked={answerDraft.allYearbooks}
+                onChange={(e) => setAnswerDraft((p) => ({ ...p, allYearbooks: e.target.checked }))}
+              />
+              <span>
+                להחיל על כל השנתונים
+                {!answerDraft.allYearbooks && answerDraft.yearbook
+                  ? ` (אחרת: ${yearbookMap[answerDraft.yearbook] || answerDraft.yearbook})`
+                  : ""}
+              </span>
+            </label>
+          </div>
+        )}
+        <DialogFooter className="flex-row gap-2 justify-start">
+          <Button onClick={publishAnswer} disabled={publishing}>
+            {publishing ? "מפרסם..." : "פרסם"}
+          </Button>
+          <Button variant="outline" onClick={() => setAnswerDraft(null)}>ביטול</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

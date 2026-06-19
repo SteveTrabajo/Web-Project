@@ -10,6 +10,7 @@ import YearbooksTab    from "./tabs/YearbooksTab.jsx";
 import RegistrationTab from "./tabs/RegistrationTab.jsx";
 import FeedbackTab     from "./tabs/FeedbackTab.jsx";
 import UnansweredTab   from "./tabs/UnansweredTab.jsx";
+import FaqTab          from "./tabs/FaqTab.jsx";
 import SettingsTab     from "./tabs/SettingsTab.jsx";
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { id: "registration", icon: "📝",  label: "ניהול סמסטר" },
   { id: "feedback",     icon: "💬",  label: "משובים" },
   { id: "unanswered",   icon: "❓",  label: "שאלות ללא מענה" },
+  { id: "faq",          icon: "📌",  label: "תשובות מוכנות" },
   { id: "settings",     icon: "⚙️",  label: "הגדרות" },
 ];
 
@@ -29,6 +31,7 @@ const TAB_COMPONENTS = {
   registration: RegistrationTab,
   feedback:     FeedbackTab,
   unanswered:   UnansweredTab,
+  faq:          FaqTab,
   settings:     SettingsTab,
 };
 

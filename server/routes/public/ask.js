@@ -418,6 +418,77 @@ async function detectEmotion(question) {
 }
 
 /* =============================
+   Curated answers (admin-published Q&A)
+   Consulted only as a safety net, right before the generic fallback.
+============================= */
+
+const _curatedCache = { ts: 0, items: [] };
+const CURATED_TTL = 5 * 60 * 1000;
+
+async function getCuratedAnswersCached() {
+  const now = Date.now();
+  if (_curatedCache.ts && now - _curatedCache.ts < CURATED_TTL) return _curatedCache.items;
+  try {
+    const snap = await db
+      .collection("curatedAnswers")
+      .where("status", "==", "published")
+      .get();
+    _curatedCache.items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    _curatedCache.ts = now;
+  } catch {
+    // keep stale cache on failure
+  }
+  return _curatedCache.items;
+}
+
+async function findCuratedAnswer(question, qNorm, yearbookId) {
+  const all = await getCuratedAnswersCached();
+  const candidates = all.filter((a) => !a.yearbook || a.yearbook === yearbookId);
+  if (!candidates.length) return null;
+
+  const qTokens = new Set(qNorm.split(" ").filter(Boolean));
+
+  // 1) Keyword / token overlap - cheap and deterministic.
+  let best = null;
+  let bestHits = 0;
+  let bestScore = 0;
+  for (const a of candidates) {
+    const kws = (a.keywords || []).map((k) => normalizeHebrew(k)).filter(Boolean);
+    if (!kws.length) continue;
+    let hits = 0;
+    for (const kw of kws) {
+      const parts = kw.split(" ").filter(Boolean);
+      if (parts.length && parts.every((p) => qTokens.has(p))) hits += 1;
+    }
+    const score = hits / kws.length;
+    if (score > bestScore) { bestScore = score; bestHits = hits; best = a; }
+  }
+  if (best && (bestScore >= 0.5 || bestHits >= 2)) return best;
+
+  // 2) Gemini fallback - semantic pick from a shortlist of questions.
+  const shortlist = candidates.slice(0, 25);
+  const list = shortlist
+    .map((a, i) => `${i + 1}. ${a.question || (a.keywords || []).join(", ")}`)
+    .join("\n");
+  const prompt = `
+החזירי JSON בלבד בפורמט: { "id": number | null }
+
+לפנייך רשימת שאלות נפוצות ממוספרת. בהינתן שאלת הסטודנט,
+החזירי את המספר של השאלה התואמת ביותר במשמעות, או null אם אף אחת לא מתאימה.
+
+רשימה:
+${list}
+
+שאלת הסטודנט:
+"${question}"
+`;
+  const result = await callGeminiJson(prompt);
+  const id = result?.id;
+  if (Number.isInteger(id) && id >= 1 && id <= shortlist.length) return shortlist[id - 1];
+  return null;
+}
+
+/* =============================
    Route: /ask
 ============================= */
 
@@ -759,6 +830,9 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
   return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
 }
 
+
+    const curated = await findCuratedAnswer(question, qNorm, yearbookId);
+    if (curated) return res.json({ html: curated.answerHtml });
 
     return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסי שוב.</div>` });
   } catch (err) {
