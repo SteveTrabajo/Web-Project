@@ -131,7 +131,9 @@ export default function YearbooksTab({ toast }) {
             <div className="space-y-1.5">
               <Label>שנתון</Label>
               <Select value={ybId} onValueChange={setYbId}>
-                <SelectTrigger dir="rtl"><SelectValue /></SelectTrigger>
+                <SelectTrigger dir="rtl">
+                  <span>{yearbooks.find((y) => y.id === ybId)?.label || ybId || "בחר שנתון"}</span>
+                </SelectTrigger>
                 <SelectContent>
                   {yearbooks.map((y) => (
                     <SelectItem key={y.id} value={y.id}>{y.label || y.id}</SelectItem>

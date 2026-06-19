@@ -33,7 +33,7 @@ function fullDate(createdAt) {
   });
 }
 
-function QuestionCard({ item, onDelete }) {
+function QuestionCard({ item, onDelete, yearbookLabel }) {
   const questions = item.questions || [];
   const lastIndex = questions.length - 1;
   const hasFooter = (item.reasons?.length > 0) || item.comment;
@@ -42,7 +42,7 @@ function QuestionCard({ item, onDelete }) {
     <div className="rounded-xl border border-border bg-muted/30 overflow-hidden" dir="rtl">
       <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-2.5 border-b border-border bg-muted/50">
         <Badge variant="outline" className="text-caption">
-          {item.yearbook ? `שנתון ${item.yearbook}` : "שנתון לא ידוע"}
+          {item.yearbook ? `שנתון ${yearbookLabel || item.yearbook}` : "שנתון לא ידוע"}
         </Badge>
         <div className="flex items-center gap-3">
           <div className="text-caption text-muted-foreground text-left leading-tight">
@@ -112,6 +112,7 @@ export default function UnansweredTab({ toast }) {
   const [hasMore, setHasMore]     = useState(true);
   const [fromDate, setFromDate]   = useState("");
   const [toDate, setToDate]       = useState("");
+  const [yearbookMap, setYearbookMap] = useState({});
 
   const loadQuestions = async (pageNum = 1) => {
     setLoading(true);
@@ -147,6 +148,17 @@ export default function UnansweredTab({ toast }) {
   // Reload from page 1 whenever a filter changes, and on initial mount.
   useEffect(() => { loadQuestions(1); }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Map yearbook id -> Hebrew display name so cards show the name, not the id.
+  useEffect(() => {
+    apiFetch("/api/yearbooks")
+      .then((data) => {
+        const map = {};
+        (data.yearbooks || []).forEach((y) => { map[y.id] = y.label; });
+        setYearbookMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -175,7 +187,7 @@ export default function UnansweredTab({ toast }) {
         ) : (
           <div className="space-y-3">
             {questions.map((q) => (
-              <QuestionCard key={q.id} item={q} onDelete={deleteQuestion} />
+              <QuestionCard key={q.id} item={q} onDelete={deleteQuestion} yearbookLabel={yearbookMap[q.yearbook]} />
             ))}
             {hasMore && (
               <div className="pt-2 flex justify-center">

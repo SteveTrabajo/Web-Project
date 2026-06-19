@@ -140,7 +140,9 @@ export default function LabsTab({ toast }) {
             <div className="space-y-1.5">
               <Label>שנתון</Label>
               <Select value={labYearbookId} onValueChange={setLabYearbookId}>
-                <SelectTrigger dir="rtl"><SelectValue placeholder="בחרי שנה" /></SelectTrigger>
+                <SelectTrigger dir="rtl">
+                  <span>{labYears.find((y) => y.id === labYearbookId)?.label || "בחרי שנה"}</span>
+                </SelectTrigger>
                 <SelectContent>
                   {labYears.map((y) => (
                     <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>
