@@ -1,5 +1,5 @@
 import { db } from "../server.js";
-import { transporter } from "./mailer.js";
+import { sendEmail } from "./mailer.js";
 import { buildReportStats, renderReportHtml } from "./reportService.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -18,8 +18,7 @@ export async function sendWeeklyReport() {
   const stats = await buildReportStats(Date.now() - WEEK_MS);
   const html = renderReportHtml(stats, "שבועי");
 
-  await transporter.sendMail({
-    from: "BIO-BOT",
+  await sendEmail({
     to,
     subject: "דוח שבועי - BIO-BOT 2.0",
     html,

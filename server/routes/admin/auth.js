@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../../server.js";
-import { transporter } from "../../services/mailer.js";
+import { sendEmail } from "../../services/mailer.js";
 
 const router = express.Router();
 const ADMIN_ID = "admin1";
@@ -70,8 +70,7 @@ router.post("/forgot-password", async (req, res) => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   await adminRef.update({ resetCode: code, resetAt: Date.now() });
 
-  await transporter.sendMail({
-    from: "BIO-BOT",
+  await sendEmail({
     to: email,
     subject: "קוד לאיפוס סיסמה",
     text: `קוד האימות שלך הוא: ${code}`,
