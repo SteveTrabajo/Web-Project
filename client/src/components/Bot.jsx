@@ -8,12 +8,16 @@ const HEB_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
 
 const SECRETARY_PHONE = "04-9901927";
 const SECRETARY_EMAIL = "nataliav@braude.ac.il";
-const EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
-const ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
+const FALLBACK_EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
+const FALLBACK_ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
 
 export default function ChatBot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [formUrls, setFormUrls] = useState({
+    advisor: FALLBACK_ADVISOR_FORM_URL,
+    exception_registration: FALLBACK_EXCEPTION_FORM_URL,
+  });
   const [context, setContext] = useState({
     yearbook: null,
     semesterNum: null,
@@ -57,6 +61,24 @@ export default function ChatBot() {
   useEffect(() => {
     startChat();
     loadYearbooks();
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/forms`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const forms = data?.forms;
+        if (!Array.isArray(forms) || !forms.length) return;
+        setFormUrls((prev) => {
+          const next = { ...prev };
+          for (const f of forms) {
+            if (f.usage === "advisor" && f.url) next.advisor = f.url;
+            if (f.usage === "exception_registration" && f.url) next.exception_registration = f.url;
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
   }, []);
 
   const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
@@ -228,7 +250,7 @@ export default function ChatBot() {
     </div>
     <div class="mt-2 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
       זכור למלא
-      <a href="${ADVISOR_FORM_URL}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
+      <a href="${formUrls.advisor}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
       לפני הפנייה.
     </div>
   </div>
@@ -282,7 +304,7 @@ export default function ChatBot() {
   <div class="border-t border-gray-200 pt-3 text-sm space-y-2">
     <div>
       <strong>טופס רישום/ביטול קורס:</strong><br/>
-      <a href="${EXCEPTION_FORM_URL}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
+      <a href="${formUrls.exception_registration}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
     </div>
     <div class="text-gray-700">
       <strong>מזכירות:</strong> ${SECRETARY_PHONE}<br/>

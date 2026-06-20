@@ -17,6 +17,8 @@ import uploadAdminRoutes from "./routes/admin/uploadAdmin.js";
 import adminSecurityRoutes from "./routes/admin/adminSecurity.js";
 import adminAuthRoutes from "./routes/admin/auth.js";
 import registrationGuidelinesAdmin from "./routes/admin/registrationGuidelinesAdmin.js";
+import formsAdminRoutes, { formsPublicRoutes } from "./routes/admin/formsAdmin.js";
+import knowledgeCheckAdminRoutes from "./routes/admin/knowledgeCheckAdmin.js";
 import yearbooksAdminRoutes from "./routes/admin/yearbooksAdmin.js";
 import feedbackRoutes from "./routes/public/feedback.js";
 import feedbackAdminRoutes from "./routes/admin/feedbackAdmin.js";
@@ -96,6 +98,7 @@ app.use("/api", labsRoutes);
 app.use("/api", advisorRoutes);
 app.use("/api/ask", askLimiter);
 app.use("/api", askRoutes);
+app.use("/api", formsPublicRoutes);
 app.use("/api", feedbackRoutes);
 
 /* ======================
@@ -120,6 +123,8 @@ app.use("/api/admin", requireAdmin, labsAdminRoutes);
 app.use("/api/admin", requireAdmin, uploadAdminRoutes);
 app.use("/api/admin", requireAdmin, yearbooksAdminRoutes);
 app.use("/api/admin/registration-guidelines", requireAdmin, registrationGuidelinesAdmin);
+app.use("/api/admin", requireAdmin, formsAdminRoutes);
+app.use("/api/admin", requireAdmin, knowledgeCheckAdminRoutes);
 app.use("/api/admin", requireAdmin, feedbackAdminRoutes);
 app.use("/api/admin", requireAdmin, unansweredAdminRoutes);
 app.use("/api/admin", requireAdmin, curatedAnswersRoutes);

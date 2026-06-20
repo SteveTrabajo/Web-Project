@@ -1,0 +1,1187 @@
+{
+  "mode": "READ_ONLY_QUALITY_CHECK",
+  "testYearbook": {
+    "exists": true,
+    "documentId": "test",
+    "data": {
+      "displayName": "test",
+      "yearbookId": "test"
+    },
+    "requiredCoursesCount": 0,
+    "semesterIds": [],
+    "coursesCount": 0,
+    "relationsCount": 0,
+    "looksLikeEmptyTest": true,
+    "deleteRecommendation": "safe_to_delete_after_approval"
+  },
+  "missingCredits": {
+    "firebaseMissingCreditsCount": 20,
+    "uniqueCourseCodesMissingCredits": 5,
+    "rows": [
+      {
+        "courseCode": "11063",
+        "courseName": "אנגלית בסיסי",
+        "yearbookId": "tashpad",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11064",
+        "courseName": "אנגלית מתקדמים א'",
+        "yearbookId": "tashpad",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11179",
+        "courseName": "מבוא לפיזיקה אקדמית 2",
+        "yearbookId": "tashpad",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41452",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 1",
+        "yearbookId": "tashpad",
+        "semester": "semester_5",
+        "semesterNumber": 5,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "חובת נוכחות",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "parser_failed_non_numeric_source",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41454",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 2",
+        "yearbookId": "tashpad",
+        "semester": "semester_6",
+        "semesterNumber": 6,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "שם הקורס",
+          "ה",
+          "ה",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 8
+      },
+      {
+        "courseCode": "11063",
+        "courseName": "אנגלית בסיסי 2",
+        "yearbookId": "tashpag",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11064",
+        "courseName": "אנגלית מתקדמים א' 3",
+        "yearbookId": "tashpag",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11179",
+        "courseName": "מבוא לפיזיקה אקדמית 4",
+        "yearbookId": "tashpag",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41452",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 1",
+        "yearbookId": "tashpag",
+        "semester": "semester_5",
+        "semesterNumber": 5,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "חובת נוכחות",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "parser_failed_non_numeric_source",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41454",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 2",
+        "yearbookId": "tashpag",
+        "semester": "semester_6",
+        "semesterNumber": 6,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "שם הקורס",
+          "ה",
+          "ה",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 8
+      },
+      {
+        "courseCode": "11063",
+        "courseName": "אנגלית בסיסי",
+        "yearbookId": "tashpah",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11064",
+        "courseName": "אנגלית מתקדמים א'",
+        "yearbookId": "tashpah",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11179",
+        "courseName": "מבוא לפיזיקה אקדמית 2",
+        "yearbookId": "tashpah",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41452",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 1",
+        "yearbookId": "tashpah",
+        "semester": "semester_5",
+        "semesterNumber": 5,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "חובת נוכחות",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "parser_failed_non_numeric_source",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41454",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 2",
+        "yearbookId": "tashpah",
+        "semester": "semester_6",
+        "semesterNumber": 6,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11063",
+        "courseName": "אנגלית בסיסי",
+        "yearbookId": "tashpav",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11064",
+        "courseName": "אנגלית מתקדמים א'",
+        "yearbookId": "tashpav",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "11179",
+        "courseName": "מבוא לפיזיקה אקדמית 2",
+        "yearbookId": "tashpav",
+        "semester": "semester_1",
+        "semesterNumber": 1,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "-",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "-",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41452",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 1",
+        "yearbookId": "tashpav",
+        "semester": "semester_5",
+        "semesterNumber": 5,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "חובת נוכחות",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "חובת נוכחות",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "parser_failed_non_numeric_source",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      },
+      {
+        "courseCode": "41454",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 2",
+        "yearbookId": "tashpav",
+        "semester": "semester_6",
+        "semesterNumber": 6,
+        "firebaseCredits": null,
+        "sourceCreditsRaw": "",
+        "sourceCreditsParsed": null,
+        "missingInAllFourYearbooks": false,
+        "perYearbookSource": {
+          "tashpag": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpad": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpah": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          },
+          "tashpav": {
+            "creditsRaw": "",
+            "creditsParsed": null
+          }
+        },
+        "diagnosis": "genuinely_missing_in_source_docx",
+        "sourceHeadersSample": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "קורסי קדם וקורסים צמודים"
+        ],
+        "credColIndex": 5
+      }
+    ],
+    "uniqueSummary": [
+      {
+        "courseCode": "11063",
+        "courseName": "אנגלית בסיסי",
+        "occurrences": 4,
+        "yearbooks": [
+          "tashpad",
+          "tashpag",
+          "tashpah",
+          "tashpav"
+        ],
+        "missingInAllFourYearbooks": false,
+        "diagnoses": [
+          "genuinely_missing_in_source_docx"
+        ],
+        "sourceCreditsRawSample": "-"
+      },
+      {
+        "courseCode": "11064",
+        "courseName": "אנגלית מתקדמים א'",
+        "occurrences": 4,
+        "yearbooks": [
+          "tashpad",
+          "tashpag",
+          "tashpah",
+          "tashpav"
+        ],
+        "missingInAllFourYearbooks": false,
+        "diagnoses": [
+          "genuinely_missing_in_source_docx"
+        ],
+        "sourceCreditsRawSample": "-"
+      },
+      {
+        "courseCode": "11179",
+        "courseName": "מבוא לפיזיקה אקדמית 2",
+        "occurrences": 4,
+        "yearbooks": [
+          "tashpad",
+          "tashpag",
+          "tashpah",
+          "tashpav"
+        ],
+        "missingInAllFourYearbooks": false,
+        "diagnoses": [
+          "genuinely_missing_in_source_docx"
+        ],
+        "sourceCreditsRawSample": "-"
+      },
+      {
+        "courseCode": "41452",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 1",
+        "occurrences": 4,
+        "yearbooks": [
+          "tashpad",
+          "tashpag",
+          "tashpah",
+          "tashpav"
+        ],
+        "missingInAllFourYearbooks": false,
+        "diagnoses": [
+          "parser_failed_non_numeric_source"
+        ],
+        "sourceCreditsRawSample": "חובת נוכחות"
+      },
+      {
+        "courseCode": "41454",
+        "courseName": "סמינר מחלקתי בתהליכים ביוטכנולוגיים תעשייתיים 2",
+        "occurrences": 4,
+        "yearbooks": [
+          "tashpad",
+          "tashpag",
+          "tashpah",
+          "tashpav"
+        ],
+        "missingInAllFourYearbooks": false,
+        "diagnoses": [
+          "genuinely_missing_in_source_docx"
+        ],
+        "sourceCreditsRawSample": ""
+      }
+    ]
+  },
+  "credColumnAnalysis": {
+    "headerSamples": [
+      {
+        "yearbookId": "tashpag",
+        "semester": 1,
+        "headers": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5,
+        "credHeader": "נ\"ז"
+      },
+      {
+        "yearbookId": "tashpad",
+        "semester": 1,
+        "headers": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5,
+        "credHeader": "נ\"ז"
+      },
+      {
+        "yearbookId": "tashpah",
+        "semester": 1,
+        "headers": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5,
+        "credHeader": "נ\"ז"
+      },
+      {
+        "yearbookId": "tashpav",
+        "semester": 1,
+        "headers": [
+          "מס' הקורס",
+          "שם הקורס",
+          "ה",
+          "ת",
+          "מ",
+          "נ\"ז",
+          "תנאי קדם והערות"
+        ],
+        "credColIndex": 5,
+        "credHeader": "נ\"ז"
+      }
+    ]
+  },
+  "missingLabs": {
+    "firebaseLabRows": 110,
+    "firebaseRowsWithMissingFields": 5,
+    "missingDateCount": 3,
+    "missingStaffCount": 2,
+    "parserFixableEstimate": 5,
+    "rows": [
+      {
+        "yearId": "tashpav",
+        "semester": 6,
+        "courseCode": "41652",
+        "courseName": "שיטות הפרדה ודיאגנוסטיקה",
+        "session": "אקטיבציה",
+        "group": "1",
+        "date": "16.6.26",
+        "staff": [],
+        "missing": [
+          "staff"
+        ],
+        "excelMatch": {
+          "semester": 6,
+          "sourceFile": "לוח מעבדות סמסטר 6 סמסטר ב תשפו 20.2.26.xlsx",
+          "courseCode": "41652",
+          "courseName": "שיטות הפרדה ודיאגנוסטיקה",
+          "session": "",
+          "row": 40,
+          "group": "1",
+          "dateMerged": "16.6.26",
+          "datePlain": "16.6.26",
+          "staffMerged": "",
+          "staffPlain": "",
+          "time": "12:00:00",
+          "day": "ג'",
+          "prevRowDate": "תאריך",
+          "prevRowStaff": "שם המרצה",
+          "isMergedDateCell": false,
+          "isMergedStaffCell": false,
+          "fillDownWouldFixDate": false,
+          "fillDownWouldFixStaff": true
+        },
+        "fieldDiagnosis": {
+          "staff": "excel_empty_fill_down_would_help"
+        }
+      },
+      {
+        "yearId": "tashpav",
+        "semester": 6,
+        "courseCode": "41652",
+        "courseName": "שיטות הפרדה ודיאגנוסטיקה",
+        "session": "אקטיבציה",
+        "group": "2",
+        "date": "18.6.26",
+        "staff": [],
+        "missing": [
+          "staff"
+        ],
+        "excelMatch": {
+          "semester": 6,
+          "sourceFile": "לוח מעבדות סמסטר 6 סמסטר ב תשפו 20.2.26.xlsx",
+          "courseCode": "41652",
+          "courseName": "שיטות הפרדה ודיאגנוסטיקה",
+          "session": "",
+          "row": 43,
+          "group": "2",
+          "dateMerged": "18.6.26",
+          "datePlain": "18.6.26",
+          "staffMerged": "",
+          "staffPlain": "",
+          "time": "12:00:00",
+          "day": "ה'",
+          "prevRowDate": "29-30.6.26",
+          "prevRowStaff": "סמאר מרעי",
+          "isMergedDateCell": false,
+          "isMergedStaffCell": false,
+          "fillDownWouldFixDate": false,
+          "fillDownWouldFixStaff": true
+        },
+        "fieldDiagnosis": {
+          "staff": "excel_empty_fill_down_would_help"
+        }
+      },
+      {
+        "yearId": "tashpav",
+        "semester": 6,
+        "courseCode": "41668",
+        "courseName": "כימיה וטכנולוגיה של מזון",
+        "session": "סיור",
+        "group": "1+2+3",
+        "date": "",
+        "staff": [
+          "דפנה פסקוביץ'"
+        ],
+        "missing": [
+          "date"
+        ],
+        "excelMatch": {
+          "semester": 6,
+          "sourceFile": "לוח מעבדות סמסטר 6 סמסטר ב תשפו 20.2.26.xlsx",
+          "courseCode": "41668",
+          "courseName": "כימיה וטכנולוגיה של מזון",
+          "session": "סיור",
+          "row": 18,
+          "group": "1+2+3",
+          "dateMerged": "",
+          "datePlain": "",
+          "staffMerged": "דפנה פסקוביץ'",
+          "staffPlain": "דפנה פסקוביץ'",
+          "time": "08:30:00",
+          "day": "ב'",
+          "prevRowDate": "23.6.26",
+          "prevRowStaff": "צוף קרויטורו",
+          "isMergedDateCell": false,
+          "isMergedStaffCell": false,
+          "fillDownWouldFixDate": true,
+          "fillDownWouldFixStaff": false
+        },
+        "fieldDiagnosis": {
+          "date": "excel_empty_fill_down_would_help"
+        }
+      },
+      {
+        "yearId": "tashpav",
+        "semester": 7,
+        "courseCode": "41525",
+        "courseName": "הנדסה תהליכית ביוטכנולוגית (פיילוט)",
+        "session": "",
+        "group": "2",
+        "date": "",
+        "staff": [
+          "ילנה לוברסקי"
+        ],
+        "missing": [
+          "date"
+        ],
+        "excelMatch": {
+          "semester": 7,
+          "sourceFile": "לוח מעבדות סמסטר 7 סמסטר ב תשפו 20.2.26.xlsx",
+          "courseCode": "41525",
+          "courseName": "הנדסה תהליכית ביוטכנולוגית (פיילוט)",
+          "session": "בטיחות בזום",
+          "row": 39,
+          "group": "2",
+          "dateMerged": "20.4.26",
+          "datePlain": "",
+          "staffMerged": "ילנה לוברסקי",
+          "staffPlain": "ילנה לוברסקי",
+          "time": "11:30:00",
+          "day": "ב'",
+          "prevRowDate": "20.4.26",
+          "prevRowStaff": "ילנה לוברסקי",
+          "isMergedDateCell": true,
+          "isMergedStaffCell": false,
+          "fillDownWouldFixDate": true,
+          "fillDownWouldFixStaff": false
+        },
+        "fieldDiagnosis": {
+          "date": "parser_gap_merged_cell_has_value"
+        }
+      },
+      {
+        "yearId": "tashpav",
+        "semester": 7,
+        "courseCode": "41525",
+        "courseName": "הנדסה תהליכית ביוטכנולוגית (פיילוט)",
+        "session": "",
+        "group": "3",
+        "date": "",
+        "staff": [
+          "ילנה לוברסקי"
+        ],
+        "missing": [
+          "date"
+        ],
+        "excelMatch": {
+          "semester": 7,
+          "sourceFile": "לוח מעבדות סמסטר 7 סמסטר ב תשפו 20.2.26.xlsx",
+          "courseCode": "41525",
+          "courseName": "הנדסה תהליכית ביוטכנולוגית (פיילוט)",
+          "session": "בטיחות בזום",
+          "row": 40,
+          "group": "3",
+          "dateMerged": "20.4.26",
+          "datePlain": "",
+          "staffMerged": "ילנה לוברסקי",
+          "staffPlain": "ילנה לוברסקי",
+          "time": "13:30:00",
+          "day": "ב'",
+          "prevRowDate": "20.4.26",
+          "prevRowStaff": "ילנה לוברסקי",
+          "isMergedDateCell": true,
+          "isMergedStaffCell": false,
+          "fillDownWouldFixDate": true,
+          "fillDownWouldFixStaff": false
+        },
+        "fieldDiagnosis": {
+          "date": "parser_gap_merged_cell_has_value"
+        }
+      }
+    ]
+  },
+  "recommendations": [
+    "Delete yearbooks/test after manual approval — empty shell with no requiredCourses/courses.",
+    "Credits: 4 row(s) may be parser issues — review cred column detection (needle 'נ' may match wrong column).",
+    "Credits: 4 unique course code(s) genuinely empty in source DOCX — not a parser bug.",
+    "Labs: add merged-cell reading and/or fill-down for date/staff in labs_parser.py, then re-import lab semesters only.",
+    "Labs: 3 rows missing date, 2 missing staff in Firebase.",
+    "After parser fixes: run import_to_firebase.py --write for labs only (or full re-import) — requires explicit approval."
+  ]
+}

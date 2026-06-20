@@ -13,12 +13,24 @@ import UnansweredTab   from "./tabs/UnansweredTab.jsx";
 import FaqTab          from "./tabs/FaqTab.jsx";
 import SettingsTab     from "./tabs/SettingsTab.jsx";
 import StatsTab       from "./tabs/StatsTab.jsx";
+import AdminForms from "../AdminForms.jsx";
+import AdminKnowledgeCheck from "../AdminKnowledgeCheck.jsx";
+
+function FormsTab() {
+  return <AdminForms />;
+}
+
+function KnowledgeTab() {
+  return <AdminKnowledgeCheck />;
+}
 
 const NAV_ITEMS = [
   { id: "advisors",     icon: "👨‍🏫", label: "יועצים" },
   { id: "labs",         icon: "🧪",  label: "לוחות מעבדה" },
   { id: "yearbooks",    icon: "📚",  label: "שנתון / קורסים" },
   { id: "registration", icon: "📝",  label: "ניהול סמסטר" },
+  { id: "forms",        icon: "📄",  label: "טפסים" },
+  { id: "knowledge",    icon: "🔍",  label: "בדיקת מאגר" },
   { id: "feedback",     icon: "💬",  label: "משובים" },
   { id: "unanswered",   icon: "❓",  label: "שאלות ללא מענה" },
   { id: "faq",          icon: "📌",  label: "תשובות מוכנות" },
@@ -31,6 +43,8 @@ const TAB_COMPONENTS = {
   labs:         LabsTab,
   yearbooks:    YearbooksTab,
   registration: RegistrationTab,
+  forms:        FormsTab,
+  knowledge:    KnowledgeTab,
   feedback:     FeedbackTab,
   unanswered:   UnansweredTab,
   faq:          FaqTab,

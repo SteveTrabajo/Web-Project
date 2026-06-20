@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-06-19T20:00:00.000Z",
+  "mode": "READ_ONLY",
+  "collection": "academicAdvisors",
+  "writeToFirebase": false,
+  "staffPageUrl": "https://w3.braude.ac.il/department/bio/staff/",
+  "registrationSource": "registration_guidelines/הנחיות לרישום סמ 1.docx",
+  "verification": [
+    {
+      "guidelinesName": "דר' בוסיס ערן",
+      "guidelinesEmail": "bosis@braude.ac.il",
+      "staffPageName": "פרופ'/ח ערן בוסיס (Assoc. Prof. Eran Bosis)",
+      "staffPageEmail": "bosis@braude.ac.il",
+      "staffPageRole": "Associate Professor | Biotechnology Engineering",
+      "foundOnStaffPage": true,
+      "emailMatch": true,
+      "notes": "תואר שונה בין המסמכים (דר' vs פרופ'/ח) — אותו אדם"
+    },
+    {
+      "guidelinesName": "פרופ' מרעי סמאר",
+      "guidelinesEmail": "sammar@braude.ac.il",
+      "staffPageName": "פרופ' מרעי סמאר (Prof. Marei Sammar)",
+      "staffPageEmail": "sammar@braude.ac.il",
+      "staffPageRole": "Head, Biotechnology Engineering M.Sc. Program",
+      "foundOnStaffPage": true,
+      "emailMatch": true,
+      "notes": "מופיע גם כמרצה מעבדה בלוחות — לא סותר"
+    },
+    {
+      "guidelinesName": "דר\" קלס סיון",
+      "guidelinesEmail": "sivanklas@braude.ac.il",
+      "staffPageName": "ד\"ר סיון קלס (Dr. Sivan Klas)",
+      "staffPageEmail": "sivanklas@braude.ac.il",
+      "staffPageRole": "Senior Lecturer | Biotechnology Engineering",
+      "foundOnStaffPage": true,
+      "emailMatch": true,
+      "notes": "תואר שונה (דר\" vs ד\"ר) — אותו אדם"
+    }
+  ],
+  "allVerified": true,
+  "allEmailsMatch": true,
+  "roleUncertainty": {
+    "staffPageListsAs": "Faculty / administrative staff — not labeled 'יועץ אקדמי'",
+    "registrationGuidelinesSem1": "Listed with last-name letter ranges in registration context — strong evidence for semester-1 registration advisors only",
+    "semesters2to8": "Refer to missing 'הנחיות כלליות לרישום' — no advisor list in local sources",
+    "conclusion": "Identity verified; advisor role inferred from registration guidelines sem 1 only — requires human approval before import"
+  },
+  "proposedAdvisorsPreview": [
+    {
+      "proposedId": "bosis",
+      "name": "ערן בוסיס",
+      "email": "bosis@braude.ac.il",
+      "semesters": [1],
+      "semestersNote": "Admin UI and /api/advisor use numeric semester (1), not semester_1",
+      "lastNameRanges": ["א-כ"],
+      "tracks": [],
+      "source": [
+        "registration_guidelines_semester_1",
+        "official_staff_page"
+      ],
+      "sourceLine": "דר' בוסיס ערן (א' עד כ') - bosis@braude.ac.il"
+    },
+    {
+      "proposedId": "sammar",
+      "name": "מרעי סמאר",
+      "email": "sammar@braude.ac.il",
+      "semesters": [1],
+      "lastNameRanges": ["ל-ת"],
+      "tracks": [],
+      "source": [
+        "registration_guidelines_semester_1",
+        "official_staff_page"
+      ],
+      "sourceLine": "פרופ' מרעי סמאר (ל' עד ת') - מתחילת הסמסטר sammar@braude.ac.il",
+      "timingNote": "מתחילת הסמסטר — חלוקת זמן עם קלס, לא שינוי טווח אותיות"
+    },
+    {
+      "proposedId": "sivanklas",
+      "name": "סיון קלס",
+      "email": "sivanklas@braude.ac.il",
+      "semesters": [1],
+      "lastNameRanges": ["ל-ת"],
+      "tracks": [],
+      "source": [
+        "registration_guidelines_semester_1",
+        "official_staff_page"
+      ],
+      "sourceLine": "דר\" קלס סיון (ל' עד ת') - עד תחילת הסמסטר sivanklas@braude.ac.il",
+      "timingNote": "עד תחילת הסמסטר — חלוקת זמן עם מרעי, לא שינוי טווח אותיות"
+    }
+  ],
+  "recommendation": {
+    "importAllStaff": false,
+    "autoImportToFirebase": false,
+    "manualEntryAfterApproval": true,
+    "summaryHe": "ניתן להזין ידנית 3 יועצים לסמסטר 1 לאחר אישור, אבל לא לייבא את כל הסגל. עד אז — להשאיר academicAdvisors ריק אם לא נדרש routing לסמסטר 1."
+  }
+}
