@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { RotateCcw, Check } from "lucide-react";
 import FeedbackModal from "./FeedbackModal.jsx";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -27,6 +28,7 @@ export default function ChatBot() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasExchange, setHasExchange] = useState(false);
+  const [askedTyped, setAskedTyped] = useState(false);
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [isBotResponding, setIsBotResponding] = useState(false);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -65,6 +67,7 @@ export default function ChatBot() {
   const startChat = () => {
     setMessages([]);
     setHasExchange(false);
+    setAskedTyped(false);
     setRecentQuestions([]);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
     addBot(`
@@ -123,6 +126,7 @@ export default function ChatBot() {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot(data.html || "לא נמצאה תשובה בבסיס הנתונים.");
       setHasExchange(true);
+      setAskedTyped(true);
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
@@ -319,7 +323,7 @@ export default function ChatBot() {
       dir="rtl"
     >
       {/* Header */}
-      <div className="bg-brand-navy text-white px-8 py-5 flex flex-row-reverse items-center justify-between shadow-md z-10">
+      <div className="bg-brand-navy text-white px-8 py-2.5 flex flex-row-reverse items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-heading leading-none text-left">BIO BOT</h1>
@@ -344,22 +348,6 @@ export default function ChatBot() {
               </button>
             </>
           )}
-          {hasExchange && (
-            <button
-              onClick={() => setShowFeedback(true)}
-              className="text-caption bg-brand-gold text-brand-navy font-bold px-4 py-2 rounded-lg hover:bg-brand-gold-hover transition-all border border-yellow-300 shadow-sm active:scale-95 font-sans flex items-center gap-2"
-            >
-              <span>סיים שיחה</span>
-              <span>✓</span>
-            </button>
-          )}
-          <button
-            onClick={startChat}
-            className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
-          >
-            <span>איפוס שיחה</span>
-            <span className="text-body">↺</span>
-          </button>
         </div>
       </div>
 
@@ -371,15 +359,14 @@ export default function ChatBot() {
           className="chat-scroll flex-1 overflow-y-auto p-5 bg-surface-page"
         >
           <div dir="rtl" className="space-y-4">
-          {messages.map((m) => {
+          {messages.map((m, idx) => {
             const isPanel = m.sender === "bot" && m.variant === "panel";
+            const colAlign = m.sender === "user" ? "items-start" : isPanel ? "items-center" : "items-end";
+            // Action icons sit directly under the latest bot answer (ChatGPT-style).
+            const showActions =
+              m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding;
             return (
-              <div
-                key={m.id}
-                className={`flex ${
-                  m.sender === "user" ? "justify-start" : isPanel ? "justify-center" : "justify-end"
-                }`}
-              >
+              <div key={m.id} className={`flex flex-col ${colAlign}`}>
                 <div
                   className={
                     isPanel
@@ -392,6 +379,29 @@ export default function ChatBot() {
                   }
                   dangerouslySetInnerHTML={{ __html: m.html }}
                 />
+                {showActions && (
+                  <div className="flex items-center gap-0.5 mt-1.5">
+                    {/* Review is offered only after a typed question, not a selection-only flow. */}
+                    {askedTyped && (
+                      <button
+                        onClick={() => setShowFeedback(true)}
+                        title="סיום שיחה והשארת משוב"
+                        aria-label="סיום שיחה והשארת משוב"
+                        className="p-1.5 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                      >
+                        <Check size={16} strokeWidth={2.5} />
+                      </button>
+                    )}
+                    <button
+                      onClick={startChat}
+                      title="שיחה חדשה"
+                      aria-label="שיחה חדשה"
+                      className="p-1.5 rounded-md text-content-muted hover:text-brand-navy hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                    >
+                      <RotateCcw size={15} strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -448,7 +458,7 @@ export default function ChatBot() {
       </div>
 
       {/* Footer input */}
-      <div className="p-6 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
+      <div className="px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
         <div className="flex flex-col gap-3">
           <div className="flex gap-4 items-center">
             <div className="flex-1 relative">
