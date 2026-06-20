@@ -143,6 +143,8 @@ export default function ChatBot() {
           topic: (context.topic === "advisor_input" || context.topic === "track_input")
             ? "advisor"
             : (context.topic ?? null),
+          reservesMitve: context.selectedMitve || null,
+          reservesGroup: context.selectedGroup || null,
         }),
       });
       const data = await res.json();

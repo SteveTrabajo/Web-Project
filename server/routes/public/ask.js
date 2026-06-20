@@ -544,10 +544,58 @@ async function getFormsCached() {
 }
 
 /* =============================
+   Reserves (miluim) label map
+   Mirrors the group definitions in Bot.jsx so the RAG prompt
+   can tell Gemini which plan and eligibility group the student is in.
+============================= */
+const RESERVES_MITVE_LABELS = {
+  mitve_tashpah_sem_a: 'מתווה תשפ"ד - סמסטר א',
+  mitve_tashpah_sem_b: 'מתווה תשפ"ד - סמסטר ב',
+  mitve_tashpeh_sem_a: 'מתווה תשפ"ה - סמסטר א',
+  mitve_tashpeh_sem_b: 'מתווה תשפ"ה - סמסטר ב',
+  mitve_tashpuv_sem_a: 'מתווה תשפ"ו - סמסטר א',
+};
+
+const RESERVES_GROUP_LABELS = {
+  mitve_tashpah_sem_a: {
+    group_1: "שורתו 7 ימים או יותר מתחילת הסמסטר",
+    group_2: "שורתו עד 7 ימים מתחילת הסמסטר",
+    group_3: "בני/בנות זוג של מילואימניק/ית",
+    group_4: "נפגעו בצורה משמעותית וממושכת מהמצב",
+    group_5: "שאר הסטודנטים (ללא שירות מילואים)",
+  },
+  mitve_tashpah_sem_b: {
+    group_11: "שירות במילואים לתקופה של 100 ימים לפחות",
+    group_22: "שירות במילואים לתקופה של 61 עד 99 ימים",
+    group_33: "שירות במילואים לתקופה של 30 עד 60 ימים",
+    group_44: "סטודנטים ובני זוג שנפגעו בצורה משמעותית ומפונים",
+  },
+  mitve_tashpeh_sem_a: {
+    group_111: "שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי",
+    group_222: "סטודנטים עם הורות לילד עד גיל 13 השייכים לאחת מהקבוצות",
+    group_333: "שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר",
+    group_444: "נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג",
+  },
+  mitve_tashpeh_sem_b: {
+    group_111: "שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי",
+    group_222: "סטודנטים עם הורות לילד עד גיל 13 השייכים לאחת מהקבוצות",
+    group_333: "שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר",
+    group_444: "נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג",
+    group_555: "שירות של 300 ימים ומעלה / לוחמים בייעוד קדמי מעל 200 ימים",
+  },
+  mitve_tashpuv_sem_a: {
+    group_11_v: "שירות מילואים של 35 ימים ומעלה בסמסטר / סטודנט הורה לילד עד גיל 13 / משרתים בקבע ביחידות ייעוד קדמי",
+    group_22_v: "שירות מילואים בין 21 ל-35 ימים בסמסטר / מעל 35 ימים בשנה אקדמית",
+    group_33_v: "משרתי מילואים קצרי טווח (עד 21 ימים בסמסטר) וסטודנטים הורים",
+    group_44_v: "פצועי/ות, שורדי/ות, בני משפחה של חללים, מקרים חריגים",
+    group_55_v: "קבע ייעוד קדמי / הורים עם בן/בת זוג בשירות מעל 300 ימים מתחילת המלחמה",
+  },
+};
+
+/* =============================
    RAG fallback (Gemini)
 ============================= */
-// fallback for questions that don't match any of the above handlers, using a RAG approach with a Gemini prompt and a context built from the yearbook's courses and registration info
-async function buildRagContext(yearbookId, semesterNum) {
+async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup) {
   const parts = [];
 
   try {
@@ -571,12 +619,18 @@ async function buildRagContext(yearbookId, semesterNum) {
     } catch {}
   }
 
+  if (reservesMitve && reservesGroup) {
+    const mitveLabel = RESERVES_MITVE_LABELS[reservesMitve] || reservesMitve;
+    const groupLabel = RESERVES_GROUP_LABELS[reservesMitve]?.[reservesGroup] || reservesGroup;
+    parts.push(`מידע על הסטודנט - מתווה מילואים: ${mitveLabel}\nקבוצת זכאות: ${groupLabel}`);
+  }
+
   const full = parts.join("\n\n");
   return full.length > 4000 ? full.slice(0, 4000) + "..." : full;
 }
 
-async function callRagFallback(question, yearbookId, semesterNum) {
-  const context = await buildRagContext(yearbookId, semesterNum);
+async function callRagFallback(question, yearbookId, semesterNum, reservesMitve, reservesGroup) {
+  const context = await buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup);
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
 ענה בעברית בלבד. ענה רק על נושאים אקדמיים הקשורים לתואר. אם אינך יודע, כתוב "לא מצאתי מידע על כך."
 
@@ -652,7 +706,7 @@ async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
 
 router.post("/ask", async (req, res) => {
   try {
-    const { yearbookId, question, semester: clientSemester, topic: clientTopic } = req.body || {};
+    const { yearbookId, question, semester: clientSemester, topic: clientTopic, reservesMitve, reservesGroup } = req.body || {};
     if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
 
     const qNorm = normalizeHebrew(question);
@@ -1004,7 +1058,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
       return res.json({ html: curated.answerHtml });
     }
 
-    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester);
+    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester, reservesMitve, reservesGroup);
     if (ragAnswer) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag", wasAnswered: true });
       return res.json({ html: ragAnswer });
