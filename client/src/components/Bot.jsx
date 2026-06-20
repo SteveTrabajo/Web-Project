@@ -110,7 +110,14 @@ export default function ChatBot() {
       const res = await fetch(`${API_BASE}/api/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ yearbookId: context.yearbook, question: q }),
+        body: JSON.stringify({
+          yearbookId: context.yearbook,
+          question: q,
+          semester: context.semesterNum ? String(context.semesterNum) : null,
+          topic: (context.topic === "advisor_input" || context.topic === "track_input")
+            ? "advisor"
+            : (context.topic ?? null),
+        }),
       });
       const data = await res.json();
       setMessages((p) => p.filter((m) => m.id !== loadingId));

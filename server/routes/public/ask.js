@@ -489,12 +489,71 @@ ${list}
 }
 
 /* =============================
+   Anonymous usage analytics
+============================= */
+
+async function logUsageEvent({
+  question,
+  yearbook,
+  semester,
+  topic,
+  answerSource,
+  wasAnswered,
+  detectedCourses = [],
+}) {
+  try {
+    await db.collection("usageEvents").add({
+      question: String(question || "").slice(0, 1000),
+      normalizedQuestion: normalizeHebrew(question),
+      yearbook: yearbook || null,
+      semester: semester || null,
+      topic: topic || null,
+      answerSource,
+      wasAnswered,
+      detectedCourses: detectedCourses
+        .map((c) => String(c.courseCode || c).slice(0, 30))
+        .slice(0, 10),
+      createdAt: new Date().toISOString(),
+    });
+  } catch {
+    // never break the bot response
+  }
+}
+
+// Auto-saves the question to unansweredQuestions when the bot reaches the fallback.
+// Deduplicates against other auto-saved entries by normalizedQuestion.
+async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
+  try {
+    const qNorm = normalizeHebrew(question);
+    const dup = await db
+      .collection("unansweredQuestions")
+      .where("normalizedQuestion", "==", qNorm)
+      .limit(1)
+      .get();
+    if (!dup.empty) return;
+    await db.collection("unansweredQuestions").add({
+      questions: [String(question || "").slice(0, 1000)],
+      normalizedQuestion: qNorm,
+      yearbook: yearbook || null,
+      semester: semester || null,
+      topic: topic || null,
+      reasons: ["fallback_no_answer"],
+      comment: "",
+      createdAt: new Date().toISOString(),
+      status: "open",
+    });
+  } catch {
+    // never break the bot response
+  }
+}
+
+/* =============================
    Route: /ask
 ============================= */
 
 router.post("/ask", async (req, res) => {
   try {
-    const { yearbookId, question } = req.body || {};
+    const { yearbookId, question, semester: clientSemester, topic: clientTopic } = req.body || {};
     if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
 
     const qNorm = normalizeHebrew(question);
@@ -512,7 +571,10 @@ router.post("/ask", async (req, res) => {
     }
 
     // 1) Labs schedule
-    if (isLabQuestion(question, qLower)) return askLabs(req, res);
+    if (isLabQuestion(question, qLower)) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "labs", wasAnswered: true });
+      return askLabs(req, res);
+    }
 
     // 2) Registration
     if (
@@ -520,6 +582,7 @@ router.post("/ask", async (req, res) => {
       !isAcademicCourseIntent(question, qNorm) &&
       !isCourseLookupQuestion(question, qNorm)
     ) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "registration", wasAnswered: true });
       const intentObj = await classifyRegistrationIntent(question);
       const finalIntent = refineRegistrationIntent(intentObj?.intent, question) || "general";
       const semNum = extractSemesterNumber(question);
@@ -702,6 +765,7 @@ router.post("/ask", async (req, res) => {
 
     // Emotion
     if (emotion?.intent === "emotional_support" && !courseMain) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "emotional", wasAnswered: true });
       return res.json({
         html: `
           <div dir="rtl" class="text-sm leading-6 text-right">
@@ -739,6 +803,7 @@ router.post("/ask", async (req, res) => {
     // Prerequisites (with cache)
     if (courseMain && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
       const prereqs = await getAllPrerequisitesRecursiveCached(yearbookId, courseMain.courseCode);
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
 
       if (!prereqs.length) {
         return res.json({
@@ -758,6 +823,7 @@ router.post("/ask", async (req, res) => {
 
     // Lookup
     if ((kind === "lookup" || coursesFromQuestion.length === 1) && courseMain) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
       return res.json({
         html: `<div class="text-sm">✅ <b>${courseMain.courseName}</b> (${courseMain.courseCode})</div>`,
       });
@@ -765,6 +831,7 @@ router.post("/ask", async (req, res) => {
 
     // Relations (2+)
  if (coursesFromQuestion.length >= 2) {
+  logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
   const prerequisites = new Set();
   const parallels = new Set();
 
@@ -832,8 +899,13 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
 
 
     const curated = await findCuratedAnswer(question, qNorm, yearbookId);
-    if (curated) return res.json({ html: curated.answerHtml });
+    if (curated) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "curated", wasAnswered: true });
+      return res.json({ html: curated.answerHtml });
+    }
 
+    logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "fallback", wasAnswered: false });
+    autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null });
     return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסי שוב.</div>` });
   } catch (err) {
     console.error("ASK ERROR:", err);

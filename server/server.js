@@ -23,6 +23,7 @@ import feedbackAdminRoutes from "./routes/admin/feedbackAdmin.js";
 import unansweredAdminRoutes from "./routes/admin/unansweredAdmin.js";
 import curatedAnswersRoutes from "./routes/admin/curatedAnswers.js";
 import reportsAdminRoutes from "./routes/admin/reports.js";
+import usageStatsRoutes from "./routes/admin/usageStats.js";
 import cronRoutes from "./routes/internal/cron.js";
 import { requireAdmin } from "./middleware/authMiddleware.js";
 
@@ -123,6 +124,7 @@ app.use("/api/admin", requireAdmin, feedbackAdminRoutes);
 app.use("/api/admin", requireAdmin, unansweredAdminRoutes);
 app.use("/api/admin", requireAdmin, curatedAnswersRoutes);
 app.use("/api/admin", requireAdmin, reportsAdminRoutes);
+app.use("/api/admin", requireAdmin, usageStatsRoutes);
 
 /* ======================
    Start server (Local + Render)

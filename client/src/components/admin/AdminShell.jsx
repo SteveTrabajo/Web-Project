@@ -12,6 +12,7 @@ import FeedbackTab     from "./tabs/FeedbackTab.jsx";
 import UnansweredTab   from "./tabs/UnansweredTab.jsx";
 import FaqTab          from "./tabs/FaqTab.jsx";
 import SettingsTab     from "./tabs/SettingsTab.jsx";
+import StatsTab       from "./tabs/StatsTab.jsx";
 
 const NAV_ITEMS = [
   { id: "advisors",     icon: "👨‍🏫", label: "יועצים" },
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { id: "feedback",     icon: "💬",  label: "משובים" },
   { id: "unanswered",   icon: "❓",  label: "שאלות ללא מענה" },
   { id: "faq",          icon: "📌",  label: "תשובות מוכנות" },
+  { id: "stats",        icon: "📊",  label: "סטטיסטיקות" },
   { id: "settings",     icon: "⚙️",  label: "הגדרות" },
 ];
 
@@ -32,6 +34,7 @@ const TAB_COMPONENTS = {
   feedback:     FeedbackTab,
   unanswered:   UnansweredTab,
   faq:          FaqTab,
+  stats:        StatsTab,
   settings:     SettingsTab,
 };
 
