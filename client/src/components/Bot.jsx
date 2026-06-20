@@ -71,7 +71,7 @@ export default function ChatBot() {
   <div class="space-y-2">
     <div class="text-xl font-bold text-brand-navy">ברוכים הבאים ל-BIO BOT</div>
     <p class="text-gray-700">אני כאן כדי לעזור לך עם מידע אקדמי, קורסים וייעוץ במחלקה.</p>
-    <div class="text-sm font-semibold text-bio-green mt-4 font-sans">
+    <div class="text-sm font-semibold text-bio-green mt-2 font-sans">
       אנא בחר באיזה שנת לימודים התחלת כדי לעזור לך
     </div>
   </div>
@@ -168,7 +168,7 @@ export default function ChatBot() {
       const rows = data.courses.map((c) => {
         const credits = c.credits ? `${c.credits} נ"ז` : 'ללא נ"ז';
         return `
-        <div class="rounded-xl border border-surface-border bg-surface-page px-4 py-2.5">
+        <div class="rounded-xl border border-surface-border bg-surface-page px-3 py-2">
           <div class="flex items-baseline justify-between gap-3">
             <span class="text-content-primary leading-snug">
               <span class="font-bold">${c.courseName}</span>
@@ -191,11 +191,11 @@ export default function ChatBot() {
 
       const html = `
         <div class="w-full rounded-2xl border border-surface-border bg-surface-card shadow-lg overflow-hidden font-sans" dir="rtl">
-          <div class="bg-brand-navy text-white px-5 py-3 flex items-center justify-between">
+          <div class="bg-brand-navy text-white px-4 py-2.5 flex items-center justify-between">
             <span class="font-bold text-base">קורסי חובה - סמסטר ${sem}</span>
             <span class="text-xs opacity-80">${data.courses.length} קורסים</span>
           </div>
-          <div class="p-4 space-y-3">
+          <div class="p-3 space-y-2">
             ${rows}
           </div>
         </div>
@@ -228,14 +228,14 @@ export default function ChatBot() {
 
       if (a) {
         addBot(`
-  <div class="p-4 rounded-2xl border space-y-2 font-sans bg-blue-50 border-blue-100 text-gray-800">
+  <div class="p-3 rounded-2xl border space-y-1.5 font-sans bg-blue-50 border-blue-100 text-gray-800">
     <div class="font-bold text-brand-navy">היועץ האקדמי שלך:</div>
     <div class="text-sm text-gray-800"><b>שם:</b> ${a.name}</div>
     <div class="text-sm text-gray-800">
       <b>מייל:</b>
       <a href="mailto:${a.email}" class="text-bio-green underline">${a.email}</a>
     </div>
-    <div class="mt-2 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
+    <div class="mt-1.5 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
       זכור למלא
       <a href="${ADVISOR_FORM_URL}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
       לפני הפנייה.
@@ -253,14 +253,14 @@ export default function ChatBot() {
 
   const showExceptionalRegistration = () => {
     addBot(`
-<div class="rounded-2xl p-5 shadow-sm space-y-4 bg-white border border-blue-100 text-gray-800">
+<div class="rounded-2xl p-4 shadow-sm space-y-3 bg-white border border-blue-100 text-gray-800">
   <div class="text-lg font-bold text-bio-green">רישום או ביטול חריג לקורסים</div>
 
   <div class="text-sm text-gray-800">
     משתמשים ברישום חריג כאשר <strong>לא ניתן להירשם לקורס דרך תחנת מידע</strong>.
   </div>
 
-  <div class="rounded-xl p-3 text-sm space-y-1 bg-blue-50 border border-blue-200">
+  <div class="rounded-xl p-2.5 text-sm space-y-1 bg-blue-50 border border-blue-200">
     <div class="font-semibold mb-1">מתי זה קורה בדרך כלל?</div>
     <div>אין מקום פנוי בקורס</div>
     <div>נכשלת בקורס פעמיים</div>
@@ -269,7 +269,7 @@ export default function ChatBot() {
 
   <div class="text-sm font-semibold">תהליך הגשת בקשה לרישום חריג:</div>
 
-  <div class="text-sm space-y-3" dir="rtl">
+  <div class="text-sm space-y-2" dir="rtl">
     <div class="flex items-start gap-3">
       <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">1</span>
       <span>מורידים את הטופס.</span>
@@ -288,7 +288,7 @@ export default function ChatBot() {
     </div>
   </div>
 
-  <div class="border-t border-gray-200 pt-3 text-sm space-y-2">
+  <div class="border-t border-gray-200 pt-2.5 text-sm space-y-1.5">
     <div>
       <strong>טופס רישום/ביטול קורס:</strong><br/>
       <a href="${EXCEPTION_FORM_URL}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
@@ -368,9 +368,9 @@ export default function ChatBot() {
         <div
           ref={chatRef}
           dir="ltr"
-          className="chat-scroll flex-1 overflow-y-auto p-8 bg-surface-page"
+          className="chat-scroll flex-1 overflow-y-auto p-5 bg-surface-page"
         >
-          <div dir="rtl" className="space-y-6">
+          <div dir="rtl" className="space-y-4">
           {messages.map((m) => {
             const isPanel = m.sender === "bot" && m.variant === "panel";
             return (
@@ -384,7 +384,7 @@ export default function ChatBot() {
                   className={
                     isPanel
                       ? "bot-bubble w-full max-w-2xl"
-                      : `max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-body ${
+                      : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body ${
                           m.sender === "user"
                             ? "bg-brand-navy text-white rounded-tl-none font-sans"
                             : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
