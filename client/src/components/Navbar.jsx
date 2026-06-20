@@ -1,6 +1,6 @@
-import ThemeToggle from "./ThemeToggle";
+import { Button } from "@/components/ui/button";
 
-export default function Navbar({ view, onNavigate }) {
+export default function Navbar({ view, onNavigate, admin, onLogout }) {
   const item = (key, label) => {
     const isActive = view === key;
 
@@ -24,7 +24,7 @@ export default function Navbar({ view, onNavigate }) {
     <header className="sticky top-0 z-50 bg-brand-navy dark:bg-brand-navy-deep border-b border-bio-green-glow/20 shadow-[0_2px_20px_rgba(0,0,0,0.25)]">
       <div className="w-full px-8 h-[72px] flex items-center justify-between">
 
-        {/* Left - logo, brand, theme toggle */}
+        {/* Left - logo, brand, admin info */}
         <div className="flex items-center gap-5 shrink-0">
           <a
             href="#"
@@ -46,9 +46,24 @@ export default function Navbar({ view, onNavigate }) {
             </div>
           </a>
 
-          <div className="w-px h-7 bg-white/15 mx-1" />
-
-          <ThemeToggle />
+          {admin && (
+            <>
+              <div className="w-px h-7 bg-white/15 mx-1" />
+              <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/8 px-3 py-1.5">
+                <div className="text-right leading-tight min-w-0">
+                  <p className="text-caption font-semibold text-bio-green-glow">
+                    מחובר כמנהל ✓
+                  </p>
+                  <p className="text-caption text-white/60 truncate max-w-[160px]">
+                    {admin.email}
+                  </p>
+                </div>
+                <Button variant="destructive" size="sm" onClick={onLogout}>
+                  התנתקות
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right - nav */}

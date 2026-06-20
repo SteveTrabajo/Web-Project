@@ -306,7 +306,7 @@ export default function ChatBot() {
 
   return (
     <div
-      className="w-full max-w-6xl mx-auto h-[85vh] bg-surface-card text-content-primary rounded-xl shadow-2xl border border-surface-border flex flex-col overflow-hidden font-sans"
+      className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-xl shadow-2xl border border-surface-border flex flex-col overflow-hidden font-sans"
       dir="rtl"
     >
       {/* Header */}
