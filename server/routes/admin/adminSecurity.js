@@ -10,6 +10,13 @@ router.post("/change-email", async (req, res) => {
   const { newEmail } = req.body;
   if (!newEmail) return res.status(400).json({ error: "חסר אימייל" });
 
+  const wanted = String(newEmail).toLowerCase();
+  const snap = await db.collection("admins").get();
+  const taken = snap.docs.some(
+    (d) => d.id !== ADMIN_ID && String(d.data().email).toLowerCase() === wanted
+  );
+  if (taken) return res.status(409).json({ error: "אימייל כבר בשימוש" });
+
   await db.collection("admins").doc(ADMIN_ID).update({ email: newEmail });
   res.json({ ok: true });
 });

@@ -5,7 +5,6 @@ import { db } from "../../server.js";
 import { sendEmail } from "../../services/mailer.js";
 
 const router = express.Router();
-const ADMIN_ID = "admin1";
 
 // Login
 router.post("/login", async (req, res) => {
@@ -15,15 +14,13 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const snap = await db
-      .collection("admins")
-      .where("email", "==", email)
-      .limit(1)
-      .get();
+    // Match email case-insensitively (Firestore can't query that way).
+    const wanted = String(email).toLowerCase();
+    const snap = await db.collection("admins").get();
+    const doc = snap.docs.find((d) => String(d.data().email).toLowerCase() === wanted);
 
-    if (snap.empty) return res.status(401).json({ error: "משתמש לא קיים" });
+    if (!doc) return res.status(401).json({ error: "משתמש לא קיים" });
 
-    const doc = snap.docs[0];
     const admin = doc.data();
 
     // Support both bcrypt hashes and legacy plaintext passwords.
@@ -60,15 +57,16 @@ router.post("/login", async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
-  const adminRef = db.collection("admins").doc(ADMIN_ID);
-  const snap = await adminRef.get();
+  const wanted = String(email).toLowerCase();
+  const snap = await db.collection("admins").get();
+  const doc = snap.docs.find((d) => String(d.data().email).toLowerCase() === wanted);
 
-  if (!snap.exists || snap.data().email !== email) {
+  if (!doc) {
     return res.status(404).json({ error: "אימייל לא קיים" });
   }
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await adminRef.update({ resetCode: code, resetAt: Date.now() });
+  await doc.ref.update({ resetCode: code, resetAt: Date.now() });
 
   await sendEmail({
     to: email,
@@ -83,19 +81,15 @@ router.post("/forgot-password", async (req, res) => {
 router.post("/reset-password", async (req, res) => {
   const { code, newPassword } = req.body;
 
-  const adminRef = db.collection("admins").doc(ADMIN_ID);
-  const snap = await adminRef.get();
-  const admin = snap.data();
+  const snap = await db.collection("admins").get();
+  const doc = snap.docs.find((d) => d.data().resetCode === code);
 
-  if (
-    admin.resetCode !== code ||
-    Date.now() - admin.resetAt > 10 * 60 * 1000
-  ) {
+  if (!doc || Date.now() - doc.data().resetAt > 10 * 60 * 1000) {
     return res.status(400).json({ error: "קוד שגוי או פג תוקף" });
   }
 
   const hashed = await bcrypt.hash(newPassword, 12);
-  await adminRef.update({ password: hashed, resetCode: null, resetAt: null });
+  await doc.ref.update({ password: hashed, resetCode: null, resetAt: null });
 
   res.json({ ok: true });
 });
