@@ -83,6 +83,7 @@ export default function ChatBot() {
       .catch(() => {});
   }, []);
 
+
   const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
   const addUser = (text) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "user", html: text }]);
 
@@ -142,6 +143,8 @@ export default function ChatBot() {
           topic: (context.topic === "advisor_input" || context.topic === "track_input")
             ? "advisor"
             : (context.topic ?? null),
+          reservesMitve: context.selectedMitve || null,
+          reservesGroup: context.selectedGroup || null,
         }),
       });
       const data = await res.json();
@@ -162,11 +165,124 @@ export default function ChatBot() {
     setContext((p) => ({ ...p, yearbook: y.id }));
   };
 
+  window.handleReservesMitve = (mitveKey, mitveLabel) => handleReservesMitve(mitveKey, mitveLabel);
+  window.handleReservesDays = (daysKey, daysLabel) => handleReservesDays(daysKey, daysLabel);
+
+const showReservesGuidelines = () => {
+    addBot(`
+      <div class="space-y-2 font-sans" dir="rtl">
+        <b class="text-brand-navy">עבור איזה מתווה וסמסטר תרצה לבדוק התאמות?</b>
+        <div class="flex flex-wrap gap-2 justify-end mt-2">
+          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpah_sem_a', 'מתווה תשפד - סמסטר א')">מתווה תשפ"ד - סמסטר א'</button>
+          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpah_sem_b', 'מתווה תשפד - סמסטר ב')">מתווה תשפ"ד - סמסטר ב'</button>
+          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpeh_sem_a', 'מתווה תשפה - סמסטר א')">מתווה תשפ"ה - סמסטר א'</button>
+          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpeh_sem_b', 'מתווה תשפה - סמסטר ב')">מתווה תשפ"ה - סמסטר ב'</button>
+          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpuv_sem_a', 'מתווה תשפו - סמסטר א')">מתווה תשפ"ו - סמסטר א'</button>
+        </div>
+      </div>
+    `);
+  };
+
+  const handleReservesMitve = (mitveKey, mitveLabel) => {
+  
+    window.handleReservesDays = handleReservesDays;
+
+    addUser(mitveLabel);
+    setContext((prev) => ({ ...prev, selectedMitve: mitveKey }));
+
+    let daysButtonsHtml = "";
+
+    
+    if (mitveKey === "mitve_tashpah_sem_a") {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_1', 'קבוצה 1')">קבוצה 1: שורתו 7 ימים או יותר מתחילת הסמסטר</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_2', 'קבוצה 2')">קבוצה 2: שורתו עד 7 ימים מתחילת הסמסטר</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_3', 'קבוצה 3')">קבוצה 3: בני/בנות זוג של מילואימניק/ית</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_4', 'קבוצה 4')">קבוצה 4: נפגעו בצורה משמעותית וממושכת מהמצב</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_5', 'קבוצה 5')">קבוצה 5: שאר הסטודנטים (ללא שירות מילואים)</button>
+      `;
+    } 
+    
+    else if (mitveKey === "mitve_tashpah_sem_b") {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_11', 'קבוצה 11')">קבוצה 11: שירות במילואים לתקופה של 100 ימים לפחות</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_22', 'קבוצה 22')">קבוצה 22: שירות במילואים לתקופה של 61 עד 99 ימים</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_33', 'קבוצה 33')">קבוצה 33: שירות במילואים לתקופה של 30 עד 60 ימים</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_44', 'קבוצה 44')">קבוצה 44: סטודנטים ובני זוג שנפגעו בצורה משמעותית ומפונים</button>
+      `;
+    } 
+    
+    else if (mitveKey === "mitve_tashpeh_sem_a") {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_111', 'קבוצה 111')">קבוצה 111: שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_222', 'קבוצה 222')">קבוצה 222: סטודנטים השייכים לאחת מהקבוצות עם הורות לילד עד גיל 13</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_333', 'קבוצה 333')">קבוצה 333: שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_444', 'קבוצה 444')">קבוצה 444: נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג</button>
+      `;
+    }
+    
+    else if (mitveKey === "mitve_tashpeh_sem_b") {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_111', 'קבוצה 111')">קבוצה 111: שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_222', 'קבוצה 222')">קבוצה 222: סטודנטים השייכים לאחת מהקבוצות עם הורות לילד עד גיל 13</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_333', 'קבוצה 333')">קבוצה 333: שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_444', 'קבוצה 444')">קבוצה 444: נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_555', 'קבוצה 5')">קבוצה 5: שירות של 300 ימים ומעלה / לוחמים בייעוד קדמי מעל 200 ימים</button>
+      `;
+    }
+    
+    else if (mitveKey === "mitve_tashpuv_sem_a") {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_11_v', 'קבוצה 11')">קבוצה 11: שירות מילואים של 35 ימים ומעלה בסמסטר, סטודנט/ית הורה לילד עד גיל 13, משרתים בקבע ביחידות ייעוד קדמי</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_22_v', 'קבוצה 22')">קבוצה 22: שירות מילואים בין 21 ל-35 ימים בסמסטר / מעל 35 ימים בשנה אקדמית / שירות סמוך לתחילת הסמסטר ובמהלכו</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_33_v', 'קבוצה 33')">קבוצה 33: משרתי מילואים קצרי טווח (עד 21 ימים בסמסטר) וסטודנטים הורים</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_44_v', 'קבוצה 44')">קבוצה 44: פצועי/ות, שורדי/ות, בני משפחה של חללים, מקרים חריגים</button>
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_55_v', 'קבוצה 55')">קבוצה 55: קבע ייעוד קדמי / הורים עם בן/בת זוג בשירות מעל 300 ימים מתחילת המלחמה במהלך הלימודים</button>
+      `;
+    }
+        
+    else {
+      daysButtonsHtml = `
+        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesDays('default_reserves', 'שירות מילואים פעיל')">שירות מילואים פעיל</button>
+      `;
+    }
+
+    setTimeout(() => {
+      addBot(`
+        <div class="space-y-2 font-sans w-full" dir="rtl">
+          <b class="text-brand-navy">לאיזו קבוצת זכאות אתם שייכים לפי תנאי המכללה?</b>
+          <div class="flex flex-col gap-2 items-stretch mt-2 max-w-xl">
+            ${daysButtonsHtml}
+          </div>
+        </div>
+      `);
+    }, 600);
+  };
+
+  const handleReservesDays = (daysKey, daysLabel) => {
+    window.handleReservesDays = handleReservesDays;
+
+    addUser(daysLabel);
+    
+    setContext((prev) => ({ ...prev, selectedGroup: daysKey }));
+    setTimeout(() => {
+      addBot(`
+        <div class="space-y-1 font-sans" dir="rtl">
+          <b class="text-bio-green">מצוין! שמרתי את פרטי הזכאות שלך.</b>
+          <p class="text-sm text-gray-600">עכשיו אתה יכול להקליד כל שאלה חופשית בתיבת הטקסט למטה (למשל: *"מתי מועדי ב'?"* או *"מגיע לי פטור מנוכחות?"*), ואני אבדוק לך את זה ישירות בתוך סעיפי המתווה הרשמיים.</p>
+        </div>
+      `);
+    }, 600);
+  };
+
   const chooseTopic = (t) => {
-    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג" };
+    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג" ,reserves: "מילואים"};
     addUser(labels[t]);
     if (t === "exceptional") {
       showExceptionalRegistration();
+    }
+    else if (t === "reserves") {
+      showReservesGuidelines(); 
     } else {
       setContext((p) => ({ ...p, topic: t }));
       addBot("<b class='font-sans'>בחר/י סמסטר:</b>");
@@ -447,6 +563,7 @@ export default function ChatBot() {
                   <button className={pillBtn} onClick={() => chooseTopic("courses")}>קורסי חובה</button>
                   <button className={pillBtn} onClick={() => chooseTopic("advisor")}>יועץ אקדמי</button>
                   <button className={pillBtn} onClick={() => chooseTopic("exceptional")}>רישום חריג</button>
+                  <button className={pillBtn} onClick={() => chooseTopic("reserves")}>מילואים</button>
                 </div>
               </div>
             )}

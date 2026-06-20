@@ -148,9 +148,66 @@ export async function getAllRegDocs() {
 }
 
 /* =============================
+   Forms helper
+============================= */
+function appendForms(forms, intent) {
+  if (!forms.length) return "";
+  let relevant = [];
+  if (intent === "exemptions") {
+    relevant = forms.filter((f) => f.label.includes("פטור"));
+  } else if (intent === "exception_registration" || intent === "contacts" || intent === "rules") {
+    relevant = forms.filter((f) => f.usage === "exception_registration");
+  } else if (intent === "advisors") {
+    relevant = forms.filter((f) => f.usage === "advisor");
+  } else if (intent === "general") {
+    relevant = forms;
+  }
+  if (!relevant.length) return "";
+  return `
+    <div class="mt-3 pt-2 border-t border-gray-200" style="font-size:12px;">
+      <b>טפסים רלוונטיים:</b><br/>
+      ${relevant.map((f) => `• <a href="${f.url}" target="_blank" rel="noopener noreferrer">${f.label}</a>`).join("<br/>")}
+    </div>`;
+}
+
+/* =============================
+   Live advisor lookup (Firestore)
+============================= */
+async function getAdvisorsForSemester(semesterNum) {
+  try {
+    const snap = await db
+      .collection("academicAdvisors")
+      .where("semesters", "array-contains", Number(semesterNum))
+      .get();
+    if (snap.empty) return null;
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    return null;
+  }
+}
+
+/* =============================
+   RAG context export
+============================= */
+export async function getRegistrationSummary(semesterNum) {
+  try {
+    const doc = await getRegDoc(semesterNum);
+    if (!doc) return "";
+    const w = doc.registrationWindow;
+    const windowStr = w ? `חלון רישום: ${w.date} בין ${w.from} ל-${w.to}` : "";
+    const rules = (doc.keyRules || []).slice(0, 5).map((r) => r.text).join("; ");
+    return [`הנחיות רישום - סמסטר ${semesterNum}:`, windowStr, rules ? `כללים: ${rules}` : ""]
+      .filter(Boolean)
+      .join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/* =============================
    Builders – single semester
 ============================= */
-export function buildRegistrationAnswer(intent, doc) {
+export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) {
   const sem = doc.semesterNumber;
   const cohort = doc.audience?.cohortText
     ? ` (${doc.audience.cohortText})`
@@ -192,23 +249,24 @@ export function buildRegistrationAnswer(intent, doc) {
   }
 
   /* ---------- ADVISORS ---------- */
- if (intent === "advisors") {
-  const a = doc.contacts?.academicAdvisors || [];
-  return `
-    <div class="text-sm">
-      <b>יועצים אקדמיים – סמסטר ${sem}</b><br/><br/>
+  if (intent === "advisors") {
+    const liveAdvisors = await getAdvisorsForSemester(sem);
+    const a = liveAdvisors?.length ? liveAdvisors : (doc.contacts?.academicAdvisors || []);
+    const formsHtml = appendForms(forms, intent);
+    return `
+      <div class="text-sm">
+        <b>יועצים אקדמיים - סמסטר ${sem}</b><br/><br/>
 
-      ${a.map(x =>
-        `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
-      ).join("<br/>")}
+        ${a.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
 
-      <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
+        <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
 
-      <div style="font-size:12px; color:#6b7280; text-align:center;">
-        ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה ⬇️
-      </div>
-    </div>`;
-}
+        <div style="font-size:12px; color:#6b7280; text-align:center;">
+          ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה
+        </div>
+        ${formsHtml}
+      </div>`;
+  }
 
   /* ---------- LABS ---------- */
   if (intent === "labs") {
@@ -241,14 +299,14 @@ export function buildRegistrationAnswer(intent, doc) {
   /* ---------- EXEMPTIONS ---------- */
   if (intent === "exemptions") {
     const e = doc.contacts?.exemptions || [];
+    const formsHtml = appendForms(forms, intent);
     if (!e.length)
-      return `<div class="text-sm">ℹ️ אין מידע על פטורים בסמסטר זה.</div>`;
+      return `<div class="text-sm">ℹ️ אין מידע על פטורים בסמסטר זה.${formsHtml}</div>`;
     return `
       <div class="text-sm">
         <b>פטורים / חריגים</b><br/><br/>
-        ${e.map(x =>
-          `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
-        ).join("<br/>")}
+        ${e.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
+        ${formsHtml}
       </div>`;
   }
 
@@ -278,18 +336,18 @@ export function buildRegistrationAnswer(intent, doc) {
   /* ---------- CONTACTS ---------- */
   if (intent === "contacts") {
     const c = doc.contacts?.registrationSupport || [];
+    const formsHtml = appendForms(forms, intent);
     if (!c.length)
-      return `<div class="text-sm">ℹ️ אין איש קשר ייעודי לרישום בסמסטר זה.</div>`;
+      return `<div class="text-sm">ℹ️ אין איש קשר ייעודי לרישום בסמסטר זה.${formsHtml}</div>`;
     return `
       <div class="text-sm">
         <b>אנשי קשר לרישום</b><br/><br/>
-        ${c.map(x =>
-          `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
-        ).join("<br/>")}
+        ${c.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
+        ${formsHtml}
       </div>`;
   }
 
-  return `<div class="text-sm">${doc.title}</div>`;
+  return `<div class="text-sm">${doc.title}${appendForms(forms, "general")}</div>`;
 }
 
 /* =============================
