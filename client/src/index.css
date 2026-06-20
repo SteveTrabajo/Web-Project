@@ -170,7 +170,7 @@ body,
   font-family: "Heebo", ui-sans-serif, system-ui, sans-serif;
   /* Only Heebo Light (300) is shipped; lift the baseline to 400 and let
      font-synthesis thicken it so default text is not hairline-thin. */
-  font-weight: 400;
+  font-weight: 300;
   font-synthesis: weight style;
 }
 
@@ -232,12 +232,12 @@ body,
    ============================================================ */
 
 @keyframes star-travel-bottom {
-  0%   { transform: translateX(0%);    opacity: 0.7; }
+  0%   { transform: translateX(0%);    opacity: 0.8; }
   100% { transform: translateX(-100%); opacity: 0; }
 }
 
 @keyframes star-travel-top {
-  0%   { transform: translateX(0%);    opacity: 0.7; }
+  0%   { transform: translateX(0%);    opacity: 0.8; }
   100% { transform: translateX(100%);  opacity: 0; }
 }
 
@@ -255,7 +255,7 @@ body,
   border-radius: 50%;
   opacity: 0.7;
   pointer-events: none;
-  transition: opacity 600ms ease;
+  transition: opacity 800ms ease;
 }
 
 .star-border__points--bottom {
@@ -269,7 +269,7 @@ body,
   top: -12px;
   left: -250%;
   background: radial-gradient(circle, #6EE7B7, transparent 10%);
-  animation: star-travel-top 6s linear infinite alternate;
+  animation: star-travel-top 8s linear infinite alternate;
 }
 
 .star-border--responding .star-border__points {
