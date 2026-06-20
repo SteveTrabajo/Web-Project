@@ -59,7 +59,7 @@ export default function ChatBot() {
     loadYearbooks();
   }, []);
 
-  const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
+  const addBot = (html, variant = "bubble") => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html, variant }]);
   const addUser = (text) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "user", html: text }]);
 
   const startChat = () => {
@@ -165,34 +165,43 @@ export default function ChatBot() {
       const data = await res.json();
       if (!res.ok || !data.courses?.length) return addBot("<div class='font-sans'>לא נמצאו קורסים.</div>");
 
-      let html = `
-  <div class="space-y-4 font-sans">
-    <div class="text-lg font-bold text-brand-navy">
-      סמסטר ${sem} - קורסי חובה
-    </div>
-`;
-
-      data.courses.forEach((c) => {
-        html += `
-    <div class="rounded-2xl border-r-4 border-brand-navy p-4 shadow-sm border bg-white text-gray-900">
-      <div class="font-bold">${c.courseName}</div>
-      <div class="text-xs font-mono mt-1 text-gray-500">
-        ${c.courseCode} | ${c.credits} נ"ז
-      </div>
-      ${c.relations?.length ? `
-        <div class="mt-2 text-xs space-y-1">
-          ${c.relations.map((r) => `
-            <div class="italic font-bold ${r.type === "PREREQUISITE" ? "text-red-600" : "text-amber-600"}">
-              - ${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseName}
+      const rows = data.courses.map((c) => {
+        const credits = c.credits ? `${c.credits} נ"ז` : 'ללא נ"ז';
+        return `
+        <div class="rounded-xl border border-surface-border bg-surface-page px-4 py-2.5">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="text-content-primary leading-snug">
+              <span class="font-bold">${c.courseName}</span>
+              <span class="text-content-muted">(${credits})</span>
+            </span>
+            <span class="text-xs text-content-muted shrink-0">סימול: <span class="font-mono">${c.courseCode}</span></span>
+          </div>
+          ${c.relations?.length ? `
+            <div class="mt-1 text-xs">
+              ${c.relations.map((r) => `
+                <span class="inline-block ms-2 font-semibold ${r.type === "PREREQUISITE" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}">
+                  · ${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseName}
+                </span>
+              `).join("")}
             </div>
-          `).join("")}
+          ` : ""}
         </div>
-      ` : ""}
-    </div>
-  `;
-      });
+        `;
+      }).join("");
 
-      addBot(html + "</div>");
+      const html = `
+        <div class="w-full rounded-2xl border border-surface-border bg-surface-card shadow-lg overflow-hidden font-sans" dir="rtl">
+          <div class="bg-brand-navy text-white px-5 py-3 flex items-center justify-between">
+            <span class="font-bold text-base">קורסי חובה - סמסטר ${sem}</span>
+            <span class="text-xs opacity-80">${data.courses.length} קורסים</span>
+          </div>
+          <div class="p-4 space-y-3">
+            ${rows}
+          </div>
+        </div>
+      `;
+
+      addBot(html, "panel");
       setHasExchange(true);
     } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
   };
@@ -319,6 +328,22 @@ export default function ChatBot() {
         </div>
 
         <div className="flex items-center gap-2">
+          {context.topic && (
+            <>
+              <button
+                onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
+                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              >
+                החלפת נושא
+              </button>
+              <button
+                onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
+                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              >
+                שינוי סמסטר
+              </button>
+            </>
+          )}
           {hasExchange && (
             <button
               onClick={() => setShowFeedback(true)}
@@ -342,20 +367,34 @@ export default function ChatBot() {
       <div className="flex-1 flex overflow-hidden">
         <div
           ref={chatRef}
-          className="flex-1 overflow-y-auto p-8 bg-surface-page space-y-6"
+          dir="ltr"
+          className="chat-scroll flex-1 overflow-y-auto p-8 bg-surface-page"
         >
-          {messages.map((m) => (
-            <div key={m.id} className={`flex ${m.sender === "user" ? "justify-start" : "justify-end"}`}>
+          <div dir="rtl" className="space-y-6">
+          {messages.map((m) => {
+            const isPanel = m.sender === "bot" && m.variant === "panel";
+            return (
               <div
-                className={`max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-body ${
-                  m.sender === "user"
-                    ? "bg-brand-navy text-white rounded-tl-none font-sans"
-                    : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
+                key={m.id}
+                className={`flex ${
+                  m.sender === "user" ? "justify-start" : isPanel ? "justify-center" : "justify-end"
                 }`}
-                dangerouslySetInnerHTML={{ __html: m.html }}
-              />
-            </div>
-          ))}
+              >
+                <div
+                  className={
+                    isPanel
+                      ? "bot-bubble w-full max-w-2xl"
+                      : `max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-body ${
+                          m.sender === "user"
+                            ? "bg-brand-navy text-white rounded-tl-none font-sans"
+                            : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
+                        }`
+                  }
+                  dangerouslySetInnerHTML={{ __html: m.html }}
+                />
+              </div>
+            );
+          })}
 
           {/* Quick action pills */}
           <div className="pt-4 flex flex-col gap-4 items-end">
@@ -404,29 +443,13 @@ export default function ChatBot() {
               </div>
             )}
           </div>
+          </div>
         </div>
       </div>
 
       {/* Footer input */}
       <div className="p-6 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
         <div className="flex flex-col gap-3">
-          {context.topic && (
-            <div className="flex gap-4 px-2">
-              <button
-                className="text-caption font-bold text-bio-green dark:text-bio-green-glow hover:underline uppercase tracking-wider font-sans"
-                onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
-              >
-                החלפת נושא
-              </button>
-              <button
-                className="text-caption font-bold text-content-muted hover:underline uppercase tracking-wider font-sans"
-                onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
-              >
-                שינוי סמסטר
-              </button>
-            </div>
-          )}
-
           <div className="flex gap-4 items-center">
             <div className="flex-1 relative">
               {showSuggestions && suggestions.length > 0 && (

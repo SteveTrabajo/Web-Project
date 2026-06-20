@@ -196,6 +196,33 @@ body,
 }
 
 /* ============================================================
+   CHAT SCROLLBAR
+   Themed thin scrollbar for the bot chat area. The scroll
+   container is set to dir=ltr so the bar sits on the right;
+   its inner content is wrapped back to dir=rtl.
+   ============================================================ */
+
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-border) transparent;
+}
+.chat-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--surface-border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--content-muted);
+}
+
+/* ============================================================
    CHAT INPUT GLOW
    Animated green + white gradient outline around the chat input.
      default                  - dominant outward glow (waiting for input)
