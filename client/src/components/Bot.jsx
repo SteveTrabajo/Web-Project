@@ -380,25 +380,25 @@ export default function ChatBot() {
                   dangerouslySetInnerHTML={{ __html: m.html }}
                 />
                 {showActions && (
-                  <div className="flex items-center gap-0.5 mt-1.5">
+                  <div className="flex items-center gap-1 mt-1.5">
                     {/* Review is offered only after a typed question, not a selection-only flow. */}
                     {askedTyped && (
                       <button
                         onClick={() => setShowFeedback(true)}
                         title="סיום שיחה והשארת משוב"
                         aria-label="סיום שיחה והשארת משוב"
-                        className="p-1.5 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                        className="p-2 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
                       >
-                        <Check size={16} strokeWidth={2.5} />
+                        <Check size={19} strokeWidth={2.5} />
                       </button>
                     )}
                     <button
                       onClick={startChat}
                       title="שיחה חדשה"
                       aria-label="שיחה חדשה"
-                      className="p-1.5 rounded-md text-content-muted hover:text-brand-navy hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                      className="p-2 rounded-md text-content-muted hover:text-brand-navy hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
                     >
-                      <RotateCcw size={15} strokeWidth={2} />
+                      <RotateCcw size={18} strokeWidth={2} />
                     </button>
                   </div>
                 )}
