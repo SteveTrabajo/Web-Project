@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { RotateCcw, Check } from "lucide-react";
 import FeedbackModal from "./FeedbackModal.jsx";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -8,12 +9,16 @@ const HEB_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
 
 const SECRETARY_PHONE = "04-9901927";
 const SECRETARY_EMAIL = "nataliav@braude.ac.il";
-const EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
-const ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
+const FALLBACK_EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
+const FALLBACK_ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
 
 export default function ChatBot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [formUrls, setFormUrls] = useState({
+    advisor: FALLBACK_ADVISOR_FORM_URL,
+    exception_registration: FALLBACK_EXCEPTION_FORM_URL,
+  });
   const [context, setContext] = useState({
     yearbook: null,
     semesterNum: null,
@@ -27,6 +32,7 @@ export default function ChatBot() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasExchange, setHasExchange] = useState(false);
+  const [askedTyped, setAskedTyped] = useState(false);
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [isBotResponding, setIsBotResponding] = useState(false);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -59,19 +65,38 @@ export default function ChatBot() {
     loadYearbooks();
   }, []);
 
+  useEffect(() => {
+    fetch(`${API_BASE}/api/forms`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const forms = data?.forms;
+        if (!Array.isArray(forms) || !forms.length) return;
+        setFormUrls((prev) => {
+          const next = { ...prev };
+          for (const f of forms) {
+            if (f.usage === "advisor" && f.url) next.advisor = f.url;
+            if (f.usage === "exception_registration" && f.url) next.exception_registration = f.url;
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
   const addUser = (text) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "user", html: text }]);
 
   const startChat = () => {
     setMessages([]);
     setHasExchange(false);
+    setAskedTyped(false);
     setRecentQuestions([]);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
     addBot(`
   <div class="space-y-2">
     <div class="text-xl font-bold text-brand-navy">ברוכים הבאים ל-BIO BOT</div>
     <p class="text-gray-700">אני כאן כדי לעזור לך עם מידע אקדמי, קורסים וייעוץ במחלקה.</p>
-    <div class="text-sm font-semibold text-bio-green mt-4 font-sans">
+    <div class="text-sm font-semibold text-bio-green mt-2 font-sans">
       אנא בחר באיזה שנת לימודים התחלת כדי לעזור לך
     </div>
   </div>
@@ -123,6 +148,7 @@ export default function ChatBot() {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot(data.html || "לא נמצאה תשובה בבסיס הנתונים.");
       setHasExchange(true);
+      setAskedTyped(true);
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
@@ -165,34 +191,43 @@ export default function ChatBot() {
       const data = await res.json();
       if (!res.ok || !data.courses?.length) return addBot("<div class='font-sans'>לא נמצאו קורסים.</div>");
 
-      let html = `
-  <div class="space-y-4 font-sans">
-    <div class="text-lg font-bold text-brand-navy">
-      סמסטר ${sem} - קורסי חובה
-    </div>
-`;
-
-      data.courses.forEach((c) => {
-        html += `
-    <div class="rounded-2xl border-r-4 border-brand-navy p-4 shadow-sm border bg-white text-gray-900">
-      <div class="font-bold">${c.courseName}</div>
-      <div class="text-xs font-mono mt-1 text-gray-500">
-        ${c.courseCode} | ${c.credits} נ"ז
-      </div>
-      ${c.relations?.length ? `
-        <div class="mt-2 text-xs space-y-1">
-          ${c.relations.map((r) => `
-            <div class="italic font-bold ${r.type === "PREREQUISITE" ? "text-red-600" : "text-amber-600"}">
-              - ${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseName}
+      const rows = data.courses.map((c) => {
+        const credits = c.credits ? `${c.credits} נ"ז` : 'ללא נ"ז';
+        return `
+        <div class="rounded-xl border border-surface-border bg-surface-page px-3 py-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="text-content-primary leading-snug">
+              <span class="font-bold">${c.courseName}</span>
+              <span class="text-content-muted">(${credits})</span>
+            </span>
+            <span class="text-xs text-content-muted shrink-0">סימול: <span class="font-mono">${c.courseCode}</span></span>
+          </div>
+          ${c.relations?.length ? `
+            <div class="mt-1 text-xs">
+              ${c.relations.map((r) => `
+                <span class="inline-block ms-2 font-semibold ${r.type === "PREREQUISITE" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}">
+                  · ${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseName}
+                </span>
+              `).join("")}
             </div>
-          `).join("")}
+          ` : ""}
         </div>
-      ` : ""}
-    </div>
-  `;
-      });
+        `;
+      }).join("");
 
-      addBot(html + "</div>");
+      const html = `
+        <div class="w-full rounded-2xl border border-surface-border bg-surface-card shadow-lg overflow-hidden font-sans" dir="rtl">
+          <div class="bg-brand-navy text-white px-4 py-2.5 flex items-center justify-between">
+            <span class="font-bold text-base">קורסי חובה - סמסטר ${sem}</span>
+            <span class="text-xs opacity-80">${data.courses.length} קורסים</span>
+          </div>
+          <div class="p-3 space-y-2">
+            ${rows}
+          </div>
+        </div>
+      `;
+
+      addBot(html, "panel");
       setHasExchange(true);
     } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
   };
@@ -219,16 +254,16 @@ export default function ChatBot() {
 
       if (a) {
         addBot(`
-  <div class="p-4 rounded-2xl border space-y-2 font-sans bg-blue-50 border-blue-100 text-gray-800">
+  <div class="p-3 rounded-2xl border space-y-1.5 font-sans bg-blue-50 border-blue-100 text-gray-800">
     <div class="font-bold text-brand-navy">היועץ האקדמי שלך:</div>
     <div class="text-sm text-gray-800"><b>שם:</b> ${a.name}</div>
     <div class="text-sm text-gray-800">
       <b>מייל:</b>
       <a href="mailto:${a.email}" class="text-bio-green underline">${a.email}</a>
     </div>
-    <div class="mt-2 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
+    <div class="mt-1.5 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
       זכור למלא
-      <a href="${ADVISOR_FORM_URL}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
+      <a href="${formUrls.advisor}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
       לפני הפנייה.
     </div>
   </div>
@@ -244,14 +279,14 @@ export default function ChatBot() {
 
   const showExceptionalRegistration = () => {
     addBot(`
-<div class="rounded-2xl p-5 shadow-sm space-y-4 bg-white border border-blue-100 text-gray-800">
+<div class="rounded-2xl p-4 shadow-sm space-y-3 bg-white border border-blue-100 text-gray-800">
   <div class="text-lg font-bold text-bio-green">רישום או ביטול חריג לקורסים</div>
 
   <div class="text-sm text-gray-800">
     משתמשים ברישום חריג כאשר <strong>לא ניתן להירשם לקורס דרך תחנת מידע</strong>.
   </div>
 
-  <div class="rounded-xl p-3 text-sm space-y-1 bg-blue-50 border border-blue-200">
+  <div class="rounded-xl p-2.5 text-sm space-y-1 bg-blue-50 border border-blue-200">
     <div class="font-semibold mb-1">מתי זה קורה בדרך כלל?</div>
     <div>אין מקום פנוי בקורס</div>
     <div>נכשלת בקורס פעמיים</div>
@@ -260,7 +295,7 @@ export default function ChatBot() {
 
   <div class="text-sm font-semibold">תהליך הגשת בקשה לרישום חריג:</div>
 
-  <div class="text-sm space-y-3" dir="rtl">
+  <div class="text-sm space-y-2" dir="rtl">
     <div class="flex items-start gap-3">
       <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">1</span>
       <span>מורידים את הטופס.</span>
@@ -279,10 +314,10 @@ export default function ChatBot() {
     </div>
   </div>
 
-  <div class="border-t border-gray-200 pt-3 text-sm space-y-2">
+  <div class="border-t border-gray-200 pt-2.5 text-sm space-y-1.5">
     <div>
       <strong>טופס רישום/ביטול קורס:</strong><br/>
-      <a href="${EXCEPTION_FORM_URL}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
+      <a href="${formUrls.exception_registration}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
     </div>
     <div class="text-gray-700">
       <strong>מזכירות:</strong> ${SECRETARY_PHONE}<br/>
@@ -306,11 +341,11 @@ export default function ChatBot() {
 
   return (
     <div
-      className="w-full max-w-6xl mx-auto h-[85vh] bg-surface-card text-content-primary rounded-xl shadow-2xl border border-surface-border flex flex-col overflow-hidden font-sans"
+      className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-xl shadow-2xl border border-surface-border flex flex-col overflow-hidden font-sans"
       dir="rtl"
     >
       {/* Header */}
-      <div className="bg-brand-navy text-white px-8 py-5 flex flex-row-reverse items-center justify-between shadow-md z-10">
+      <div className="bg-brand-navy text-white px-8 py-2.5 flex flex-row-reverse items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-heading leading-none text-left">BIO BOT</h1>
@@ -319,22 +354,22 @@ export default function ChatBot() {
         </div>
 
         <div className="flex items-center gap-2">
-          {hasExchange && (
-            <button
-              onClick={() => setShowFeedback(true)}
-              className="text-caption bg-brand-gold text-brand-navy font-bold px-4 py-2 rounded-lg hover:bg-brand-gold-hover transition-all border border-yellow-300 shadow-sm active:scale-95 font-sans flex items-center gap-2"
-            >
-              <span>סיים שיחה</span>
-              <span>✓</span>
-            </button>
+          {context.topic && (
+            <>
+              <button
+                onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
+                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              >
+                החלפת נושא
+              </button>
+              <button
+                onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
+                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              >
+                שינוי סמסטר
+              </button>
+            </>
           )}
-          <button
-            onClick={startChat}
-            className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans flex items-center gap-2"
-          >
-            <span>איפוס שיחה</span>
-            <span className="text-body">↺</span>
-          </button>
         </div>
       </div>
 
@@ -342,20 +377,56 @@ export default function ChatBot() {
       <div className="flex-1 flex overflow-hidden">
         <div
           ref={chatRef}
-          className="flex-1 overflow-y-auto p-8 bg-surface-page space-y-6"
+          dir="ltr"
+          className="chat-scroll flex-1 overflow-y-auto p-5 bg-surface-page"
         >
-          {messages.map((m) => (
-            <div key={m.id} className={`flex ${m.sender === "user" ? "justify-start" : "justify-end"}`}>
-              <div
-                className={`max-w-[75%] px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-body ${
-                  m.sender === "user"
-                    ? "bg-brand-navy text-white rounded-tl-none font-sans"
-                    : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
-                }`}
-                dangerouslySetInnerHTML={{ __html: m.html }}
-              />
-            </div>
-          ))}
+          <div dir="rtl" className="space-y-4">
+          {messages.map((m, idx) => {
+            const isPanel = m.sender === "bot" && m.variant === "panel";
+            const colAlign = m.sender === "user" ? "items-start" : isPanel ? "items-center" : "items-end";
+            // Action icons sit directly under the latest bot answer (ChatGPT-style).
+            const showActions =
+              m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding;
+            return (
+              <div key={m.id} className={`flex flex-col ${colAlign}`}>
+                <div
+                  className={
+                    isPanel
+                      ? "bot-bubble w-full max-w-2xl"
+                      : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body ${
+                          m.sender === "user"
+                            ? "bg-brand-navy text-white rounded-tl-none font-sans"
+                            : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
+                        }`
+                  }
+                  dangerouslySetInnerHTML={{ __html: m.html }}
+                />
+                {showActions && (
+                  <div className="flex items-center gap-1 mt-1.5">
+                    {/* Review is offered only after a typed question, not a selection-only flow. */}
+                    {askedTyped && (
+                      <button
+                        onClick={() => setShowFeedback(true)}
+                        title="סיום שיחה והשארת משוב"
+                        aria-label="סיום שיחה והשארת משוב"
+                        className="p-2 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                      >
+                        <Check size={19} strokeWidth={2.5} />
+                      </button>
+                    )}
+                    <button
+                      onClick={startChat}
+                      title="שיחה חדשה"
+                      aria-label="שיחה חדשה"
+                      className="p-2 rounded-md text-content-muted hover:text-brand-navy hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+                    >
+                      <RotateCcw size={18} strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Quick action pills */}
           <div className="pt-4 flex flex-col gap-4 items-end">
@@ -404,29 +475,13 @@ export default function ChatBot() {
               </div>
             )}
           </div>
+          </div>
         </div>
       </div>
 
       {/* Footer input */}
-      <div className="p-6 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
+      <div className="px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
         <div className="flex flex-col gap-3">
-          {context.topic && (
-            <div className="flex gap-4 px-2">
-              <button
-                className="text-caption font-bold text-bio-green dark:text-bio-green-glow hover:underline uppercase tracking-wider font-sans"
-                onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
-              >
-                החלפת נושא
-              </button>
-              <button
-                className="text-caption font-bold text-content-muted hover:underline uppercase tracking-wider font-sans"
-                onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
-              >
-                שינוי סמסטר
-              </button>
-            </div>
-          )}
-
           <div className="flex gap-4 items-center">
             <div className="flex-1 relative">
               {showSuggestions && suggestions.length > 0 && (
@@ -454,8 +509,10 @@ export default function ChatBot() {
               )}
 
               <div
-                className={`relative rounded-2xl input-glow ${isBotResponding ? "input-glow--responding" : ""}`}
+                className={`star-border relative rounded-2xl border border-surface-border p-0.5 ${isBotResponding ? "star-border--responding" : ""}`}
               >
+                <span className="star-border__points star-border__points--bottom" aria-hidden="true" />
+                <span className="star-border__points star-border__points--top" aria-hidden="true" />
                 <input
                   type="text"
                   value={input}
@@ -468,11 +525,11 @@ export default function ChatBot() {
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-0"
+                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
                 />
                 <button
                   onClick={sendMessage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-10"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"/>
