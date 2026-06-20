@@ -477,8 +477,10 @@ export default function ChatBot() {
               )}
 
               <div
-                className={`relative rounded-2xl input-glow ${isBotResponding ? "input-glow--responding" : ""}`}
+                className={`star-border relative rounded-2xl border border-surface-border p-0.5 ${isBotResponding ? "star-border--responding" : ""}`}
               >
+                <span className="star-border__points star-border__points--bottom" aria-hidden="true" />
+                <span className="star-border__points star-border__points--top" aria-hidden="true" />
                 <input
                   type="text"
                   value={input}
@@ -491,11 +493,11 @@ export default function ChatBot() {
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-0"
+                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
                 />
                 <button
                   onClick={sendMessage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-10"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"/>

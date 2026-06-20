@@ -5,11 +5,26 @@ const router = express.Router();
 
 router.get("/labs-years", async (req, res) => {
   try {
-    const snap = await db.collection("lab_schedule").get();
-    const years = snap.docs.map((d) => ({
-      id: d.id,
-      label: d.data()?.year || d.id,
-    }));
+    const [labsSnap, yearbooksSnap] = await Promise.all([
+      db.collection("lab_schedule").get(),
+      db.collection("yearbooks").get(),
+    ]);
+
+    // Hebrew display names keyed by yearbook id (shared id scheme with lab_schedule)
+    const hebrewById = new Map(
+      yearbooksSnap.docs
+        .map((d) => [d.id, d.data()?.displayName])
+        .filter(([, name]) => name)
+    );
+
+    const years = labsSnap.docs.map((d) => {
+      const stored = d.data()?.year;
+      // Prefer a real stored Hebrew label, then the yearbook display name, then the id.
+      const label =
+        stored && stored !== d.id ? stored : hebrewById.get(d.id) || stored || d.id;
+      return { id: d.id, label };
+    });
+
     res.json({ years });
   } catch {
     res.status(500).json({ error: "failed" });

@@ -11,7 +11,7 @@
 @font-face {
   font-family: "Heebo";
   src: url("/fonts/Heebo Light.ttf") format("truetype");
-  font-weight: 300;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -155,12 +155,10 @@
 
 /* ============================================================
    GLOBAL RESET + TYPOGRAPHY BASE
-   Bumping html font-size scales the whole Tailwind rem-based
-   text scale up ~6% (16px -> 17px).
    ============================================================ */
 
 html {
-  font-size: 17px;
+  font-size: 21px;
 }
 
 html,
@@ -223,69 +221,63 @@ body,
 }
 
 /* ============================================================
-   CHAT INPUT GLOW
-   Animated green + white gradient outline around the chat input.
-     default                  - dominant outward glow (waiting for input)
-     .input-glow--responding  - subtle (bot is replying)
-     .input-glow--off         - hidden (user is actively typing)
-   All transitions are opacity-based to avoid flicker between states.
+   CHAT INPUT STAR BORDER
+   Two soft "stars" travel along the top and bottom edges of the
+   chat text box, creating an animated shimmer border. Same state
+   logic as before:
+     default                    - full shimmer (waiting for input)
+     .star-border--responding   - dimmed (bot is replying)
+   The travel layers sit behind the input; a thin wrapper padding
+   reveals them at the edges. Honors prefers-reduced-motion.
    ============================================================ */
 
-@keyframes input-glow-flow {
-  0%   { background-position:   0% 50%; }
-  100% { background-position: 200% 50%; }
+@keyframes star-travel-bottom {
+  0%   { transform: translateX(0%);    opacity: 0.7; }
+  100% { transform: translateX(-100%); opacity: 0; }
 }
 
-.input-glow {
+@keyframes star-travel-top {
+  0%   { transform: translateX(0%);    opacity: 0.7; }
+  100% { transform: translateX(100%);  opacity: 0; }
+}
+
+.star-border {
   position: relative;
+  overflow: hidden;
   isolation: isolate;
 }
 
-.input-glow::before {
-  content: '';
+.star-border__points {
   position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  padding: 2px;
-  background: linear-gradient(
-    90deg,
-    #15803D,
-    #34D399,
-    #FFFFFF,
-    #6EE7B7,
-    #34D399,
-    #FFFFFF,
-    #15803D
-  );
-  background-size: 200% 100%;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-          mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  animation: input-glow-flow 6s linear infinite;
-  opacity: 0.95;
-  /* Layered drop-shadows create a wide outward bloom */
-  filter:
-    drop-shadow(0  0  6px rgba(52, 211, 153, 0.65))
-    drop-shadow(0  0 18px rgba(52, 211, 153, 0.45))
-    drop-shadow(0  0 36px rgba(52, 211, 153, 0.25));
-  transition: opacity 600ms ease, filter 600ms ease;
+  z-index: 0;
+  width: 300%;
+  height: 50%;
+  border-radius: 50%;
+  opacity: 0.7;
   pointer-events: none;
-  z-index: 1;
+  transition: opacity 600ms ease;
 }
 
-.input-glow--responding::before {
-  opacity: 0.22;
-  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.2));
+.star-border__points--bottom {
+  bottom: -12px;
+  right: -250%;
+  background: radial-gradient(circle, #34D399, transparent 10%);
+  animation: star-travel-bottom 6s linear infinite alternate;
 }
 
-.input-glow--off::before {
-  opacity: 0;
-  filter: drop-shadow(0 0 0 rgba(52, 211, 153, 0));
+.star-border__points--top {
+  top: -12px;
+  left: -250%;
+  background: radial-gradient(circle, #6EE7B7, transparent 10%);
+  animation: star-travel-top 6s linear infinite alternate;
+}
+
+.star-border--responding .star-border__points {
+  opacity: 0.18;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-border__points { animation: none; }
 }
 
 /* ============================================================
