@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import AdminLogin from "../AdminLogin.jsx";
@@ -56,8 +55,8 @@ const TAB_COMPONENTS = {
  * AdminShell
  * ----------
  * Dashboard shell with right-side vertical sidebar and single-column main area.
- * - Auth gate (login screen when not authed)
- * - Header with page title and inline admin info bar
+ * - Auth gate (login screen when not authed); auth state is owned by App
+ *   and the logged-in admin info bar lives in the navbar
  * - Status banner (toast)
  * - Sticky sidebar nav on the right (RTL)
  * - Each tab fills the remaining width with no overflow
@@ -65,23 +64,16 @@ const TAB_COMPONENTS = {
  * Each tab component manages its own data fetching, CRUD, and editor state.
  * `toast(type, msg)` is passed down so any tab can report success/error.
  */
-export default function AdminShell() {
-  const [admin, setAdmin] = useState(() =>
-    JSON.parse(sessionStorage.getItem("bio_admin") || "null")
-  );
+export default function AdminShell({ admin, setAdmin }) {
   const [activeTab, setActiveTab] = useState("advisors");
   const [status, setStatus]       = useState({ type: "idle", msg: "" });
 
   const isAuthed = !!admin;
   const toast = (type, msg) => setStatus({ type, msg });
-  const handleLogout = () => {
-    setAdmin(null);
-    sessionStorage.removeItem("bio_admin");
-  };
 
   if (!isAuthed) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-background flex items-center justify-center px-4">
+      <div className="min-h-[calc(100vh-72px)] bg-background flex items-start justify-center px-4 pt-16">
         <div className="w-full max-w-sm">
           <Card className="p-6">
             <AdminLogin
@@ -99,33 +91,7 @@ export default function AdminShell() {
   const ActiveTabComponent = TAB_COMPONENTS[activeTab];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 text-foreground">
-
-      {/* Header bar */}
-      <header className="flex items-center justify-between gap-4 flex-wrap mb-6" dir="rtl">
-        <div className="space-y-0.5 min-w-0">
-          <h1 className="text-page-title text-brand-navy dark:text-bio-green-glow truncate">
-            אזור מנהל
-          </h1>
-          <p className="text-caption text-muted-foreground">
-            ניהול יועצים, לוחות מעבדה, שנתון וקורסים
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
-          <div className="text-right min-w-0">
-            <p className="text-caption font-semibold text-bio-green dark:text-bio-green-glow">
-              מחובר כמנהל ✓
-            </p>
-            <p className="text-caption text-muted-foreground truncate max-w-[160px]">
-              {admin.email}
-            </p>
-          </div>
-          <Button variant="destructive" size="sm" onClick={handleLogout}>
-            התנתקות
-          </Button>
-        </div>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 pb-8 text-foreground">
 
       {/* Status banner */}
       {status.msg && (

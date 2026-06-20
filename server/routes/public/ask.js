@@ -906,10 +906,10 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
 
     logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "fallback", wasAnswered: false });
     autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null });
-    return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסי שוב.</div>` });
+    return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסו שוב.</div>` });
   } catch (err) {
     console.error("ASK ERROR:", err);
-    res.status(500).json({ html: "❌ שגיאה בעיבוד השאלה" });
+    res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
   }
 });
 
