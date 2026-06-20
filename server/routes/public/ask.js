@@ -1,5 +1,8 @@
 import express from "express";
 import fetch from "node-fetch";
+import { readFile } from "fs/promises";
+import { fileURLToPath } from "url";
+import path from "path";
 import { db } from "../../server.js";
 import askLabs from "./askLabs.js";
 import {
@@ -12,6 +15,7 @@ import {
   buildRegistrationAnswer,
   buildAllAdvisorsAnswer,
   buildAllLabsAnswer,
+  getRegistrationSummary,
 } from "./registration.service.js";
 
 const router = express.Router();
@@ -360,6 +364,29 @@ async function callGeminiJson(promptText) {
     return null;
   }
 }
+// semantic text generation with a more lenient temperature, used for the RAG fallback where we don't require strict JSON output
+async function callGeminiText(promptText) {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
+    process.env.GEMINI_API_KEY;
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { temperature: 0.2 },
+      }),
+    });
+
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 async function classifyQuestion(question) {
   const classifierPrompt = `
@@ -486,6 +513,78 @@ ${list}
   const id = result?.id;
   if (Number.isInteger(id) && id >= 1 && id <= shortlist.length) return shortlist[id - 1];
   return null;
+}
+
+/* =============================
+   Forms cache (filesystem)
+============================= */
+
+const _formsCache = { ts: 0, items: [] };
+const FORMS_TTL = 5 * 60 * 1000; // 5 minutes time to live
+const __dirname_ask = path.dirname(fileURLToPath(import.meta.url));
+
+async function getFormsCached() {
+  const now = Date.now();
+  if (_formsCache.ts && now - _formsCache.ts < FORMS_TTL) return _formsCache.items;
+  try {
+    const raw = await readFile(
+      path.resolve(__dirname_ask, "../../files/forms.json"),
+      "utf8"
+    );
+    const parsed = JSON.parse(raw);
+    _formsCache.items = (Array.isArray(parsed) ? parsed : []).map((f) => ({
+      ...f,
+      url: "/files/" + encodeURIComponent(f.filename),
+    }));
+    _formsCache.ts = now;
+  } catch {
+    // keep stale or empty
+  }
+  return _formsCache.items;
+}
+
+/* =============================
+   RAG fallback (Gemini)
+============================= */
+// fallback for questions that don't match any of the above handlers, using a RAG approach with a Gemini prompt and a context built from the yearbook's courses and registration info
+async function buildRagContext(yearbookId, semesterNum) {
+  const parts = [];
+
+  try {
+    const courses = await getAllCoursesCached(yearbookId);
+    const bySemester = {};
+    for (const c of courses) {
+      const key = c.semesterKey || "unknown";
+      if (!bySemester[key]) bySemester[key] = [];
+      bySemester[key].push(`${c.courseName} (${c.courseCode})`);
+    }
+    const courseLines = Object.entries(bySemester)
+      .map(([sem, names]) => `סמסטר ${sem}: ${names.join(", ")}`)
+      .join("\n");
+    if (courseLines) parts.push(`קורסים בשנתון:\n${courseLines}`);
+  } catch {}
+
+  if (semesterNum) {
+    try {
+      const summary = await getRegistrationSummary(semesterNum);
+      if (summary) parts.push(summary);
+    } catch {}
+  }
+
+  const full = parts.join("\n\n");
+  return full.length > 4000 ? full.slice(0, 4000) + "..." : full;
+}
+
+async function callRagFallback(question, yearbookId, semesterNum) {
+  const context = await buildRagContext(yearbookId, semesterNum);
+  const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
+ענה בעברית בלבד. ענה רק על נושאים אקדמיים הקשורים לתואר. אם אינך יודע, כתוב "לא מצאתי מידע על כך."
+
+${context ? `מידע על השנתון:\n${context}\n\n` : ""}שאלת הסטודנט: "${question}"`;
+
+  const text = await callGeminiText(prompt);
+  if (!text) return null;
+  return `<div class="text-sm leading-6">${text.replace(/\n/g, "<br/>")}</div>`;
 }
 
 /* =============================
@@ -682,7 +781,7 @@ router.post("/ask", async (req, res) => {
           }
 
           if (docsWithLinks.length === 1) {
-            return res.json({ html: buildRegistrationAnswer("links", docsWithLinks[0]) });
+            return res.json({ html: await buildRegistrationAnswer("links", docsWithLinks[0]) });
           }
 
           return res.json({
@@ -742,7 +841,8 @@ router.post("/ask", async (req, res) => {
         });
       }
 
-      return res.json({ html: buildRegistrationAnswer(finalIntent, regDoc) });
+      const forms = await getFormsCached();
+      return res.json({ html: await buildRegistrationAnswer(finalIntent, regDoc, { forms }) });
     }
 
     // 3) Courses / Relations / Prereqs / Emotion (Academic)
@@ -902,6 +1002,12 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
     if (curated) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "curated", wasAnswered: true });
       return res.json({ html: curated.answerHtml });
+    }
+
+    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester);
+    if (ragAnswer) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag", wasAnswered: true });
+      return res.json({ html: ragAnswer });
     }
 
     logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "fallback", wasAnswered: false });

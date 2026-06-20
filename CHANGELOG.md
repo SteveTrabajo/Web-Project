@@ -1,11 +1,10 @@
 2026-06-20
 
 ### Added
-- Curated answers feature - admin answers an unanswered question and publishes it; the bot serves it as a safety net (keyword + Gemini match) before the "didn't understand" fallback
-- routes/admin/curatedAnswers.js + tabs/FaqTab.jsx ("תשובות מוכנות") - create/edit/publish/unpublish curated answers, with server-side sanitization
-- ask.js findCuratedAnswer lookup (5-min cache) hooked in just before the generic fallback
+- RAG fallback in ask.js - when no intent matches, passes yearbook courses + registration context to Gemini and returns a composed Hebrew answer instead of a dead-end "didn't understand"
+- Forms integration - bot registration responses now append relevant download links from the admin-managed forms system (advisor form, exception registration, exemption request)
+- Advisor deduplication - registration "advisors" intent now queries live `academicAdvisors` Firestore collection; falls back to embedded contacts only if collection is empty
 
 ### Modified
-- tabs/UnansweredTab.jsx - "ענה ופרסם" dialog; yearbook now shown as Hebrew name, not id
-- AdminRegistrationGuidelines.jsx - contacts laid out on full-width rows; each category collapsible
-- YearbooksTab.jsx / LabsTab.jsx - selector trigger shows the Hebrew yearbook name, not the id
+- ask.js - new callGeminiText, getFormsCached, buildRagContext, callRagFallback; autoSaveUnanswered now only fires when RAG also fails
+- registration.service.js - buildRegistrationAnswer is now async; accepts forms param; advisor case queries live collection via getAdvisorsForSemester; appendForms helper wires forms into exemptions/contacts/advisors/general responses
