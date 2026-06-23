@@ -55,6 +55,8 @@ export default function ChatBot() {
 
   const chatRef = useRef(null);
   const [yearbooks, setYearbooks] = useState([]);
+  const [loadingYearbooks, setLoadingYearbooks] = useState(true);
+  const [yearbooksError, setYearbooksError] = useState(false);
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
@@ -105,12 +107,17 @@ export default function ChatBot() {
   };
 
   const loadYearbooks = async () => {
+    setLoadingYearbooks(true);
+    setYearbooksError(false);
     try {
       const res = await fetch(`${API_BASE}/api/yearbooks`);
       const data = await res.json();
       if (res.ok && Array.isArray(data.yearbooks)) setYearbooks(data.yearbooks);
+      else setYearbooksError(true);
     } catch (e) {
-      addBot("<div class='text-red-500 font-sans'>תקלה בחיבור לשרת הנתונים.</div>");
+      setYearbooksError(true);
+    } finally {
+      setLoadingYearbooks(false);
     }
   };
 
@@ -547,10 +554,22 @@ const showReservesGuidelines = () => {
           {/* Quick action pills */}
           <div className="pt-4 flex flex-col gap-4 items-end">
             {!context.yearbook && (
-              <div className="flex flex-wrap gap-2 justify-end">
-                {yearbooks.map((y) => (
-                  <button key={y.id} className={pillBtn} onClick={() => chooseYearbook(y)}>{y.label}</button>
-                ))}
+              <div className="flex flex-wrap gap-2 justify-end items-center">
+                {loadingYearbooks ? (
+                  <div className="flex items-center gap-2 text-bio-green dark:text-bio-green-glow text-body font-sans">
+                    <span className="h-4 w-4 rounded-full border-2 border-bio-green/30 border-t-bio-green dark:border-bio-green-glow/30 dark:border-t-bio-green-glow animate-spin" />
+                    <span>טוען שנתונים...</span>
+                  </div>
+                ) : yearbooksError ? (
+                  <div className="flex items-center gap-3 font-sans">
+                    <span className="text-red-500 text-body">תקלה בחיבור לשרת הנתונים.</span>
+                    <button className={pillBtn} onClick={loadYearbooks}>נסה שוב</button>
+                  </div>
+                ) : (
+                  yearbooks.map((y) => (
+                    <button key={y.id} className={pillBtn} onClick={() => chooseYearbook(y)}>{y.label}</button>
+                  ))
+                )}
               </div>
             )}
 
