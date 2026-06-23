@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "../utils/adminApi";
+import { useTheme } from "@/theme/ThemeProvider";
 
-/* ── project colors ───────────────────────────────────────── */
-const C_NAVY  = "#162A5A";  // bar fill
-const C_LABEL = "#36513B";  // axis text
-const C_GRID  = "#BFCFC1";  // grid lines
+/* ── theme-aware chart palette ────────────────────────────────
+*/
+const CHART_PALETTE = {
+  light: { bar: "#162A5A", text: "#36513B", grid: "#BFCFC1", xLabel: "#162A5A", barLabel: "#162A5A" },
+  dark:  { bar: "#34D399", text: "#AFCBDF", grid: "#1C3050", xLabel: "#FFFFFF", barLabel: "#FFFFFF" },
+};
 
 /* ── display labels (used on x-axis AND in tooltip) ─────── */
 
@@ -45,17 +47,9 @@ const REASON_LABELS = {
   other:              "אחר",
 };
 
-function shortDate(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("he-IL", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
-}
-
-/* ── shared axis tick style ───────────────────────────────── */
-const TICK_STYLE = {
-  fontSize: 11,
-  fill: C_LABEL,
+/* ── shared axis tick font (color is applied per-theme) ───── */
+const TICK_FONT = {
+  fontSize: 12,
   fontFamily: "Heebo, ui-sans-serif, sans-serif",
 };
 
@@ -69,6 +63,9 @@ const TICK_STYLE = {
  * note  – explanatory line rendered below the chart
  */
 function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
+  const { theme } = useTheme();
+  const palette = CHART_PALETTE[theme] || CHART_PALETTE.light;
+
   const labels = items.map((i) => i.label);
   const counts = items.map((i) => i.count);
   const total  = counts.reduce((s, c) => s + c, 0);
@@ -101,13 +98,25 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
                 xAxis={[{
                   scaleType: "band",
                   data: labels,
-                  /* tickLabelStyle handles font/color;
-                     rotation is applied via sx below */
-                  tickLabelStyle: { ...TICK_STYLE, fontSize: 10 },
+                  /* horizontal, high-contrast category labels under each bar */
+                  tickLabelStyle: {
+                    ...TICK_FONT,
+                    fill: palette.xLabel,
+                  },
+                  /* force every label to show; the default 'auto' overlap
+                     check otherwise drops some of them */
+                  tickLabelInterval: () => true,
+                  /*
+                   * height must be tall enough for the labels. MUI derives the
+                   * tick-label clearance from this axis height (default 25px),
+                   * NOT from margin.bottom - too little space ellipsizes every
+                   * horizontal label down to an empty string.
+                   */
+                  height: 52,
                 }]}
                 yAxis={[{
                   tickMinStep: 1,
-                  tickLabelStyle: { ...TICK_STYLE, fontSize: 10 },
+                  tickLabelStyle: { ...TICK_FONT, fill: palette.text },
                   /* y-axis title makes "number of questions" explicit */
                   label: yLabel,
                 }]}
@@ -115,7 +124,7 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
                 /* ── data series ────────────────────────────────────── */
                 series={[{
                   data: counts,
-                  color: C_NAVY,
+                  color: palette.bar,
 
                   /* count number shown above each bar */
                   barLabel: (item) =>
@@ -135,11 +144,10 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
                   top:    32,   /* room for bar-top count labels */
                   right:  16,
                   /*
-                   * bottom: Hebrew labels are rotated -35°.
-                   * At that angle a 10-char label needs ~50px vertical
-                   * clearance; 72px gives comfortable breathing room.
+                   * bottom: horizontal labels wrap to up to ~2 lines at 12px.
+                   * 56px fits two wrapped lines with breathing room.
                    */
-                  bottom: 72,
+                  bottom: 56,
                   /*
                    * left: y-axis tick numbers + rotated y-axis title.
                    * Small integers (≤2 chars) need ~20px; title ~24px.
@@ -153,38 +161,26 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
                 sx={{
                   /* ── grid lines ─────────────────────────────────── */
                   "& .MuiChartsGrid-line": {
-                    stroke: C_GRID,
+                    stroke: palette.grid,
                     strokeWidth: 1,
                     strokeDasharray: "4 3",
                   },
 
                   /* ── axis structural lines & ticks ──────────────── */
-                  "& .MuiChartsAxis-line": { stroke: C_GRID },
-                  "& .MuiChartsAxis-tick": { stroke: C_GRID },
-
-                  /*
-                   * Rotate x-axis tick labels -35° around their own center
-                   * so even the longest Hebrew labels don't overlap.
-                   * transform-box: fill-box makes the origin relative to
-                   * the element's bounding box (not the SVG viewport).
-                   */
-                  "& .MuiChartsAxis-directionX .MuiChartsAxis-tickLabel": {
-                    transformBox:    "fill-box",
-                    transformOrigin: "center center",
-                    transform:       "rotate(-35deg)",
-                  },
+                  "& .MuiChartsAxis-line": { stroke: palette.grid },
+                  "& .MuiChartsAxis-tick": { stroke: palette.grid },
 
                   /* ── y-axis title ───────────────────────────────── */
                   "& .MuiChartsAxis-directionY .MuiChartsAxis-label": {
-                    fill:       C_LABEL,
-                    fontSize:   10,
+                    fill:       palette.text,
+                    fontSize:   12,
                     fontFamily: "Heebo, ui-sans-serif, sans-serif",
                   },
 
                   /* ── bar-top count labels ───────────────────────── */
-                  "& .MuiBar-label": {
-                    fill:       C_NAVY,
-                    fontSize:   11,
+                  "& .MuiBarChart-label": {
+                    fill:       palette.barLabel,
+                    fontSize:   13,
                     fontWeight: 600,
                     fontFamily: "Heebo, ui-sans-serif, sans-serif",
                   },
@@ -372,53 +368,6 @@ export default function StatsTab({ toast }) {
         unit="משובים"
         note="העמודות מציגות כמה פעמים כל סיבה נבחרה במשוב שלילי"
       />
-
-      {/* ── recent unanswered questions list ─────────────────── */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="space-y-0.5">
-            <h3 className="text-body font-semibold">שאלות אחרונות ללא מענה</h3>
-            <p className="text-caption text-muted-foreground">
-              20 השאלות האחרונות שהבוט לא הצליח לענות עליהן
-            </p>
-          </div>
-
-          {(data.recentUnanswered?.length ?? 0) === 0 ? (
-            <p className="text-caption text-muted-foreground text-center py-2">
-              אין עדיין נתונים להצגה
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {data.recentUnanswered.map((q) => (
-                <div
-                  key={q.id}
-                  className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 space-y-1"
-                >
-                  <p className="text-body text-foreground break-words">{q.question}</p>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {q.yearbook && (
-                      <Badge variant="outline" className="text-caption">{q.yearbook}</Badge>
-                    )}
-                    {q.semester && (
-                      <Badge variant="outline" className="text-caption">סמסטר {q.semester}</Badge>
-                    )}
-                    {q.topic && (
-                      <Badge variant="secondary" className="text-caption">
-                        {TOPIC_LABELS[q.topic] || q.topic}
-                      </Badge>
-                    )}
-                    {q.createdAt && (
-                      <span className="text-caption text-muted-foreground">
-                        {shortDate(q.createdAt)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
