@@ -1104,7 +1104,7 @@ router.get("/courses/suggest", async (req, res) => {
       })
       .filter((c) => c.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, 3);
 
     res.json({ suggestions: results });
   } catch (err) {
