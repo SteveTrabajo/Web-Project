@@ -21,7 +21,14 @@ function AnswerCard({ item, yearbookLabel, onEdit, onToggle, onDelete }) {
     <div className="rounded-xl border border-border bg-muted/30 overflow-hidden" dir="rtl">
       <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-2.5 border-b border-border bg-muted/50">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant={published ? "default" : "secondary"} className="text-caption">
+          <Badge
+            variant={published ? "default" : "secondary"}
+            className={`text-caption${
+              published
+                ? " border-transparent bg-bio-green/15 text-bio-green dark:bg-bio-green-glow/15 dark:text-bio-green-glow"
+                : ""
+            }`}
+          >
             {published ? "פורסם" : "טיוטה"}
           </Badge>
           <Badge variant="outline" className="text-caption">
