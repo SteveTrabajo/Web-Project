@@ -1,16 +1,45 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { ChevronDownIcon } from "lucide-react";
 
 const SEMESTERS = [2, 3, 4, 5, 6, 7];
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
+const DAY_ORDER = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+const dayRank = (d = "") => {
+  const i = DAY_ORDER.findIndex((x) => d.includes(x));
+  return i === -1 ? 99 : i;
+};
+
+// Compact labelled dropdown used across the filter bar. Shows the selected
+// option's label (not its raw value) and an "all" entry at the top.
+function FilterSelect({ label, value, onValueChange, options, allLabel }) {
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="text-caption text-content-muted h-4 leading-4">{label}</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger dir="rtl" className="w-full h-9 px-3 [&>span]:text-right">
+          <span>{value === "ALL" ? allLabel : selected?.label ?? value}</span>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">{allLabel}</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 const formatDate = (iso) => {
   if (!iso) return "";
@@ -45,6 +74,17 @@ export default function LabsViewer() {
   const [semester, setSemester] = useState(2);
   const [labs, setLabs] = useState([]);
   const [courseFilter, setCourseFilter] = useState("ALL");
+  const [dateFilter, setDateFilter] = useState("ALL");
+  const [dayFilter, setDayFilter] = useState("ALL");
+  const [timeFilter, setTimeFilter] = useState("ALL");
+  const [groupFilter, setGroupFilter] = useState("ALL");
+  const [lecturerFilter, setLecturerFilter] = useState("ALL");
+  // Staged bar selections; committed to the applied state above only on "apply".
+  const [draft, setDraft] = useState({
+    yearbookId: "tashpav", semester: 2,
+    course: "ALL", date: "ALL", day: "ALL", time: "ALL", group: "ALL", lecturer: "ALL",
+  });
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -65,6 +105,7 @@ export default function LabsViewer() {
     loadYears().then((list) => {
       if (list.length && !list.some((y) => y.id === yearbookId)) {
         setYearbookId(list[0].id);
+        setDraft((d) => ({ ...d, yearbookId: list[0].id }));
       }
     });
   }, [loadYears]);
@@ -79,6 +120,14 @@ export default function LabsViewer() {
         const data = await res.json();
         setLabs(buildFlat(data, semester));
         setCourseFilter("ALL");
+        setDateFilter("ALL");
+        setDayFilter("ALL");
+        setTimeFilter("ALL");
+        setGroupFilter("ALL");
+        setLecturerFilter("ALL");
+        setDraft((d) => ({
+          ...d, course: "ALL", date: "ALL", day: "ALL", time: "ALL", group: "ALL", lecturer: "ALL",
+        }));
       } catch (e) {
         setLabs([]);
         setError("לא נמצאו נתונים");
@@ -95,6 +144,11 @@ export default function LabsViewer() {
       await loadYears();
       if (yearId) setYearbookId(yearId);
       if (sem) setSemester(Number(sem));
+      setDraft((d) => ({
+        ...d,
+        ...(yearId ? { yearbookId: yearId } : {}),
+        ...(sem ? { semester: Number(sem) } : {}),
+      }));
       setReloadKey((k) => k + 1);
     };
     window.addEventListener("labs-updated", onUpdated);
@@ -107,8 +161,40 @@ export default function LabsViewer() {
     return Array.from(m.entries()).map(([code, name]) => ({ code, name }));
   }, [labs]);
 
+  // Distinct values present in the loaded labs, used to build the filter dropdowns.
+  const filterOptions = useMemo(() => {
+    const days = new Set();
+    const times = new Set();
+    const groups = new Set();
+    const lecturers = new Set();
+    const dates = new Set();
+    labs.forEach((l) => {
+      if (l.day) days.add(l.day);
+      if (l.time) times.add(l.time);
+      if (l.group) groups.add(l.group);
+      if (l.date) dates.add(l.date);
+      (l.staff || []).forEach((s) => s && lecturers.add(s));
+    });
+    return {
+      courses: coursesList.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}` })),
+      dates: [...dates].sort().map((d) => ({ value: d, label: formatDate(d) })),
+      days: [...days].sort((a, b) => dayRank(a) - dayRank(b)).map((d) => ({ value: d, label: d })),
+      times: [...times].sort().map((t) => ({ value: t, label: t })),
+      groups: [...groups].sort().map((g) => ({ value: g, label: g })),
+      lecturers: [...lecturers].sort().map((s) => ({ value: s, label: s })),
+    };
+  }, [labs, coursesList]);
+
   const grouped = useMemo(() => {
-    const filtered = courseFilter === "ALL" ? labs : labs.filter((l) => l.courseCode === courseFilter);
+    const filtered = labs.filter((l) => {
+      if (courseFilter !== "ALL" && l.courseCode !== courseFilter) return false;
+      if (dateFilter !== "ALL" && l.date !== dateFilter) return false;
+      if (dayFilter !== "ALL" && l.day !== dayFilter) return false;
+      if (timeFilter !== "ALL" && l.time !== timeFilter) return false;
+      if (groupFilter !== "ALL" && l.group !== groupFilter) return false;
+      if (lecturerFilter !== "ALL" && !(l.staff || []).includes(lecturerFilter)) return false;
+      return true;
+    });
     const sorted = [...filtered].sort((a, b) => {
       const dateA = a.date ? new Date(a.date) : new Date(0);
       const dateB = b.date ? new Date(b.date) : new Date(0);
@@ -122,9 +208,40 @@ export default function LabsViewer() {
       groups[l.courseCode].rows.push(l);
     });
     return Object.values(groups);
-  }, [labs, courseFilter]);
+  }, [labs, courseFilter, dateFilter, dayFilter, timeFilter, groupFilter, lecturerFilter]);
 
   const yearOptions = yearbooks.length ? yearbooks : [{ id: yearbookId, label: yearbookId }];
+
+  const activeFilterCount = [courseFilter, dateFilter, dayFilter, timeFilter, groupFilter, lecturerFilter]
+    .filter((v) => v !== "ALL").length;
+
+  const setDraftField = (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
+
+  // True when the staged draft differs from what is currently applied.
+  const dirty =
+    draft.yearbookId !== yearbookId ||
+    draft.semester !== semester ||
+    draft.course !== courseFilter ||
+    draft.date !== dateFilter ||
+    draft.day !== dayFilter ||
+    draft.time !== timeFilter ||
+    draft.group !== groupFilter ||
+    draft.lecturer !== lecturerFilter;
+
+  // Commit the draft. Only runs when something changed; a server request is
+  // triggered only if the yearbook/semester changed (the load effect depends
+  // on those), while pure column filters just re-filter the loaded data.
+  const applyFilters = () => {
+    if (!dirty) return;
+    setYearbookId(draft.yearbookId);
+    setSemester(draft.semester);
+    setCourseFilter(draft.course);
+    setDateFilter(draft.date);
+    setDayFilter(draft.day);
+    setTimeFilter(draft.time);
+    setGroupFilter(draft.group);
+    setLecturerFilter(draft.lecturer);
+  };
 
   return (
     <div className="max-w-250 mx-auto p-4 text-right text-content-primary" dir="rtl">
@@ -134,54 +251,116 @@ export default function LabsViewer() {
       </header>
 
       {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+      <Card className="mb-6 py-2">
+        <CardContent className={filtersOpen ? "px-4 pb-4" : "px-4"}>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className="w-full flex items-center justify-between gap-2 rounded-lg -mx-2 px-2 py-1 hover:bg-surface-raised transition-colors"
+            aria-expanded={filtersOpen}
+          >
+            <span className="text-heading text-content-primary flex items-center gap-2">
+              🔎 סינון
+              {activeFilterCount > 0 && (
+                <span className="text-caption bg-bio-green/10 text-bio-green dark:bg-bio-green-glow/10 dark:text-bio-green-glow px-2 py-0.5 rounded-full font-semibold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </span>
+            <span className="flex items-center gap-1.5 text-caption font-medium text-content-muted">
+              {filtersOpen ? "הסתר" : "הצג"}
+              <span className="flex items-center justify-center size-6 rounded-full bg-surface-raised">
+                <ChevronDownIcon
+                  className={`size-4 transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}
+                />
+              </span>
+            </span>
+          </button>
 
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-caption text-content-muted h-4 leading-4">שנתון</Label>
-              <Select value={yearbookId} onValueChange={setYearbookId}>
-                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((y) => (
-                    <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {filtersOpen && (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-caption text-content-muted h-4 leading-4">שנתון</Label>
+                <Select value={draft.yearbookId} onValueChange={setDraftField("yearbookId")}>
+                  <SelectTrigger dir="rtl" className="w-full h-9 px-3 [&>span]:text-right">
+                    <span>{yearOptions.find((y) => y.id === draft.yearbookId)?.label || draft.yearbookId}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-caption text-content-muted h-4 leading-4">סמסטר</Label>
+                <Select value={String(draft.semester)} onValueChange={(v) => setDraftField("semester")(Number(v))}>
+                  <SelectTrigger dir="rtl" className="w-full h-9 px-3 [&>span]:text-right">
+                    <span>סמסטר {draft.semester}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEMESTERS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>סמסטר {s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <FilterSelect
+                label="קורס"
+                value={draft.course}
+                onValueChange={setDraftField("course")}
+                options={filterOptions.courses}
+                allLabel="כל הקורסים"
+              />
+              <FilterSelect
+                label="תאריך"
+                value={draft.date}
+                onValueChange={setDraftField("date")}
+                options={filterOptions.dates}
+                allLabel="כל התאריכים"
+              />
+              <FilterSelect
+                label="יום"
+                value={draft.day}
+                onValueChange={setDraftField("day")}
+                options={filterOptions.days}
+                allLabel="כל הימים"
+              />
+              <FilterSelect
+                label="שעה"
+                value={draft.time}
+                onValueChange={setDraftField("time")}
+                options={filterOptions.times}
+                allLabel="כל השעות"
+              />
+              <FilterSelect
+                label="קבוצה"
+                value={draft.group}
+                onValueChange={setDraftField("group")}
+                options={filterOptions.groups}
+                allLabel="כל הקבוצות"
+              />
+              <FilterSelect
+                label="מרצה / צוות"
+                value={draft.lecturer}
+                onValueChange={setDraftField("lecturer")}
+                options={filterOptions.lecturers}
+                allLabel="כל המרצים"
+              />
+
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-caption text-content-muted h-4 leading-4">סמסטר</Label>
-              <Select value={String(semester)} onValueChange={(v) => setSemester(Number(v))}>
-                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>סמסטר {s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={applyFilters} disabled={!dirty}>
+                החל סינון
+              </Button>
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-caption text-content-muted h-4 leading-4">קורס</Label>
-              <Select value={courseFilter} onValueChange={setCourseFilter}>
-                <SelectTrigger dir="rtl" className="w-full h-10 px-3 [&>span]:text-right">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">כל הקורסים</SelectItem>
-                  {coursesList.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{c.code} - {c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
           </div>
+          )}
         </CardContent>
       </Card>
 

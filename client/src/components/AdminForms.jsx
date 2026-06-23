@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from "@/components/ui/select";
 import { apiFetch, getAdminToken } from "./admin/utils/adminApi.js";
 
 const API_BASE =
@@ -23,12 +29,6 @@ export default function AdminForms() {
   // table filters
   const [search, setSearch] = useState("");
   const [usageFilter, setUsageFilter] = useState("all");
-
-  const inputCls =
-    "w-full rounded-xl border px-3 py-2 text-sm outline-none transition " +
-    "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 " +
-    "focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 " +
-    "dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400";
 
   const loadForms = async () => {
     setLoading(true);
@@ -133,198 +133,190 @@ export default function AdminForms() {
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="text-lg font-bold text-gray-800 dark:text-slate-100">
-          📄 טפסים לסטודנטים
-        </div>
-        <button
-          type="button"
-          onClick={loadForms}
-          disabled={loading}
-          className="px-4 py-2 rounded-full text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-        >
-          {loading ? "טוען..." : "רענון"}
-        </button>
-      </div>
-
       {msg.text && (
         <div
           className={
-            "text-sm rounded-xl border px-4 py-3 " +
+            "text-body rounded-2xl border px-4 py-3 " +
             (msg.type === "error"
-              ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200"
-              : "bg-green-50 border-green-200 text-green-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-200")
+              ? "text-destructive bg-destructive/10 border-destructive/20"
+              : "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20")
           }
         >
           {msg.text}
         </div>
       )}
 
-      <div className="border rounded-2xl p-4 space-y-4 bg-white dark:bg-slate-900 dark:border-slate-700">
-        <div className="text-sm font-bold text-gray-800 dark:text-slate-100">
-          העלאת טופס חדש
-        </div>
+      {/* Upload new form */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="text-body font-semibold">העלאת טופס חדש</div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
-              תווית תצוגה (אופציונלי)
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1">
+                תווית תצוגה (אופציונלי)
+              </label>
+              <Input
+                placeholder="למשל: טופס ייעוץ לסטודנט"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1">
+                שימוש בבוט
+              </label>
+              <Select value={usage} onValueChange={setUsage}>
+                <SelectTrigger dir="rtl" className="w-full">
+                  <span>{USAGE_OPTIONS.find((o) => o.value === usage)?.label}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  {USAGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
             <input
-              className={inputCls}
-              placeholder="למשל: טופס ייעוץ לסטודנט"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              ref={fileRef}
+              type="file"
+              accept=".doc,.docx,.pdf"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
+            <Button type="button" variant="outline" onClick={chooseFile}>
+              📄 בחירת קובץ
+            </Button>
+            {file && (
+              <span dir="ltr" className="text-caption text-muted-foreground">
+                {file.name}
+              </span>
+            )}
+            <Button type="button" onClick={upload} disabled={uploading}>
+              {uploading ? "מעלה..." : "⬆️ העלאה"}
+            </Button>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
-              שימוש בבוט
-            </label>
-            <select
-              className={inputCls}
-              value={usage}
-              onChange={(e) => setUsage(e.target.value)}
-            >
-              {USAGE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+          <div className="text-caption text-muted-foreground">
+            מותר: doc, docx, pdf · מקסימום 10MB
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".doc,.docx,.pdf"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          <button
-            type="button"
-            onClick={chooseFile}
-            className="px-5 py-2 rounded-xl border text-sm font-semibold bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
-          >
-            📄 בחירת קובץ
-          </button>
-          {file && (
-            <span dir="ltr" className="text-xs text-slate-600 dark:text-slate-300">
-              {file.name}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={upload}
-            disabled={uploading}
-            className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-500"
-          >
-            {uploading ? "מעלה..." : "⬆️ העלאה"}
-          </button>
-        </div>
+      {/* Forms list */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-heading">📄 טפסים לסטודנטים</h2>
+            <Button size="sm" variant="outline" onClick={loadForms} disabled={loading}>
+              {loading ? "טוען..." : "רענון"}
+            </Button>
+          </div>
 
-        <div className="text-[11px] text-slate-500 dark:text-slate-400">
-          מותר: doc, docx, pdf · מקסימום 10MB
-        </div>
-      </div>
+          {/* Filters */}
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-caption font-medium text-muted-foreground block mb-1">
+                חיפוש (שם קובץ או תווית)
+              </label>
+              <Input
+                placeholder="הקלד לחיפוש..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="min-w-[200px]">
+              <label className="text-caption font-medium text-muted-foreground block mb-1">
+                סינון לפי שימוש
+              </label>
+              <Select value={usageFilter} onValueChange={setUsageFilter}>
+                <SelectTrigger dir="rtl" className="w-full">
+                  <span>
+                    {usageFilter === "all"
+                      ? "כל השימושים"
+                      : USAGE_OPTIONS.find((o) => o.value === usageFilter)?.label}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל השימושים</SelectItem>
+                  {USAGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
-            חיפוש (שם קובץ או תווית)
-          </label>
-          <input
-            className={inputCls}
-            placeholder="הקלד לחיפוש..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="min-w-[200px]">
-          <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
-            סינון לפי שימוש
-          </label>
-          <select
-            className={inputCls}
-            value={usageFilter}
-            onChange={(e) => setUsageFilter(e.target.value)}
-          >
-            <option value="all">כל השימושים</option>
-            {USAGE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto border rounded-2xl dark:border-slate-700">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-gray-600 border-b bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-800">
-              <th className="text-right py-2 px-3">שם קובץ</th>
-              <th className="text-right py-2 px-3">תווית</th>
-              <th className="text-right py-2 px-3">שימוש</th>
-              <th className="text-right py-2 px-3">גודל</th>
-              <th className="text-right py-2 px-3">תאריך</th>
-              <th className="text-right py-2 px-3">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredForms.map((f) => (
-              <tr
-                key={f.filename}
-                className="border-b last:border-b-0 dark:border-slate-800"
-              >
-                <td className="py-2 px-3 font-mono text-[11px]" dir="ltr">
-                  {f.filename}
-                </td>
-                <td className="py-2 px-3">{f.label || "—"}</td>
-                <td className="py-2 px-3">{usageLabel(f.usage)}</td>
-                <td className="py-2 px-3">{formatSize(f.size)}</td>
-                <td className="py-2 px-3">{formatDate(f.uploadedAt)}</td>
-                <td className="py-2 px-3">
-                  <div className="flex gap-2 flex-wrap">
-                    <a
-                      href={f.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 underline dark:text-blue-300"
-                    >
-                      פתיחה
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => deleteForm(f.filename)}
-                      className="text-red-600 hover:underline dark:text-red-400"
-                    >
-                      מחיקה
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!loading && !filteredForms.length && (
-              <tr>
-                <td colSpan={6} className="py-4 text-center text-gray-500 dark:text-slate-400">
-                  {forms.length ? "לא נמצאו טפסים התואמים את הסינון" : "אין טפסים"}
-                </td>
-              </tr>
-            )}
-            {loading && (
-              <tr>
-                <td colSpan={6} className="py-4 text-center text-blue-600 animate-pulse">
-                  טוען...
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-caption">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-right py-2 px-3">שם קובץ</th>
+                  <th className="text-right py-2 px-3">תווית</th>
+                  <th className="text-right py-2 px-3">שימוש</th>
+                  <th className="text-right py-2 px-3">גודל</th>
+                  <th className="text-right py-2 px-3">תאריך</th>
+                  <th className="text-right py-2 px-3">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredForms.map((f) => (
+                  <tr key={f.filename} className="border-b border-border last:border-b-0">
+                    <td className="py-2 px-3 font-mono text-[11px] text-right" dir="ltr">
+                      {f.filename}
+                    </td>
+                    <td className="py-2 px-3">{f.label || "—"}</td>
+                    <td className="py-2 px-3">{usageLabel(f.usage)}</td>
+                    <td className="py-2 px-3">{formatSize(f.size)}</td>
+                    <td className="py-2 px-3">{formatDate(f.uploadedAt)}</td>
+                    <td className="py-2 px-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <a
+                          href={f.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-bio-green dark:text-bio-green-glow underline"
+                        >
+                          פתיחה
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => deleteForm(f.filename)}
+                          className="text-destructive hover:underline"
+                        >
+                          מחיקה
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!loading && !filteredForms.length && (
+                  <tr>
+                    <td colSpan={6} className="py-4 text-center text-muted-foreground">
+                      {forms.length ? "לא נמצאו טפסים התואמים את הסינון" : "אין טפסים"}
+                    </td>
+                  </tr>
+                )}
+                {loading && (
+                  <tr>
+                    <td colSpan={6} className="py-4 text-center text-muted-foreground animate-pulse">
+                      טוען...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
