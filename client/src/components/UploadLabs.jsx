@@ -132,7 +132,7 @@ export default function UploadLabs() {
         </Button>
 
         <p className="text-caption text-amber-700 dark:text-amber-300">
-          Import overrides existing labs for the same year and semester.
+          הייבוא מחליף לוחות מעבדה קיימים עבור אותה שנה וסמסטר.
         </p>
 
         {msg.text && (

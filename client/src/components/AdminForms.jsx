@@ -20,6 +20,10 @@ export default function AdminForms() {
   const [usage, setUsage] = useState("other");
   const [msg, setMsg] = useState({ type: "", text: "" });
 
+  // table filters
+  const [search, setSearch] = useState("");
+  const [usageFilter, setUsageFilter] = useState("all");
+
   const inputCls =
     "w-full rounded-xl border px-3 py-2 text-sm outline-none transition " +
     "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 " +
@@ -117,6 +121,16 @@ export default function AdminForms() {
     return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
+  const q = search.trim().toLowerCase();
+  const filteredForms = forms.filter((f) => {
+    const matchesUsage = usageFilter === "all" || f.usage === usageFilter;
+    const matchesSearch =
+      !q ||
+      (f.filename || "").toLowerCase().includes(q) ||
+      (f.label || "").toLowerCase().includes(q);
+    return matchesUsage && matchesSearch;
+  });
+
   return (
     <div className="space-y-4" dir="rtl">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -193,7 +207,7 @@ export default function AdminForms() {
           <button
             type="button"
             onClick={chooseFile}
-            className="px-4 py-2 rounded-full border text-sm bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+            className="px-5 py-2 rounded-xl border text-sm font-semibold bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
           >
             📄 בחירת קובץ
           </button>
@@ -206,7 +220,7 @@ export default function AdminForms() {
             type="button"
             onClick={upload}
             disabled={uploading}
-            className="px-5 py-2 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-500"
+            className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-500"
           >
             {uploading ? "מעלה..." : "⬆️ העלאה"}
           </button>
@@ -214,6 +228,37 @@ export default function AdminForms() {
 
         <div className="text-[11px] text-slate-500 dark:text-slate-400">
           מותר: doc, docx, pdf · מקסימום 10MB
+        </div>
+      </div>
+
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
+            חיפוש (שם קובץ או תווית)
+          </label>
+          <input
+            className={inputCls}
+            placeholder="הקלד לחיפוש..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="min-w-[200px]">
+          <label className="text-xs font-semibold text-gray-700 dark:text-slate-200 block mb-1">
+            סינון לפי שימוש
+          </label>
+          <select
+            className={inputCls}
+            value={usageFilter}
+            onChange={(e) => setUsageFilter(e.target.value)}
+          >
+            <option value="all">כל השימושים</option>
+            {USAGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -230,7 +275,7 @@ export default function AdminForms() {
             </tr>
           </thead>
           <tbody>
-            {forms.map((f) => (
+            {filteredForms.map((f) => (
               <tr
                 key={f.filename}
                 className="border-b last:border-b-0 dark:border-slate-800"
@@ -263,10 +308,10 @@ export default function AdminForms() {
                 </td>
               </tr>
             ))}
-            {!loading && !forms.length && (
+            {!loading && !filteredForms.length && (
               <tr>
                 <td colSpan={6} className="py-4 text-center text-gray-500 dark:text-slate-400">
-                  אין טפסים
+                  {forms.length ? "לא נמצאו טפסים התואמים את הסינון" : "אין טפסים"}
                 </td>
               </tr>
             )}
