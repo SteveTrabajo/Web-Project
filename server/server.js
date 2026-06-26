@@ -79,6 +79,29 @@ app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
+// temp Firestore diagnostic — remove once the 403 is solved
+app.get("/health/fs", async (req, res) => {
+  const pk = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n") || "";
+  const out = {
+    serverTimeUTC: new Date().toISOString(), // compare to real time → clock skew
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    keyOk: pk.startsWith("-----BEGIN PRIVATE KEY-----") && pk.trimEnd().endsWith("-----END PRIVATE KEY-----"),
+    keyLen: pk.length,
+  };
+  try {
+    const cols = await db.listCollections();
+    out.firestore = "OK";
+    out.collections = cols.map((c) => c.id);
+  } catch (e) {
+    out.firestore = "FAILED";
+    out.code = e.code;
+    out.details = e.details;
+    out.message = e.message;
+  }
+  res.json(out);
+});
+
 /* ======================
    Rate limiting (public ask endpoint)
 ====================== */
