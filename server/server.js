@@ -99,6 +99,20 @@ app.get("/health/fs", async (req, res) => {
     out.details = e.details;
     out.message = e.message;
   }
+  // raw REST probe: who is returning the HTML 403?
+  try {
+    const tok = await firebase_admin.app().options.credential.getAccessToken();
+    const r = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${process.env.FIREBASE_PROJECT_ID}/databases/(default)/documents/admins?pageSize=1`,
+      { headers: { Authorization: `Bearer ${tok.access_token}` } }
+    );
+    out.restStatus = r.status;
+    out.restServer = r.headers.get("server");
+    out.restVia = r.headers.get("via");
+    out.restBody = (await r.text()).slice(0, 600);
+  } catch (e) {
+    out.restProbeError = e.message;
+  }
   res.json(out);
 });
 
