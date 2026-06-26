@@ -79,43 +79,6 @@ app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
-// temp Firestore diagnostic — remove once the 403 is solved
-app.get("/health/fs", async (req, res) => {
-  const pk = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n") || "";
-  const out = {
-    serverTimeUTC: new Date().toISOString(), // compare to real time → clock skew
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    keyOk: pk.startsWith("-----BEGIN PRIVATE KEY-----") && pk.trimEnd().endsWith("-----END PRIVATE KEY-----"),
-    keyLen: pk.length,
-  };
-  try {
-    const cols = await db.listCollections();
-    out.firestore = "OK";
-    out.collections = cols.map((c) => c.id);
-  } catch (e) {
-    out.firestore = "FAILED";
-    out.code = e.code;
-    out.details = e.details;
-    out.message = e.message;
-  }
-  // raw REST probe: who is returning the HTML 403?
-  try {
-    const tok = await firebase_admin.app().options.credential.getAccessToken();
-    const r = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${process.env.FIREBASE_PROJECT_ID}/databases/(default)/documents/admins?pageSize=1`,
-      { headers: { Authorization: `Bearer ${tok.access_token}` } }
-    );
-    out.restStatus = r.status;
-    out.restServer = r.headers.get("server");
-    out.restVia = r.headers.get("via");
-    out.restBody = (await r.text()).slice(0, 600);
-  } catch (e) {
-    out.restProbeError = e.message;
-  }
-  res.json(out);
-});
-
 /* ======================
    Rate limiting (public ask endpoint)
 ====================== */
