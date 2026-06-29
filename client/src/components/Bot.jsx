@@ -89,6 +89,15 @@ export default function ChatBot() {
   const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
   const addUser = (text) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "user", html: text }]);
 
+  // Compact plain-text form of a bubble, used to send conversation context to the server.
+  const stripHtml = (html) =>
+    String(html)
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 280);
+
   const startChat = () => {
     setMessages([]);
     setHasExchange(false);
@@ -152,6 +161,12 @@ export default function ChatBot() {
             : (context.topic ?? null),
           reservesMitve: context.selectedMitve || null,
           reservesGroup: context.selectedGroup || null,
+          // Latest turns of THIS conversation (excludes the question just typed,
+          // since addUser's state update hasn't applied yet) for follow-up context.
+          history: messages
+            .slice(-7)
+            .map((m) => ({ role: m.sender, text: stripHtml(m.html) }))
+            .filter((m) => m.text),
         }),
       });
       const data = await res.json();
@@ -515,8 +530,8 @@ const showReservesGuidelines = () => {
                 <div
                   className={
                     isPanel
-                      ? "bot-bubble w-full max-w-2xl"
-                      : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body ${
+                      ? "bot-bubble w-full max-w-2xl break-words"
+                      : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
                           m.sender === "user"
                             ? "bg-brand-navy text-white rounded-tl-none font-sans"
                             : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
@@ -651,9 +666,10 @@ const showReservesGuidelines = () => {
                 <span className="star-border__points star-border__points--top" aria-hidden="true" />
                 <input
                   type="text"
+                  maxLength={150}
                   value={input}
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const val = e.target.value.slice(0, 150);
                     setInput(val);
                     clearTimeout(typingTimerRef.current);
                     typingTimerRef.current = setTimeout(() => fetchSuggestions(val), 300);

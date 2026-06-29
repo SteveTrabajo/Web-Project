@@ -19,7 +19,7 @@ import {
 } from "./registration.service.js";
 
 const router = express.Router();
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.1-flash-lite";
 
 /* =============================
    Utils (MUST be defined BEFORE usage)
@@ -388,7 +388,23 @@ async function callGeminiText(promptText) {
   }
 }
 
-async function classifyQuestion(question) {
+// Compact transcript of the latest conversation turns, used to give the
+// classifier and the RAG fallback enough context to resolve follow-up questions.
+function buildHistoryText(history) {
+  if (!Array.isArray(history) || !history.length) return "";
+  const lines = history
+    .slice(-7)
+    .map((m) => {
+      const who = m?.role === "user" ? "סטודנט" : "בוט";
+      const text = String(m?.text || "").replace(/\s+/g, " ").trim().slice(0, 280);
+      return text ? `${who}: ${text}` : null;
+    })
+    .filter(Boolean);
+  const joined = lines.join("\n");
+  return joined.length > 2000 ? joined.slice(-2000) : joined;
+}
+
+async function classifyQuestion(question, historyText = "") {
   const classifierPrompt = `
 החזירי JSON בלבד:
 
@@ -403,7 +419,13 @@ lookup → קורס אחד (שם/קוד)
 prerequisites → קורסי קדם של קורס אחד
 relation → קשר בין שני קורסים או יותר (לפני/במקביל/כללי)
 
-שאלה:
+כללי קורס ב-courses רק אם השאלה הנוכחית באמת עוסקת בקורס (דרישות קדם, קשר בין
+קורסים, קוד/שם של קורס). אם זו שאלת המשך עם התייחסות עקיפה לקורס שהוזכר קודם
+(למשל "ומה הקדם שלו?", "ומה לגביו?", "ואותו קורס?"), זהי את הקורס מההקשר וכללי את שמו.
+אבל אם השאלה אינה על קורס - למשל שאלה על השיחה עצמה ("מה שאלתי קודם?", "מה אמרת?")
+או נושא כללי - החזירי courses ריק: [].
+${historyText ? `\nשיחה קודמת (להקשר בלבד):\n${historyText}\n` : ""}
+שאלה נוכחית:
 "${question}"
 `;
   return callGeminiJson(classifierPrompt);
@@ -629,12 +651,13 @@ async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesG
   return full.length > 4000 ? full.slice(0, 4000) + "..." : full;
 }
 
-async function callRagFallback(question, yearbookId, semesterNum, reservesMitve, reservesGroup) {
+async function callRagFallback(question, yearbookId, semesterNum, reservesMitve, reservesGroup, historyText = "") {
   const context = await buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup);
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
 ענה בעברית בלבד. ענה רק על נושאים אקדמיים הקשורים לתואר. אם אינך יודע, כתוב "לא מצאתי מידע על כך."
+אם השאלה היא שאלת המשך, היעזר בשיחה הקודמת כדי להבין למה היא מתייחסת.
 
-${context ? `מידע על השנתון:\n${context}\n\n` : ""}שאלת הסטודנט: "${question}"`;
+${historyText ? `שיחה קודמת:\n${historyText}\n\n` : ""}${context ? `מידע על השנתון:\n${context}\n\n` : ""}שאלת הסטודנט: "${question}"`;
 
   const text = await callGeminiText(prompt);
   if (!text) return null;
@@ -706,11 +729,12 @@ async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
 
 router.post("/ask", async (req, res) => {
   try {
-    const { yearbookId, question, semester: clientSemester, topic: clientTopic, reservesMitve, reservesGroup } = req.body || {};
+    const { yearbookId, question, semester: clientSemester, topic: clientTopic, reservesMitve, reservesGroup, history } = req.body || {};
     if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
 
     const qNorm = normalizeHebrew(question);
     const qLower = String(question).toLowerCase();
+    const historyText = buildHistoryText(history);
 
     if (detectGreeting(question, qNorm)) {
       return res.json({
@@ -908,7 +932,7 @@ router.post("/ask", async (req, res) => {
 
     const detectedCourses = extractMultipleCourses(question, allCourses, qNorm);
 
-    const [emotion, classification] = await Promise.all([detectEmotion(question), classifyQuestion(question)]);
+    const [emotion, classification] = await Promise.all([detectEmotion(question), classifyQuestion(question, historyText)]);
 
     const geminiCourses = Array.isArray(classification?.courses)
       ? classification.courses.map((c) => matchCourse(c, allCourses, nameIndex)).filter(Boolean)
@@ -1058,7 +1082,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
       return res.json({ html: curated.answerHtml });
     }
 
-    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester, reservesMitve, reservesGroup);
+    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester, reservesMitve, reservesGroup, historyText);
     if (ragAnswer) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag", wasAnswered: true });
       return res.json({ html: ragAnswer });
