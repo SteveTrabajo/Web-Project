@@ -143,6 +143,8 @@ export default function ChatBot() {
           topic: (context.topic === "advisor_input" || context.topic === "track_input")
             ? "advisor"
             : (context.topic ?? null),
+            selectedMitve: context.selectedMitve || null,
+            selectedGroup: context.selectedGroup || null,
         }),
       });
       const data = await res.json();
@@ -280,7 +282,9 @@ const showReservesGuidelines = () => {
       showExceptionalRegistration();
     }
     else if (t === "reserves") {
-      showReservesGuidelines(); 
+      setContext((p) => ({ ...p, topic: "reserves" }));
+      showReservesGuidelines();
+    
     } else {
       setContext((p) => ({ ...p, topic: t }));
       addBot("<b class='font-sans'>בחר/י סמסטר:</b>");

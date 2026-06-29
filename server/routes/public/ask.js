@@ -16,6 +16,18 @@ import {
 
 const router = express.Router();
 const MODEL = "gemini-2.5-flash";
+import fs from "fs";
+import path from "path";
+
+
+function readMiluimFile(fileName) {
+  const filePath = path.join(process.cwd(), "files", fileName);
+  const content = fs.readFileSync(filePath, "utf-8");
+
+  console.log("READ MILUIM FILE:", fileName, "length:", content.length);
+
+  return content;
+}
 
 /* =============================
    Utils (MUST be defined BEFORE usage)
@@ -361,6 +373,7 @@ async function callGeminiJson(promptText) {
   }
 }
 
+
 async function classifyQuestion(question) {
   const classifierPrompt = `
 החזירי JSON בלבד:
@@ -415,6 +428,30 @@ function buildEmotionPrompt(question) {
 
 async function detectEmotion(question) {
   return callGeminiJson(buildEmotionPrompt(question));
+}
+
+async function callGeminiText(promptText) {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
+    process.env.GEMINI_API_KEY;
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { temperature: 0 },
+      }),
+    });
+
+    const data = await resp.json();
+    console.log("GEMINI RAW RESPONSE:", JSON.stringify(data, null, 2));
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || "לא נמצאה תשובה מתאימה.";
+  } catch (error) {
+    console.error("Gemini text error:", error);
+    return "חלה שגיאה בקבלת תשובה מהמערכת.";
+  }
 }
 
 /* =============================
@@ -553,11 +590,121 @@ async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
 
 router.post("/ask", async (req, res) => {
   try {
-    const { yearbookId, question, semester: clientSemester, topic: clientTopic } = req.body || {};
+    const { yearbookId, question, semester: clientSemester, topic: clientTopic, selectedMitve,
+  selectedGroup, } = req.body || {};
     if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
 
     const qNorm = normalizeHebrew(question);
     const qLower = String(question).toLowerCase();
+
+    console.log("MILUIM DEBUG:", {
+      question,
+      clientTopic,
+      clientSemester,
+      selectedMitve,
+      selectedGroup,
+    });
+
+    // ==========================================
+    // Automatic handling for military reserve (Miluim) topics
+    // ==========================================
+    if (
+      clientTopic === "reserves" ||
+      selectedMitve ||
+      selectedGroup ||
+      qNorm.includes("מילואים") ||
+      qNorm.includes("מילואימניק") ||
+      qNorm.includes("צו 8") ||
+      qNorm.includes("מתווה")
+    ) {
+    const MITVE_TO_FILE = {
+      mitve_tashpad_sem_a: "tashpad_semA.txt",
+      mitve_tashpad_sem_b: "tashpad_semB.txt",
+      mitve_tashpeh_sem_a: "tashpah_semA.txt",
+      mitve_tashpeh_sem_b: "tashpah_semB.txt",
+      mitve_tashpav_sem_a: "tashpav_semA.txt",
+      };
+      // Contact questions should return the dedicated contact file directly
+    if (
+      qNorm.includes("קשר") ||
+      qNorm.includes("טלפון") ||
+      qNorm.includes("מייל") ||
+      qNorm.includes("לפנות") ||
+      qNorm.includes("כתובת")
+    ) {
+      const content = readMiluimFile("miluim_contacts.txt");
+      return res.json({
+        html: `<div class="text-sm leading-6">${content.replace(/\n/g, "<br/>")}</div>`,
+      });
+    }
+
+    // Emotional support questions should return the dedicated emotional support file directly
+    if (
+      qNorm.includes("רגשי") ||
+      qNorm.includes("נפשי") ||
+      qNorm.includes("חוסן") ||
+      qNorm.includes("טיפול") ||
+      qNorm.includes("שיחה") ||
+      qNorm.includes("לחץ") ||
+      qNorm.includes("חרדה") ||
+      qNorm.includes("קשה לי")
+    ) {
+      const content = readMiluimFile("miluim_emotional_support.txt");
+      return res.json({
+        html: `<div class="text-sm leading-6">${content.replace(/\n/g, "<br/>")}</div>`,
+      });
+    }
+
+    // All other reserve-duty questions are answered by Gemini
+    // using the document that matches the selected framework
+    const targetFileName = MITVE_TO_FILE[selectedMitve];
+
+    if (!targetFileName) {
+      return res.json({
+        html: `<div class="text-sm">ℹ️ לא נמצא מתווה מילואים מתאים. אנא בחרו מתווה וקבוצה מחדש.</div>`,
+      });
+    }
+
+    const frameworkDocument = readMiluimFile(targetFileName);
+    const academicSupportDocument = readMiluimFile("miluim_academic_support.txt");
+
+    const miluimDocument = `
+    === Selected reserve framework document ===
+    ${frameworkDocument}
+
+    === General academic reserve support document ===
+    ${academicSupportDocument}
+    `;
+    
+    console.log("TARGET FILE:", targetFileName);
+    console.log("DOCUMENT PREVIEW:");
+    console.log(miluimDocument.substring(0, 500));
+
+    const prompt = `
+    You are an administrative chatbot for the Biotechnology department.
+    Answer in Hebrew only.
+    Answer only according to the reserve-duty document below.
+    Do not invent information.
+    If the answer does not appear in the document, say that the information is not available in the document.
+
+    Selected framework: ${selectedMitve || "not provided"}
+    Selected group: ${selectedGroup || "not provided"}
+
+    Reserve-duty document:
+    """
+    ${miluimDocument}
+    """
+
+    Student question:
+    "${question}"
+    `;
+
+    const answer = await callGeminiText(prompt);
+
+    return res.json({
+      html: `<div class="text-sm leading-6">${answer.replace(/\n/g, "<br/>")}</div>`,
+    });
+  }
 
     if (detectGreeting(question, qNorm)) {
       return res.json({
@@ -911,6 +1058,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
     console.error("ASK ERROR:", err);
     res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
   }
+
 });
 
 /* =============================
