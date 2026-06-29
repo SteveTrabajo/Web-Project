@@ -384,6 +384,8 @@ function buildEmotionPrompt(question) {
 - אני בלחץ
 - לא מבינה כלום
 
+הביטויים יכולים להופיע בכל מין (למשל גם "אני לא מצליח", "אני תקוע", "אני לא מבין").
+
 סווגי כ-"other" רק אם השאלה היא מידע אקדמי טכני בלבד
 (קוד קורס, דרישות קדם, לוח זמנים).
 
@@ -602,6 +604,7 @@ async function answerOrRoute(question, yearbookId, semesterNum, reservesMitve, r
   const context = await buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup);
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
 ענה בעברית בלבד ורק על נושאים אקדמיים הקשורים לתואר ולמכללה.
+פנה תמיד בלשון נייטרלית הפונה לשני המינים (למשל: את/ה, תוכל/י, מומלץ, אפשר) - אל תניח מגדר.
 אם השאלה היא שאלת המשך, היעזר בשיחה הקודמת כדי להבין למה היא מתייחסת.
 
 הנחיות פלט - חשוב מאוד:
@@ -806,7 +809,7 @@ router.post("/ask", async (req, res) => {
             html: `
               <div class="text-sm">
                 ℹ️ פטורים וחריגים מטופלים מול הגורם האקדמי הרלוונטי.<br/>
-                אנא צייני סמסטר או פני ליועץ/ת האקדמי/ת.
+                אנא ציין/י סמסטר או פנה/י ליועץ/ת האקדמי/ת.
               </div>
             `,
           });
@@ -848,7 +851,7 @@ router.post("/ask", async (req, res) => {
             });
           }
 
-          return res.json({ html: `<div class="text-sm">ℹ️ יש מספר מלווים. אנא צייני סמסטר.</div>` });
+          return res.json({ html: `<div class="text-sm">ℹ️ יש מספר מלווים. אנא ציין/י סמסטר.</div>` });
         }
 
         if (finalIntent === "links") {
@@ -882,7 +885,7 @@ router.post("/ask", async (req, res) => {
 
         if (finalIntent === "internship") {
           return res.json({
-            html: `<div class="text-sm">ℹ️ תנאי סטאז' משתנים לפי סמסטר. אנא צייני סמסטר.</div>`,
+            html: `<div class="text-sm">ℹ️ תנאי סטאז' משתנים לפי סמסטר. אנא ציין/י סמסטר.</div>`,
           });
         }
 
@@ -897,7 +900,7 @@ router.post("/ask", async (req, res) => {
           });
         }
 
-        return res.json({ html: `<div class="text-sm">ℹ️ אנא צייני סמסטר (לדוגמה: סמסטר 2)</div>` });
+        return res.json({ html: `<div class="text-sm">ℹ️ אנא ציין/י סמסטר (לדוגמה: סמסטר 2)</div>` });
       }
 
       const regDoc = await getRegDoc(semNum);
@@ -947,10 +950,10 @@ router.post("/ask", async (req, res) => {
       return res.json({
         html: `
           <div dir="rtl" class="text-sm leading-6 text-right">
-            💙 זה בסדר להרגיש ככה, את לא לבד.<br/>
+            💙 זה בסדר להרגיש ככה, את/ה לא לבד.<br/>
             הרבה סטודנטים חווים עומס ובלבול במהלך הלימודים.<br/><br/>
 
-            אם את מרגישה צורך בעזרה נוספת, אפשר וכדאי לפנות לדיקנט הסטודנטים.<br/><br/>
+            אם את/ה מרגיש/ה צורך בעזרה נוספת, אפשר וכדאי לפנות לדיקנט הסטודנטים.<br/><br/>
 
             <div class="mt-2 rounded-lg border border-gray-200 bg-white p-3 text-right
                         dark:bg-slate-950 dark:border-slate-700">
