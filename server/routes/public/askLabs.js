@@ -1,7 +1,5 @@
-import fetch from "node-fetch";
 import { db } from "../../server.js";
-
-const MODEL = "gemini-2.5-flash";
+import { callLLMJson } from "../../services/llm.js";
 
 /* ================= utils ================= */
 
@@ -12,22 +10,6 @@ const normalize = (s = "") =>
     .replace(/\s+/g, " ")
     .toLowerCase()
     .trim();
-
-function safeParseJson(text) {
-  if (!text) return null;
-  const cleaned = String(text).replace(/```json|```/g, "").trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const m = cleaned.match(/\{[\s\S]*\}/);
-    if (!m) return null;
-    try {
-      return JSON.parse(m[0]);
-    } catch {
-      return null;
-    }
-  }
-}
 
 /* ================= date helpers ================= */
 
@@ -129,24 +111,7 @@ async function classifyWithGemini(question) {
 "${question}"
 `;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-    process.env.GEMINI_API_KEY;
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0 },
-    }),
-  });
-
-  const data = await resp.json().catch(() => null);
-  if (!resp.ok) return null;
-
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  return safeParseJson(text);
+  return callLLMJson(prompt);
 }
 
 /* ================= Firestore ================= */

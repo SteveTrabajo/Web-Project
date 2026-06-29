@@ -1,5 +1,5 @@
 import express from "express";
-import fetch from "node-fetch";
+import { callLLM, callLLMJson, embed } from "../../services/llm.js";
 import { readFile } from "fs/promises";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -19,7 +19,6 @@ import {
 } from "./registration.service.js";
 
 const router = express.Router();
-const MODEL = "gemini-3.1-flash-lite";
 
 /* =============================
    Utils (MUST be defined BEFORE usage)
@@ -53,26 +52,6 @@ const isCourseCode = (s) => /^\d{5,6}$/.test(String(s || "").trim());
 function extractCourseCode(question = "") {
   const m = String(question).match(/\b\d{5,6}\b/);
   return m ? m[0] : null;
-}
-
-// Strips ```json fences and falls back to extracting the first {...} object.
-function safeParseJson(text) {
-  if (!text) return null;
-
-  const cleaned = String(text).replace(/```json|```/g, "").trim();
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {}
-
-  const m = cleaned.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-
-  try {
-    return JSON.parse(m[0]);
-  } catch {
-    return null;
-  }
 }
 
 /* =============================
@@ -338,55 +317,6 @@ async function getAllPrerequisitesRecursiveCached(yearbookId, courseCode) {
   return data;
 }
 
-/* =============================
-   Gemini Wrapper 
-============================= */
-
-async function callGeminiJson(promptText) {
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-    process.env.GEMINI_API_KEY;
-
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: { temperature: 0 },
-      }),
-    });
-
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return safeParseJson(text);
-  } catch {
-    return null;
-  }
-}
-// semantic text generation with a more lenient temperature, used for the RAG fallback where we don't require strict JSON output
-async function callGeminiText(promptText) {
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-    process.env.GEMINI_API_KEY;
-
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        generationConfig: { temperature: 0.2 },
-      }),
-    });
-
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text?.trim() || null;
-  } catch {
-    return null;
-  }
-}
 
 // Compact transcript of the latest conversation turns, used to give the
 // classifier and the RAG fallback enough context to resolve follow-up questions.
@@ -428,7 +358,7 @@ ${historyText ? `\nשיחה קודמת (להקשר בלבד):\n${historyText}\n`
 שאלה נוכחית:
 "${question}"
 `;
-  return callGeminiJson(classifierPrompt);
+  return callLLMJson(classifierPrompt);
 }
 
 /* =============================
@@ -463,7 +393,7 @@ function buildEmotionPrompt(question) {
 }
 
 async function detectEmotion(question) {
-  return callGeminiJson(buildEmotionPrompt(question));
+  return callLLMJson(buildEmotionPrompt(question));
 }
 
 /* =============================
@@ -494,29 +424,7 @@ async function getCuratedAnswersCached() {
    Semantic RAG over curated answers (embeddings)
 ============================= */
 
-const EMBED_MODEL = "text-embedding-004";
 const RAG_THRESHOLD = 0.78; // min cosine similarity to treat a curated answer as a confident hit
-
-async function embedText(text) {
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=` +
-    process.env.GEMINI_API_KEY;
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: `models/${EMBED_MODEL}`,
-        content: { parts: [{ text: String(text).slice(0, 2000) }] },
-      }),
-    });
-    const data = await resp.json();
-    const values = data?.embedding?.values;
-    return Array.isArray(values) ? values : null;
-  } catch {
-    return null;
-  }
-}
 
 function cosineSim(a, b) {
   let dot = 0, na = 0, nb = 0;
@@ -548,7 +456,7 @@ async function getCuratedEmbedded() {
     const h = hashText(text);
     let entry = _embedCache.get(a.id);
     if (!entry || entry.hash !== h) {
-      const vector = await embedText(text);
+      const vector = await embed(text);
       if (!vector) continue;
       entry = { hash: h, vector };
       _embedCache.set(a.id, entry);
@@ -560,7 +468,7 @@ async function getCuratedEmbedded() {
 
 // Best curated answer above the similarity threshold for this yearbook, or null.
 async function ragCuratedAnswer(question, yearbookId) {
-  const qVec = await embedText(question);
+  const qVec = await embed(question);
   if (!qVec) return null;
   const corpus = await getCuratedEmbedded();
   let best = null;
@@ -703,7 +611,7 @@ async function answerOrRoute(question, yearbookId, semesterNum, reservesMitve, r
 
 ${historyText ? `שיחה קודמת:\n${historyText}\n\n` : ""}${context ? `מידע על השנתון:\n${context}\n\n` : ""}שאלת הסטודנט: "${question}"`;
 
-  const text = await callGeminiText(prompt);
+  const text = await callLLM(prompt);
   if (!text) return { type: "advisor" }; // API failure -> help the (likely lost) student
   const t = text.trim();
   if (t.startsWith("NEED_ADVISOR")) return { type: "advisor" };

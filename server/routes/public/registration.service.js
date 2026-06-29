@@ -1,7 +1,5 @@
-import fetch from "node-fetch";
 import { db } from "../../server.js";
-
-const MODEL = "gemini-2.5-flash";
+import { callLLMJson } from "../../services/llm.js";
 
 /* =============================
    Utils
@@ -81,28 +79,7 @@ export async function classifyRegistrationIntent(question) {
 "${question}"
 `;
 
-  try {
-    const url =
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=` +
-      process.env.GEMINI_API_KEY;
-
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0 },
-      }),
-    });
-
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
-
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    return null;
-  }
+  return callLLMJson(prompt);
 }
 
 /* =============================
