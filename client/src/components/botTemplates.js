@@ -142,14 +142,24 @@ export const requiredCoursesHtml = (courses, sem) => {
       `;
 };
 
-export const advisorHtml = (a, advisorFormUrl) => `
+export const advisorsHtml = (advisors, advisorFormUrl) => {
+  const title = advisors.length > 1 ? "היועצים האקדמיים שלך:" : "היועץ האקדמי שלך:";
+  const cards = advisors
+    .map(
+      (a) => `
+    <div class="text-sm text-gray-800 border-t border-blue-100 pt-1.5 first:border-t-0 first:pt-0">
+      <div><b>שם:</b> ${a.name}</div>
+      <div>
+        <b>מייל:</b>
+        <a href="mailto:${a.email}" class="text-bio-green underline">${a.email}</a>
+      </div>
+    </div>`
+    )
+    .join("");
+  return `
   <div class="p-3 rounded-2xl border space-y-1.5 font-sans bg-blue-50 border-blue-100 text-gray-800">
-    <div class="font-bold text-brand-navy">היועץ האקדמי שלך:</div>
-    <div class="text-sm text-gray-800"><b>שם:</b> ${a.name}</div>
-    <div class="text-sm text-gray-800">
-      <b>מייל:</b>
-      <a href="mailto:${a.email}" class="text-bio-green underline">${a.email}</a>
-    </div>
+    <div class="font-bold text-brand-navy">${title}</div>
+    ${cards}
     <div class="mt-1.5 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
       זכור למלא
       <a href="${advisorFormUrl}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
@@ -157,6 +167,7 @@ export const advisorHtml = (a, advisorFormUrl) => `
     </div>
   </div>
 `;
+};
 
 export const exceptionalRegistrationHtml = (exceptionFormUrl) => `
 <div class="rounded-2xl p-4 shadow-sm space-y-3 bg-white border border-blue-100 text-gray-800">

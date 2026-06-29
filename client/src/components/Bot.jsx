@@ -7,7 +7,7 @@ import {
   reservesDaysPromptHtml,
   reservesSavedHtml,
   requiredCoursesHtml,
-  advisorHtml,
+  advisorsHtml,
   exceptionalRegistrationHtml,
 } from "./botTemplates.js";
 
@@ -188,6 +188,8 @@ export default function ChatBot() {
 
   window.handleReservesMitve = (mitveKey, mitveLabel) => handleReservesMitve(mitveKey, mitveLabel);
   window.handleReservesDays = (daysKey, daysLabel) => handleReservesDays(daysKey, daysLabel);
+  // Lets the server's advisor-redirect button launch the interactive advisor picker.
+  window.startAdvisorFlow = () => chooseTopic("advisor");
 
 const showReservesGuidelines = () => {
     addBot(reservesMitvotPromptHtml());
@@ -225,7 +227,8 @@ const showReservesGuidelines = () => {
     else if (t === "reserves") {
       showReservesGuidelines(); 
     } else {
-      setContext((p) => ({ ...p, topic: t }));
+      // Reset semester so the picker re-shows, even if one was chosen earlier this session.
+      setContext((p) => ({ ...p, topic: t, semesterNum: null }));
       addBot("<b class='font-sans'>בחר/י סמסטר:</b>");
     }
   };
@@ -271,10 +274,10 @@ const showReservesGuidelines = () => {
 
       const res = await fetch(`${API_BASE}/api/advisor?${params}`);
       const data = await res.json();
-      const a = data.advisors?.[0];
+      const list = data.advisors || [];
 
-      if (a) {
-        addBot(advisorHtml(a, formUrls.advisor));
+      if (list.length) {
+        addBot(advisorsHtml(list, formUrls.advisor));
         setHasExchange(true);
       } else {
         addBot("<div class='font-sans text-red-500'>לא נמצא יועץ מתאים לאות זו.</div>");

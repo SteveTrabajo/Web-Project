@@ -623,44 +623,15 @@ ${historyText ? `שיחה קודמת:\n${historyText}\n\n` : ""}${context ? `מ�
    Advisor redirect (best-effort from context)
 ============================= */
 
-const DEAN_CONTACT_HTML = `
-  <div class="mt-2 rounded-lg border border-gray-200 bg-white p-3 text-right dark:bg-slate-950 dark:border-slate-700">
-    <div class="font-semibold mb-1">📌 דיקנט הסטודנטים</div>
-    <div>📞 <span dir="ltr">04-9901906</span></div>
-    <div>✉️ <a class="underline text-blue-700 dark:text-sky-300" href="mailto:dean@braude.ac.il">dean@braude.ac.il</a></div>
-  </div>`;
+// Pill button that launches the interactive advisor picker (window.startAdvisorFlow in Bot.jsx).
+const ADVISOR_PICKER_BTN =
+  "inline-block px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-sm font-medium hover:bg-surface-raised transition-colors shadow-sm";
 
-async function getAdvisorsForSemester(semesterNum) {
-  if (!semesterNum) return [];
-  try {
-    const snap = await db.collection("academicAdvisors").get();
-    return snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((a) => (a.semesters || []).includes(Number(semesterNum)));
-  } catch {
-    return [];
-  }
-}
-
-// Study-related question we couldn't answer -> point the student at their advisor.
-async function buildAdvisorRedirect(semesterNum) {
-  const advisors = await getAdvisorsForSemester(semesterNum);
-  if (advisors.length) {
-    const list = advisors
-      .map((a) => {
-        const range = (a.lastNameRanges || []).join(", ");
-        const email = a.email ? ` - <a href="mailto:${a.email}">${a.email}</a>` : "";
-        return `• <b>${a.name || "יועץ/ת אקדמי/ת"}</b>${range ? ` (${range})` : ""}${email}`;
-      })
-      .join("<br/>");
-    return `<div dir="rtl" class="text-sm leading-6 text-right">
-      🤝 לא מצאתי תשובה מדויקת, אבל אפשר וכדאי לפנות ליועץ/ת האקדמי/ת שלך:<br/><br/>
-      ${list}${DEAN_CONTACT_HTML}
-    </div>`;
-  }
+// Study-related question we couldn't answer -> nudge the student into the advisor picker.
+function buildAdvisorRedirect() {
   return `<div dir="rtl" class="text-sm leading-6 text-right">
-    🤝 לא מצאתי תשובה מדויקת לשאלה. כדי לקבל עזרה אישית מומלץ לפנות ליועץ/ת האקדמי/ת -
-    אפשר לבחור "יועץ אקדמי" מהתפריט למטה 👇${DEAN_CONTACT_HTML}
+    🤝 לא מצאתי תשובה מדויקת לשאלה. כדי לקבל עזרה אישית מומלץ לפנות ליועץ/ת האקדמי/ת שלך:<br/><br/>
+    <button onclick="window.startAdvisorFlow?.()" class="${ADVISOR_PICKER_BTN}">בחירת יועץ אקדמי 👈</button>
   </div>`;
 }
 
@@ -1097,7 +1068,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
     // 3) Study-related but unanswered -> direct the (likely lost) student to an advisor.
     logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "advisor_redirect", wasAnswered: false });
     autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null });
-    return res.json({ html: await buildAdvisorRedirect(clientSemester) });
+    return res.json({ html: buildAdvisorRedirect() });
   } catch (err) {
     console.error("ASK ERROR:", err);
     res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
