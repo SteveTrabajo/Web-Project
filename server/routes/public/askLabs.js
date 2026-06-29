@@ -77,9 +77,9 @@ function isTimeMatch(labDate, time) {
   return true; // time = all
 }
 
-/* ================= Gemini ================= */
+/* ================= LLM ================= */
 
-async function classifyWithGemini(question) {
+async function classifyWithLLM(question) {
   const prompt = `
 החזירי JSON בלבד. בלי טקסט נוסף.
 
@@ -157,7 +157,7 @@ export default async function askLabs(req, res) {
       });
     }
 
-    const parsed = await classifyWithGemini(question);
+    const parsed = await classifyWithLLM(question);
     if (!parsed) {
       return res.json({
         html: `<div class="text-sm text-gray-800 dark:text-slate-100">❌ לא הצלחתי להבין את השאלה</div>`,

@@ -362,7 +362,7 @@ ${historyText ? `\nשיחה קודמת (להקשר בלבד):\n${historyText}\n`
 }
 
 /* =============================
-   Emotion detection (Gemini)
+   Emotion detection (LLM)
 ============================= */
 
 function buildEmotionPrompt(question) {
@@ -512,7 +512,7 @@ async function getFormsCached() {
 /* =============================
    Reserves (miluim) label map
    Mirrors the group definitions in Bot.jsx so the RAG prompt
-   can tell Gemini which plan and eligibility group the student is in.
+   can tell the LLM which plan and eligibility group the student is in.
 ============================= */
 const RESERVES_MITVE_LABELS = {
   mitve_tashpah_sem_a: 'מתווה תשפ"ד - סמסטר א',
@@ -559,7 +559,7 @@ const RESERVES_GROUP_LABELS = {
 };
 
 /* =============================
-   RAG fallback (Gemini)
+   Generative fallback (LLM)
 ============================= */
 async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup) {
   const parts = [];
@@ -597,7 +597,7 @@ async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesG
 
 // Generative fallback, used ONLY when semantic RAG misses. Returns a structured
 // result so the route can answer, redirect to an advisor, or flag off-topic - the
-// study-relevance decision is folded into this single Gemini call (no extra call).
+// study-relevance decision is folded into this single LLM call (no extra call).
 async function answerOrRoute(question, yearbookId, semesterNum, reservesMitve, reservesGroup, historyText = "") {
   const context = await buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup);
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
@@ -934,11 +934,11 @@ router.post("/ask", async (req, res) => {
 
     const [emotion, classification] = await Promise.all([detectEmotion(question), classifyQuestion(question, historyText)]);
 
-    const geminiCourses = Array.isArray(classification?.courses)
+    const llmCourses = Array.isArray(classification?.courses)
       ? classification.courses.map((c) => matchCourse(c, allCourses, nameIndex)).filter(Boolean)
       : [];
 
-    const coursesFromQuestion = geminiCourses.length ? geminiCourses : detectedCourses;
+    const coursesFromQuestion = llmCourses.length ? llmCourses : detectedCourses;
     const courseMain = coursesFromQuestion[0] || null;
 
     // Emotion
@@ -1083,7 +1083,7 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
       return res.json({ html: ragHit.answerHtml });
     }
 
-    // 2) Generative Gemini ONLY on a RAG miss - it answers, or routes the case.
+    // 2) Generative LLM ONLY on a RAG miss - it answers, or routes the case.
     const routed = await answerOrRoute(question, yearbookId, clientSemester, reservesMitve, reservesGroup, historyText);
     if (routed.type === "answer") {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag", wasAnswered: true });

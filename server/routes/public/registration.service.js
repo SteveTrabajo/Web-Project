@@ -42,7 +42,7 @@ export function extractSemesterNumber(question = "") {
 }
 
 /* =============================
-   Gemini – intent
+   LLM – intent
 ============================= */
 export async function classifyRegistrationIntent(question) {
   const prompt = `
