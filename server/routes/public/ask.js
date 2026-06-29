@@ -490,51 +490,87 @@ async function getCuratedAnswersCached() {
   return _curatedCache.items;
 }
 
-async function findCuratedAnswer(question, qNorm, yearbookId) {
-  const all = await getCuratedAnswersCached();
-  const candidates = all.filter((a) => !a.yearbook || a.yearbook === yearbookId);
-  if (!candidates.length) return null;
+/* =============================
+   Semantic RAG over curated answers (embeddings)
+============================= */
 
-  const qTokens = new Set(qNorm.split(" ").filter(Boolean));
+const EMBED_MODEL = "text-embedding-004";
+const RAG_THRESHOLD = 0.78; // min cosine similarity to treat a curated answer as a confident hit
 
-  // 1) Keyword / token overlap - cheap and deterministic.
-  let best = null;
-  let bestHits = 0;
-  let bestScore = 0;
-  for (const a of candidates) {
-    const kws = (a.keywords || []).map((k) => normalizeHebrew(k)).filter(Boolean);
-    if (!kws.length) continue;
-    let hits = 0;
-    for (const kw of kws) {
-      const parts = kw.split(" ").filter(Boolean);
-      if (parts.length && parts.every((p) => qTokens.has(p))) hits += 1;
-    }
-    const score = hits / kws.length;
-    if (score > bestScore) { bestScore = score; bestHits = hits; best = a; }
+async function embedText(text) {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=` +
+    process.env.GEMINI_API_KEY;
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: `models/${EMBED_MODEL}`,
+        content: { parts: [{ text: String(text).slice(0, 2000) }] },
+      }),
+    });
+    const data = await resp.json();
+    const values = data?.embedding?.values;
+    return Array.isArray(values) ? values : null;
+  } catch {
+    return null;
   }
-  if (best && (bestScore >= 0.5 || bestHits >= 2)) return best;
+}
 
-  // 2) Gemini fallback - semantic pick from a shortlist of questions.
-  const shortlist = candidates.slice(0, 25);
-  const list = shortlist
-    .map((a, i) => `${i + 1}. ${a.question || (a.keywords || []).join(", ")}`)
-    .join("\n");
-  const prompt = `
-החזירי JSON בלבד בפורמט: { "id": number | null }
+function cosineSim(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+}
 
-לפנייך רשימת שאלות נפוצות ממוספרת. בהינתן שאלת הסטודנט,
-החזירי את המספר של השאלה התואמת ביותר במשמעות, או null אם אף אחת לא מתאימה.
+function hashText(s = "") {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return String(h);
+}
 
-רשימה:
-${list}
+// Curated-answer vectors cached by doc id + text hash, so each unique text is
+// embedded only once and reused across the 5-minute curated cache windows.
+const _embedCache = new Map();
 
-שאלת הסטודנט:
-"${question}"
-`;
-  const result = await callGeminiJson(prompt);
-  const id = result?.id;
-  if (Number.isInteger(id) && id >= 1 && id <= shortlist.length) return shortlist[id - 1];
-  return null;
+async function getCuratedEmbedded() {
+  const items = await getCuratedAnswersCached();
+  const out = [];
+  for (const a of items) {
+    const text = `${a.question || ""} ${(a.keywords || []).join(" ")}`.trim();
+    if (!text) continue;
+    const h = hashText(text);
+    let entry = _embedCache.get(a.id);
+    if (!entry || entry.hash !== h) {
+      const vector = await embedText(text);
+      if (!vector) continue;
+      entry = { hash: h, vector };
+      _embedCache.set(a.id, entry);
+    }
+    out.push({ ...a, vector: entry.vector });
+  }
+  return out;
+}
+
+// Best curated answer above the similarity threshold for this yearbook, or null.
+async function ragCuratedAnswer(question, yearbookId) {
+  const qVec = await embedText(question);
+  if (!qVec) return null;
+  const corpus = await getCuratedEmbedded();
+  let best = null;
+  let bestSim = 0;
+  for (const a of corpus) {
+    if (a.yearbook && a.yearbook !== yearbookId) continue;
+    const sim = cosineSim(qVec, a.vector);
+    if (sim > bestSim) { bestSim = sim; best = a; }
+  }
+  return best && bestSim >= RAG_THRESHOLD ? best : null;
 }
 
 /* =============================
@@ -651,17 +687,73 @@ async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesG
   return full.length > 4000 ? full.slice(0, 4000) + "..." : full;
 }
 
-async function callRagFallback(question, yearbookId, semesterNum, reservesMitve, reservesGroup, historyText = "") {
+// Generative fallback, used ONLY when semantic RAG misses. Returns a structured
+// result so the route can answer, redirect to an advisor, or flag off-topic - the
+// study-relevance decision is folded into this single Gemini call (no extra call).
+async function answerOrRoute(question, yearbookId, semesterNum, reservesMitve, reservesGroup, historyText = "") {
   const context = await buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup);
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה.
-ענה בעברית בלבד. ענה רק על נושאים אקדמיים הקשורים לתואר. אם אינך יודע, כתוב "לא מצאתי מידע על כך."
+ענה בעברית בלבד ורק על נושאים אקדמיים הקשורים לתואר ולמכללה.
 אם השאלה היא שאלת המשך, היעזר בשיחה הקודמת כדי להבין למה היא מתייחסת.
+
+הנחיות פלט - חשוב מאוד:
+- אם אתה יכול לענות מתוך המידע שסופק - החזר את התשובה כטקסט רגיל.
+- אם אינך יכול לענות אך השאלה קשורה ללימודים / לתואר / למכללה - החזר בדיוק את המילה: NEED_ADVISOR
+- אם השאלה אינה קשורה ללימודים כלל - החזר בדיוק את המילה: OFF_TOPIC
 
 ${historyText ? `שיחה קודמת:\n${historyText}\n\n` : ""}${context ? `מידע על השנתון:\n${context}\n\n` : ""}שאלת הסטודנט: "${question}"`;
 
   const text = await callGeminiText(prompt);
-  if (!text) return null;
-  return `<div class="text-sm leading-6">${text.replace(/\n/g, "<br/>")}</div>`;
+  if (!text) return { type: "advisor" }; // API failure -> help the (likely lost) student
+  const t = text.trim();
+  if (t.startsWith("NEED_ADVISOR")) return { type: "advisor" };
+  if (t.startsWith("OFF_TOPIC")) return { type: "offtopic" };
+  return { type: "answer", html: `<div class="text-sm leading-6">${t.replace(/\n/g, "<br/>")}</div>` };
+}
+
+/* =============================
+   Advisor redirect (best-effort from context)
+============================= */
+
+const DEAN_CONTACT_HTML = `
+  <div class="mt-2 rounded-lg border border-gray-200 bg-white p-3 text-right dark:bg-slate-950 dark:border-slate-700">
+    <div class="font-semibold mb-1">📌 דיקנט הסטודנטים</div>
+    <div>📞 <span dir="ltr">04-9901906</span></div>
+    <div>✉️ <a class="underline text-blue-700 dark:text-sky-300" href="mailto:dean@braude.ac.il">dean@braude.ac.il</a></div>
+  </div>`;
+
+async function getAdvisorsForSemester(semesterNum) {
+  if (!semesterNum) return [];
+  try {
+    const snap = await db.collection("academicAdvisors").get();
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((a) => (a.semesters || []).includes(Number(semesterNum)));
+  } catch {
+    return [];
+  }
+}
+
+// Study-related question we couldn't answer -> point the student at their advisor.
+async function buildAdvisorRedirect(semesterNum) {
+  const advisors = await getAdvisorsForSemester(semesterNum);
+  if (advisors.length) {
+    const list = advisors
+      .map((a) => {
+        const range = (a.lastNameRanges || []).join(", ");
+        const email = a.email ? ` - <a href="mailto:${a.email}">${a.email}</a>` : "";
+        return `• <b>${a.name || "יועץ/ת אקדמי/ת"}</b>${range ? ` (${range})` : ""}${email}`;
+      })
+      .join("<br/>");
+    return `<div dir="rtl" class="text-sm leading-6 text-right">
+      🤝 לא מצאתי תשובה מדויקת, אבל אפשר וכדאי לפנות ליועץ/ת האקדמי/ת שלך:<br/><br/>
+      ${list}${DEAN_CONTACT_HTML}
+    </div>`;
+  }
+  return `<div dir="rtl" class="text-sm leading-6 text-right">
+    🤝 לא מצאתי תשובה מדויקת לשאלה. כדי לקבל עזרה אישית מומלץ לפנות ליועץ/ת האקדמי/ת -
+    אפשר לבחור "יועץ אקדמי" מהתפריט למטה 👇${DEAN_CONTACT_HTML}
+  </div>`;
 }
 
 /* =============================
@@ -1076,21 +1168,28 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
 }
 
 
-    const curated = await findCuratedAnswer(question, qNorm, yearbookId);
-    if (curated) {
-      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "curated", wasAnswered: true });
-      return res.json({ html: curated.answerHtml });
+    // 1) Semantic RAG over curated admin answers - no generative call on a hit.
+    const ragHit = await ragCuratedAnswer(question, yearbookId);
+    if (ragHit) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag_curated", wasAnswered: true });
+      return res.json({ html: ragHit.answerHtml });
     }
 
-    const ragAnswer = await callRagFallback(question, yearbookId, clientSemester, reservesMitve, reservesGroup, historyText);
-    if (ragAnswer) {
+    // 2) Generative Gemini ONLY on a RAG miss - it answers, or routes the case.
+    const routed = await answerOrRoute(question, yearbookId, clientSemester, reservesMitve, reservesGroup, historyText);
+    if (routed.type === "answer") {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag", wasAnswered: true });
-      return res.json({ html: ragAnswer });
+      return res.json({ html: routed.html });
+    }
+    if (routed.type === "offtopic") {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "offtopic", wasAnswered: false });
+      return res.json({ html: `<div class="text-sm">אני יכול לעזור רק בנושאים אקדמיים הקשורים לתואר 🙂</div>` });
     }
 
-    logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "fallback", wasAnswered: false });
+    // 3) Study-related but unanswered -> direct the (likely lost) student to an advisor.
+    logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "advisor_redirect", wasAnswered: false });
     autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null });
-    return res.json({ html: `<div class="text-sm">ℹ️ לא הבנתי את השאלה. אנא נסו שוב.</div>` });
+    return res.json({ html: await buildAdvisorRedirect(clientSemester) });
   } catch (err) {
     console.error("ASK ERROR:", err);
     res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
