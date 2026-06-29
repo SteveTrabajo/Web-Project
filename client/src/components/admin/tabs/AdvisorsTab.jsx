@@ -8,10 +8,54 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "../utils/adminApi";
 
+const parseList = (s) => String(s).split(",").map((x) => x.trim()).filter(Boolean);
+
+const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+// Must match the track names the bot sends (TRACKS in Bot.jsx).
+const TRACKS = ["מולקולרית-תרופתית", "מזון והסביבה"];
+const GENERAL_TRACK = "כללי";
+const TRACK_FROM_SEMESTER = 5; // tracks only matter from semester 5 onward
+
+const toggleValue = (arr, val) =>
+  arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
+
 export default function AdvisorsTab({ toast }) {
   const [advisors, setAdvisors]           = useState([]);
   const [advisorDraft, setAdvisorDraft]   = useState(null);
   const [advisorSearch, setAdvisorSearch] = useState("");
+  // Raw text for the letter-range field, so typing "-" and "," isn't reformatted mid-edit.
+  const [rangesText, setRangesText]       = useState("");
+  // Original ID of the advisor being edited (null when creating), so its own ID isn't flagged as taken.
+  const [editingId, setEditingId]         = useState(null);
+
+  const semesters = advisorDraft?.semesters || [];
+  const draftTracks = advisorDraft?.tracks || [];
+  const needsTrack = semesters.some((n) => n >= TRACK_FROM_SEMESTER);
+  const selectedTracks = draftTracks.filter((t) => TRACKS.includes(t));
+  const fieldErrors = advisorDraft
+    ? {
+        id: !advisorDraft.id?.trim()
+          ? "חובה להזין ID ליועץ."
+          : advisors.some((a) => a.id === advisorDraft.id.trim() && a.id !== editingId)
+          ? "כבר קיים יועץ עם ID זה."
+          : null,
+        name: !advisorDraft.name?.trim() ? "חובה להזין שם." : null,
+        email: !advisorDraft.email?.trim()
+          ? "חובה להזין מייל."
+          : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(advisorDraft.email.trim())
+          ? "כתובת מייל לא תקינה."
+          : null,
+      }
+    : {};
+
+  const formError = !advisorDraft
+    ? null
+    : fieldErrors.id ||
+      fieldErrors.name ||
+      fieldErrors.email ||
+      (!semesters.length ? "יש לבחור לפחות סמסטר אחד." : null) ||
+      (needsTrack && !selectedTracks.length ? "מסמסטר 5 ומעלה יש לבחור לפחות התמחות אחת." : null) ||
+      null;
 
   const load = async () => {
     toast("idle", "טוען יועצים...");
@@ -34,17 +78,36 @@ export default function AdvisorsTab({ toast }) {
     );
   }, [advisors, advisorSearch]);
 
-  const newAdvisor = () =>
-    setAdvisorDraft({ id: "", name: "", email: "", lastNameRanges: ["א-ת"], semesters: [1], tracks: ["כללי"] });
+  const openDraft = (draft, editId = null) => {
+    setAdvisorDraft(draft);
+    setEditingId(editId);
+    setRangesText((draft.lastNameRanges || []).join(", "));
+  };
 
-  const editAdvisor = (a) => setAdvisorDraft({ ...a });
+  const newAdvisor = () =>
+    openDraft({ id: "", name: "", email: "", lastNameRanges: ["א-ת"], semesters: [1], tracks: [GENERAL_TRACK] });
+
+  const editAdvisor = (a) => openDraft({ ...a }, a.id);
+
+  const toggleSemester = (n) =>
+    setAdvisorDraft((p) => ({ ...p, semesters: toggleValue(p.semesters || [], n).sort((a, b) => a - b) }));
+
+  const toggleTrack = (t) =>
+    setAdvisorDraft((p) => ({ ...p, tracks: toggleValue(p.tracks || [], t) }));
 
   const saveAdvisor = async () => {
     try {
       if (!advisorDraft?.id) return toast("error", "חובה להזין ID ליועץ.");
+      if (formError) return toast("error", formError);
+      const payload = {
+        ...advisorDraft,
+        lastNameRanges: parseList(rangesText),
+        semesters,
+        tracks: needsTrack ? selectedTracks : [GENERAL_TRACK],
+      };
       await apiFetch(`/api/admin/advisors/${encodeURIComponent(advisorDraft.id)}`, {
         method: "POST",
-        body: advisorDraft,
+        body: payload,
       });
       toast("ok", "היועץ נשמר.");
       setAdvisorDraft(null);
@@ -138,54 +201,70 @@ export default function AdvisorsTab({ toast }) {
                     value={advisorDraft[key] ?? ""}
                     placeholder={placeholder}
                     onChange={(e) => setAdvisorDraft((p) => ({ ...p, [key]: e.target.value }))}
+                    readOnly={key === "id" && editingId !== null}
+                    className={key === "id" && editingId !== null ? "opacity-60 cursor-not-allowed" : ""}
                   />
+                  <p className="text-caption text-destructive min-h-5">
+                    {fieldErrors[key]}
+                  </p>
                 </div>
               ))}
 
               <div className="space-y-1.5">
                 <Label>טווח אותיות (lastNameRanges)</Label>
                 <Input
-                  value={(advisorDraft.lastNameRanges || []).join(", ")}
-                  onChange={(e) =>
-                    setAdvisorDraft((p) => ({
-                      ...p,
-                      lastNameRanges: e.target.value.split(",").map((x) => x.trim()).filter(Boolean),
-                    }))
-                  }
+                  value={rangesText}
+                  onChange={(e) => setRangesText(e.target.value)}
                 />
-                <p className="text-caption text-muted-foreground">דוגמה: "א-כ" או "א-ת"</p>
+                <p className="text-caption text-muted-foreground">דוגמה: "א-כ" או "א-ת". לכמה טווחים: "א-כ, ל-ת"</p>
               </div>
 
               <div className="space-y-1.5">
                 <Label>סמסטרים</Label>
-                <Input
-                  value={(advisorDraft.semesters || []).join(",")}
-                  onChange={(e) =>
-                    setAdvisorDraft((p) => ({
-                      ...p,
-                      semesters: e.target.value.split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => !Number.isNaN(n)),
-                    }))
-                  }
-                />
-                <p className="text-caption text-muted-foreground">דוגמה: "1,2" או "5,6,7,8"</p>
+                <div className="flex flex-wrap gap-2">
+                  {SEMESTERS.map((n) => (
+                    <Button
+                      key={n}
+                      type="button"
+                      size="sm"
+                      variant={semesters.includes(n) ? "default" : "outline"}
+                      className="w-9"
+                      onClick={() => toggleSemester(n)}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-caption text-destructive min-h-5">
+                  {!semesters.length && "יש לבחור לפחות סמסטר אחד."}
+                </p>
               </div>
 
-              <div className="space-y-1.5">
-                <Label>מסלולים</Label>
-                <Input
-                  value={(advisorDraft.tracks || []).join(", ")}
-                  onChange={(e) =>
-                    setAdvisorDraft((p) => ({
-                      ...p,
-                      tracks: e.target.value.split(",").map((x) => x.trim()).filter(Boolean),
-                    }))
-                  }
-                />
-              </div>
+              {needsTrack && (
+                <div className="space-y-1.5">
+                  <Label>התמחות (מסמסטר 5)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TRACKS.map((t) => (
+                      <Button
+                        key={t}
+                        type="button"
+                        size="sm"
+                        variant={draftTracks.includes(t) ? "default" : "outline"}
+                        onClick={() => toggleTrack(t)}
+                      >
+                        {t}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-caption text-destructive min-h-5">
+                    {!selectedTracks.length && "מסמסטר 5 ומעלה יש לבחור לפחות התמחות אחת."}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter className="flex-row gap-2 justify-start">
-            <Button onClick={saveAdvisor}>שמירה</Button>
+            <Button onClick={saveAdvisor} disabled={!!formError}>שמירה</Button>
             <Button variant="outline" onClick={() => setAdvisorDraft(null)}>ביטול</Button>
           </DialogFooter>
         </DialogContent>
