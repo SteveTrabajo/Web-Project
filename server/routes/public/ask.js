@@ -19,7 +19,7 @@ import {
 } from "./registration.service.js";
 
 const router = express.Router();
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.1-flash-lite";
 
 /* =============================
    Utils (MUST be defined BEFORE usage)
