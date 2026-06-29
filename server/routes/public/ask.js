@@ -16,6 +16,8 @@ import {
   buildAllAdvisorsAnswer,
   buildAllLabsAnswer,
   getRegistrationSummary,
+  getContactsSummary,
+  findContactsByQuery,
 } from "./registration.service.js";
 
 const router = express.Router();
@@ -564,7 +566,23 @@ const RESERVES_GROUP_LABELS = {
    Generative fallback (LLM)
 ============================= */
 async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup) {
+  // Order matters: the course list can be long and is the part safe to drop on
+  // truncation, so contacts and registration info go first.
   const parts = [];
+
+  // Contacts (head of department, secretariat, advisors, labs...) are
+  // department-wide, so include them regardless of the selected semester.
+  try {
+    const contacts = await getContactsSummary();
+    if (contacts) parts.push(contacts);
+  } catch {}
+
+  if (semesterNum) {
+    try {
+      const summary = await getRegistrationSummary(semesterNum);
+      if (summary) parts.push(summary);
+    } catch {}
+  }
 
   try {
     const courses = await getAllCoursesCached(yearbookId);
@@ -579,13 +597,6 @@ async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesG
       .join("\n");
     if (courseLines) parts.push(`קורסים בשנתון:\n${courseLines}`);
   } catch {}
-
-  if (semesterNum) {
-    try {
-      const summary = await getRegistrationSummary(semesterNum);
-      if (summary) parts.push(summary);
-    } catch {}
-  }
 
   if (reservesMitve && reservesGroup) {
     const mitveLabel = RESERVES_MITVE_LABELS[reservesMitve] || reservesMitve;
@@ -629,6 +640,19 @@ ${historyText ? `שיחה קודמת:\n${historyText}\n\n` : ""}${context ? `מ�
 // Pill button that launches the interactive advisor picker (window.startAdvisorFlow in Bot.jsx).
 const ADVISOR_PICKER_BTN =
   "inline-block px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-sm font-medium hover:bg-surface-raised transition-colors shadow-sm";
+
+// Direct answer for a contact-role question, listing each matched person.
+function buildContactsAnswer(contacts) {
+  const rows = contacts
+    .map((c) => {
+      const role = c.role ? ` – ${c.role}` : "";
+      const email = c.email ? `<br/><a href="mailto:${c.email}">${c.email}</a>` : "";
+      const phone = c.phone ? `<br/>📞 <span dir="ltr">${c.phone}</span>` : "";
+      return `<div class="mb-2"><b>${c.name}</b>${role}${email}${phone}</div>`;
+    })
+    .join("");
+  return `<div dir="rtl" class="text-sm leading-6 text-right">${rows}</div>`;
+}
 
 // Study-related question we couldn't answer -> nudge the student into the advisor picker.
 function buildAdvisorRedirect() {
@@ -1049,6 +1073,14 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
   return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
 }
 
+
+    // 0) Direct contact lookup (e.g. "מי ראש המחלקה") from ניהול-סמסטר contacts.
+    //    Deterministic, so it doesn't depend on the generative fallback.
+    const contactHits = await findContactsByQuery(question);
+    if (contactHits.length) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "contacts", wasAnswered: true });
+      return res.json({ html: buildContactsAnswer(contactHits) });
+    }
 
     // 1) Semantic RAG over curated admin answers - no generative call on a hit.
     const ragHit = await ragCuratedAnswer(question, yearbookId);

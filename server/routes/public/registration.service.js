@@ -1,5 +1,6 @@
 import { db } from "../../server.js";
 import { callLLMJson } from "../../services/llm.js";
+import { matchContacts } from "./contactsMatch.js";
 
 /* =============================
    Utils
@@ -178,6 +179,69 @@ export async function getRegistrationSummary(semesterNum) {
       .join("\n");
   } catch {
     return "";
+  }
+}
+
+const CONTACT_CATEGORIES = {
+  registrationSupport: "תמיכה ומזכירות",
+  academicAdvisors: "יועץ אקדמי",
+  mentors: "סטודנט מלווה",
+  exemptions: "פטורים/חריגים",
+  labs: "אחראי מעבדות",
+};
+
+// Flat, deduped list of every contact across all semester docs. Department-wide
+// roles (e.g. ראש המחלקה) repeat across semester docs, so dedup by
+// name+email+role collapses them to one entry.
+export async function getAllContacts() {
+  const docs = await getAllRegDocs();
+  const seen = new Set();
+  const out = [];
+  for (const d of docs) {
+    const c = d.contacts || {};
+    for (const [key, label] of Object.entries(CONTACT_CATEGORIES)) {
+      for (const p of c[key] || []) {
+        if (!p?.name) continue;
+        const dedupeKey = `${p.name}|${p.email || ""}|${p.role || ""}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        out.push({
+          name: p.name,
+          role: p.role || "",
+          email: p.email || "",
+          phone: p.phone || "",
+          category: label,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+// Plain-text contacts block for the RAG context.
+export async function getContactsSummary() {
+  try {
+    const contacts = await getAllContacts();
+    if (!contacts.length) return "";
+    const lines = contacts.map((c) => {
+      const role = c.role ? ` (${c.role})` : "";
+      const email = c.email ? `, מייל: ${c.email}` : "";
+      const phone = c.phone ? `, טלפון: ${c.phone}` : "";
+      return `${c.category}: ${c.name}${role}${email}${phone}`;
+    });
+    return `אנשי קשר במחלקה:\n${lines.join("\n")}`;
+  } catch {
+    return "";
+  }
+}
+
+// Deterministic lookup for "who is X" contact questions (e.g. "מי ראש המחלקה"),
+// so the answer doesn't depend on the generative fallback surfacing it.
+export async function findContactsByQuery(question) {
+  try {
+    return matchContacts(await getAllContacts(), question);
+  } catch {
+    return [];
   }
 }
 
