@@ -9,8 +9,8 @@ export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewCha
       <div
         className={
           isPanel
-            ? "bot-bubble w-full max-w-2xl"
-            : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body ${
+            ? "bot-bubble w-full max-w-2xl break-words"
+            : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
                 m.sender === "user"
                   ? "bg-brand-navy text-white rounded-tl-none font-sans"
                   : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
@@ -95,9 +95,10 @@ export function ChatInput({
               <span className="star-border__points star-border__points--top" aria-hidden="true" />
               <input
                 type="text"
+                maxLength={150}
                 value={input}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  const val = e.target.value.slice(0, 150);
                   setInput(val);
                   clearTimeout(typingTimerRef.current);
                   typingTimerRef.current = setTimeout(() => fetchSuggestions(val), 300);

@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Check } from "lucide-react";
 import FeedbackModal from "./FeedbackModal.jsx";
+import { MessageBubble, ChatInput } from "./BotParts.jsx";
+import {
+  greetingHtml,
+  reservesMitvotPromptHtml,
+  reservesDaysPromptHtml,
+  reservesSavedHtml,
+  requiredCoursesHtml,
+  advisorHtml,
+  exceptionalRegistrationHtml,
+} from "./botTemplates.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 const TRACKS = ["מולקולרית-תרופתית", "מזון והסביבה"];
 const HEB_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ", "ק", "ר", "ש", "ת"];
 
-const SECRETARY_PHONE = "04-9901927";
-const SECRETARY_EMAIL = "nataliav@braude.ac.il";
 const FALLBACK_EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
 const FALLBACK_ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
 
@@ -104,15 +111,7 @@ export default function ChatBot() {
     setAskedTyped(false);
     setRecentQuestions([]);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
-    addBot(`
-  <div class="space-y-2">
-    <div class="text-xl font-bold text-brand-navy">ברוכים הבאים ל-BIO BOT</div>
-    <p class="text-gray-700">אני כאן כדי לעזור לך עם מידע אקדמי, קורסים וייעוץ במחלקה.</p>
-    <div class="text-sm font-semibold text-bio-green mt-2 font-sans">
-      אנא בחר באיזה שנת לימודים התחלת כדי לעזור לך
-    </div>
-  </div>
-`);
+    addBot(greetingHtml());
   };
 
   const loadYearbooks = async () => {
@@ -191,18 +190,7 @@ export default function ChatBot() {
   window.handleReservesDays = (daysKey, daysLabel) => handleReservesDays(daysKey, daysLabel);
 
 const showReservesGuidelines = () => {
-    addBot(`
-      <div class="space-y-2 font-sans" dir="rtl">
-        <b class="text-brand-navy">עבור איזה מתווה וסמסטר תרצה לבדוק התאמות?</b>
-        <div class="flex flex-wrap gap-2 justify-end mt-2">
-          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpah_sem_a', 'מתווה תשפד - סמסטר א')">מתווה תשפ"ד - סמסטר א'</button>
-          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpah_sem_b', 'מתווה תשפד - סמסטר ב')">מתווה תשפ"ד - סמסטר ב'</button>
-          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpeh_sem_a', 'מתווה תשפה - סמסטר א')">מתווה תשפ"ה - סמסטר א'</button>
-          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpeh_sem_b', 'מתווה תשפה - סמסטר ב')">מתווה תשפ"ה - סמסטר ב'</button>
-          <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesMitve?.('mitve_tashpuv_sem_a', 'מתווה תשפו - סמסטר א')">מתווה תשפ"ו - סמסטר א'</button>
-        </div>
-      </div>
-    `);
+    addBot(reservesMitvotPromptHtml());
   };
 
   const handleReservesMitve = (mitveKey, mitveLabel) => {
@@ -212,72 +200,8 @@ const showReservesGuidelines = () => {
     addUser(mitveLabel);
     setContext((prev) => ({ ...prev, selectedMitve: mitveKey }));
 
-    let daysButtonsHtml = "";
-
-    
-    if (mitveKey === "mitve_tashpah_sem_a") {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_1', 'קבוצה 1')">קבוצה 1: שורתו 7 ימים או יותר מתחילת הסמסטר</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_2', 'קבוצה 2')">קבוצה 2: שורתו עד 7 ימים מתחילת הסמסטר</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_3', 'קבוצה 3')">קבוצה 3: בני/בנות זוג של מילואימניק/ית</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_4', 'קבוצה 4')">קבוצה 4: נפגעו בצורה משמעותית וממושכת מהמצב</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_5', 'קבוצה 5')">קבוצה 5: שאר הסטודנטים (ללא שירות מילואים)</button>
-      `;
-    } 
-    
-    else if (mitveKey === "mitve_tashpah_sem_b") {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_11', 'קבוצה 11')">קבוצה 11: שירות במילואים לתקופה של 100 ימים לפחות</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_22', 'קבוצה 22')">קבוצה 22: שירות במילואים לתקופה של 61 עד 99 ימים</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_33', 'קבוצה 33')">קבוצה 33: שירות במילואים לתקופה של 30 עד 60 ימים</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_44', 'קבוצה 44')">קבוצה 44: סטודנטים ובני זוג שנפגעו בצורה משמעותית ומפונים</button>
-      `;
-    } 
-    
-    else if (mitveKey === "mitve_tashpeh_sem_a") {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_111', 'קבוצה 111')">קבוצה 111: שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_222', 'קבוצה 222')">קבוצה 222: סטודנטים השייכים לאחת מהקבוצות עם הורות לילד עד גיל 13</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_333', 'קבוצה 333')">קבוצה 333: שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_444', 'קבוצה 444')">קבוצה 444: נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג</button>
-      `;
-    }
-    
-    else if (mitveKey === "mitve_tashpeh_sem_b") {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_111', 'קבוצה 111')">קבוצה 111: שירות של 35 ימים ומעלה במצטבר / משרתים בקבע ייעודי קדמי</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_222', 'קבוצה 222')">קבוצה 222: סטודנטים השייכים לאחת מהקבוצות עם הורות לילד עד גיל 13</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_333', 'קבוצה 333')">קבוצה 333: שירות במילואים של פחות מ-21 ימים במצטבר במהלך הסמסטר</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_444', 'קבוצה 444')">קבוצה 444: נפגעו בצורה משמעותית במלחמה ומפונים, כולל בני/בנות זוג</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_555', 'קבוצה 5')">קבוצה 5: שירות של 300 ימים ומעלה / לוחמים בייעוד קדמי מעל 200 ימים</button>
-      `;
-    }
-    
-    else if (mitveKey === "mitve_tashpuv_sem_a") {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_11_v', 'קבוצה 11')">קבוצה 11: שירות מילואים של 35 ימים ומעלה בסמסטר, סטודנט/ית הורה לילד עד גיל 13, משרתים בקבע ביחידות ייעוד קדמי</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_22_v', 'קבוצה 22')">קבוצה 22: שירות מילואים בין 21 ל-35 ימים בסמסטר / מעל 35 ימים בשנה אקדמית / שירות סמוך לתחילת הסמסטר ובמהלכו</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_33_v', 'קבוצה 33')">קבוצה 33: משרתי מילואים קצרי טווח (עד 21 ימים בסמסטר) וסטודנטים הורים</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_44_v', 'קבוצה 44')">קבוצה 44: פצועי/ות, שורדי/ות, בני משפחה של חללים, מקרים חריגים</button>
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm w-full text-right" onclick="window.handleReservesDays('group_55_v', 'קבוצה 55')">קבוצה 55: קבע ייעוד קדמי / הורים עם בן/בת זוג בשירות מעל 300 ימים מתחילת המלחמה במהלך הלימודים</button>
-      `;
-    }
-        
-    else {
-      daysButtonsHtml = `
-        <button class="px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm" onclick="window.handleReservesDays('default_reserves', 'שירות מילואים פעיל')">שירות מילואים פעיל</button>
-      `;
-    }
-
     setTimeout(() => {
-      addBot(`
-        <div class="space-y-2 font-sans w-full" dir="rtl">
-          <b class="text-brand-navy">לאיזו קבוצת זכאות אתם שייכים לפי תנאי המכללה?</b>
-          <div class="flex flex-col gap-2 items-stretch mt-2 max-w-xl">
-            ${daysButtonsHtml}
-          </div>
-        </div>
-      `);
+      addBot(reservesDaysPromptHtml(mitveKey));
     }, 600);
   };
 
@@ -288,12 +212,7 @@ const showReservesGuidelines = () => {
     
     setContext((prev) => ({ ...prev, selectedGroup: daysKey }));
     setTimeout(() => {
-      addBot(`
-        <div class="space-y-1 font-sans" dir="rtl">
-          <b class="text-bio-green">מצוין! שמרתי את פרטי הזכאות שלך.</b>
-          <p class="text-sm text-gray-600">עכשיו אתה יכול להקליד כל שאלה חופשית בתיבת הטקסט למטה (למשל: *"מתי מועדי ב'?"* או *"מגיע לי פטור מנוכחות?"*), ואני אבדוק לך את זה ישירות בתוך סעיפי המתווה הרשמיים.</p>
-        </div>
-      `);
+      addBot(reservesSavedHtml());
     }, 600);
   };
 
@@ -329,43 +248,7 @@ const showReservesGuidelines = () => {
       const data = await res.json();
       if (!res.ok || !data.courses?.length) return addBot("<div class='font-sans'>לא נמצאו קורסים.</div>");
 
-      const rows = data.courses.map((c) => {
-        const credits = c.credits ? `${c.credits} נ"ז` : 'ללא נ"ז';
-        return `
-        <div class="rounded-xl border border-surface-border bg-surface-page px-3 py-2">
-          <div class="flex items-baseline justify-between gap-3">
-            <span class="text-content-primary leading-snug">
-              <span class="font-bold">${c.courseName}</span>
-              <span class="text-content-muted">(${credits})</span>
-            </span>
-            <span class="text-xs text-content-muted shrink-0">סימול: <span class="font-mono">${c.courseCode}</span></span>
-          </div>
-          ${c.relations?.length ? `
-            <div class="mt-1 text-xs">
-              ${c.relations.map((r) => `
-                <span class="inline-block ms-2 font-semibold ${r.type === "PREREQUISITE" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}">
-                  · ${r.type === "PREREQUISITE" ? "קדם" : "צמוד"}: ${r.courseName}
-                </span>
-              `).join("")}
-            </div>
-          ` : ""}
-        </div>
-        `;
-      }).join("");
-
-      const html = `
-        <div class="w-full rounded-2xl border border-surface-border bg-surface-card shadow-lg overflow-hidden font-sans" dir="rtl">
-          <div class="bg-brand-navy text-white px-4 py-2.5 flex items-center justify-between">
-            <span class="font-bold text-base">קורסי חובה - סמסטר ${sem}</span>
-            <span class="text-xs opacity-80">${data.courses.length} קורסים</span>
-          </div>
-          <div class="p-3 space-y-2">
-            ${rows}
-          </div>
-        </div>
-      `;
-
-      addBot(html, "panel");
+      addBot(requiredCoursesHtml(data.courses, sem), "panel");
       setHasExchange(true);
     } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
   };
@@ -391,21 +274,7 @@ const showReservesGuidelines = () => {
       const a = data.advisors?.[0];
 
       if (a) {
-        addBot(`
-  <div class="p-3 rounded-2xl border space-y-1.5 font-sans bg-blue-50 border-blue-100 text-gray-800">
-    <div class="font-bold text-brand-navy">היועץ האקדמי שלך:</div>
-    <div class="text-sm text-gray-800"><b>שם:</b> ${a.name}</div>
-    <div class="text-sm text-gray-800">
-      <b>מייל:</b>
-      <a href="mailto:${a.email}" class="text-bio-green underline">${a.email}</a>
-    </div>
-    <div class="mt-1.5 text-xs p-2 rounded border bg-white border-blue-50 text-gray-700">
-      זכור למלא
-      <a href="${formUrls.advisor}" class="underline font-bold text-bio-green">טופס ייעוץ</a>
-      לפני הפנייה.
-    </div>
-  </div>
-`);
+        addBot(advisorHtml(a, formUrls.advisor));
         setHasExchange(true);
       } else {
         addBot("<div class='font-sans text-red-500'>לא נמצא יועץ מתאים לאות זו.</div>");
@@ -416,55 +285,7 @@ const showReservesGuidelines = () => {
   };
 
   const showExceptionalRegistration = () => {
-    addBot(`
-<div class="rounded-2xl p-4 shadow-sm space-y-3 bg-white border border-blue-100 text-gray-800">
-  <div class="text-lg font-bold text-bio-green">רישום או ביטול חריג לקורסים</div>
-
-  <div class="text-sm text-gray-800">
-    משתמשים ברישום חריג כאשר <strong>לא ניתן להירשם לקורס דרך תחנת מידע</strong>.
-  </div>
-
-  <div class="rounded-xl p-2.5 text-sm space-y-1 bg-blue-50 border border-blue-200">
-    <div class="font-semibold mb-1">מתי זה קורה בדרך כלל?</div>
-    <div>אין מקום פנוי בקורס</div>
-    <div>נכשלת בקורס פעמיים</div>
-    <div>מועד הרישום/הביטול הסתיים</div>
-  </div>
-
-  <div class="text-sm font-semibold">תהליך הגשת בקשה לרישום חריג:</div>
-
-  <div class="text-sm space-y-2" dir="rtl">
-    <div class="flex items-start gap-3">
-      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">1</span>
-      <span>מורידים את הטופס.</span>
-    </div>
-    <div class="flex items-start gap-3">
-      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">2</span>
-      <span>ממלאים פרטי הקורס והסיבה לבקשה.</span>
-    </div>
-    <div class="flex items-start gap-3">
-      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">3</span>
-      <span>שולחים מייל מנומס ליועץ ומסבירים את הבקשה שלכם כולל צירוף הטופס.</span>
-    </div>
-    <div class="flex items-start gap-3">
-      <span class="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-brand-navy text-white text-sm font-bold">4</span>
-      <span>היועץ מאשר/דוחה את הבקשה וממשיך את הטיפול.</span>
-    </div>
-  </div>
-
-  <div class="border-t border-gray-200 pt-2.5 text-sm space-y-1.5">
-    <div>
-      <strong>טופס רישום/ביטול קורס:</strong><br/>
-      <a href="${formUrls.exception_registration}" class="underline text-bio-green" target="_blank" rel="noreferrer">להורדת הטופס</a>
-    </div>
-    <div class="text-gray-700">
-      <strong>מזכירות:</strong> ${SECRETARY_PHONE}<br/>
-      <strong>מייל:</strong>
-      <a class="underline text-bio-green" href="mailto:${SECRETARY_EMAIL}">${SECRETARY_EMAIL}</a>
-    </div>
-  </div>
-</div>
-`);
+    addBot(exceptionalRegistrationHtml(formUrls.exception_registration));
   };
 
   const pillBtn =
@@ -519,52 +340,16 @@ const showReservesGuidelines = () => {
           className="chat-scroll flex-1 overflow-y-auto p-5 bg-surface-page"
         >
           <div dir="rtl" className="space-y-4">
-          {messages.map((m, idx) => {
-            const isPanel = m.sender === "bot" && m.variant === "panel";
-            const colAlign = m.sender === "user" ? "items-start" : isPanel ? "items-center" : "items-end";
-            // Action icons sit directly under the latest bot answer (ChatGPT-style).
-            const showActions =
-              m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding;
-            return (
-              <div key={m.id} className={`flex flex-col ${colAlign}`}>
-                <div
-                  className={
-                    isPanel
-                      ? "bot-bubble w-full max-w-2xl break-words"
-                      : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
-                          m.sender === "user"
-                            ? "bg-brand-navy text-white rounded-tl-none font-sans"
-                            : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
-                        }`
-                  }
-                  dangerouslySetInnerHTML={{ __html: m.html }}
-                />
-                {showActions && (
-                  <div className="flex items-center gap-1 mt-1.5">
-                    {/* Review is offered only after a typed question, not a selection-only flow. */}
-                    {askedTyped && (
-                      <button
-                        onClick={() => setShowFeedback(true)}
-                        title="סיום שיחה והשארת משוב"
-                        aria-label="סיום שיחה והשארת משוב"
-                        className="p-2 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
-                      >
-                        <Check size={19} strokeWidth={2.5} />
-                      </button>
-                    )}
-                    <button
-                      onClick={startChat}
-                      title="שיחה חדשה"
-                      aria-label="שיחה חדשה"
-                      className="p-2 rounded-md text-content-muted hover:text-brand-navy hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
-                    >
-                      <RotateCcw size={18} strokeWidth={2} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {messages.map((m, idx) => (
+            <MessageBubble
+              key={m.id}
+              m={m}
+              showActions={m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding}
+              askedTyped={askedTyped}
+              onFeedback={() => setShowFeedback(true)}
+              onNewChat={startChat}
+            />
+          ))}
 
           {/* Quick action pills */}
           <div className="pt-4 flex flex-col gap-4 items-end">
@@ -631,69 +416,19 @@ const showReservesGuidelines = () => {
       </div>
 
       {/* Footer input */}
-<<<<<<< HEAD
-      <div className="px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 relative">
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute bottom-full mb-2 w-full bg-surface-card border border-surface-border rounded-xl shadow-xl z-50 overflow-hidden">
-                  {suggestions.map((s, idx) => (
-                    <button
-                      key={idx}
-                      className="w-full text-right px-4 py-3 text-body hover:bg-surface-raised border-b border-surface-border last:border-none flex justify-between items-center transition-colors"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setInput(prev => {
-                          const parts = prev.trim().split(/\s+/);
-                          parts.pop();
-                          return [...parts, s.courseName].join(" ");
-                        });
-                        setSuggestions([]);
-                        setShowSuggestions(false);
-                      }}
-                    >
-                      <span className="font-medium text-content-primary">{s.courseName}</span>
-                      <span className="text-caption font-mono text-content-muted bg-surface-raised px-1.5 py-0.5 rounded">{s.courseCode}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div
-                className={`star-border relative rounded-2xl border border-surface-border p-0.5 ${isBotResponding ? "star-border--responding" : ""}`}
-              >
-                <span className="star-border__points star-border__points--bottom" aria-hidden="true" />
-                <span className="star-border__points star-border__points--top" aria-hidden="true" />
-                <input
-                  type="text"
-                  maxLength={150}
-                  value={input}
-                  onChange={(e) => {
-                    const val = e.target.value.slice(0, 150);
-                    setInput(val);
-                    clearTimeout(typingTimerRef.current);
-                    typingTimerRef.current = setTimeout(() => fetchSuggestions(val), 300);
-                  }}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder={context.yearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                  className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
-                />
-                <button
-                  onClick={sendMessage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"/>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ChatInput
+        input={input}
+        setInput={setInput}
+        suggestions={suggestions}
+        showSuggestions={showSuggestions}
+        setSuggestions={setSuggestions}
+        setShowSuggestions={setShowSuggestions}
+        onSend={sendMessage}
+        fetchSuggestions={fetchSuggestions}
+        typingTimerRef={typingTimerRef}
+        isBotResponding={isBotResponding}
+        hasYearbook={!!context.yearbook}
+      />
 
       <FeedbackModal
         isOpen={showFeedback}
