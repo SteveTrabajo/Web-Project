@@ -631,6 +631,7 @@ const showReservesGuidelines = () => {
       </div>
 
       {/* Footer input */}
+<<<<<<< HEAD
       <div className="px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
         <div className="flex flex-col gap-3">
           <div className="flex gap-4 items-center">
