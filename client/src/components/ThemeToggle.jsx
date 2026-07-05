@@ -10,7 +10,7 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "מצב בהיר" : "מצב כהה"}
-      className="fixed bottom-4 left-4 z-50 flex items-center justify-center w-11 h-11 rounded-full border border-border bg-card text-foreground shadow-lg hover:scale-105 hover:text-bio-green transition-all duration-200"
+      className="fixed bottom-20 left-2 sm:bottom-4 sm:left-4 z-50 flex items-center justify-center w-11 h-11 rounded-full border border-border bg-card text-foreground shadow-lg hover:scale-105 hover:text-bio-green transition-all duration-200"
     >
       {isDark
         ? <LightbulbOff className="w-5 h-5" />

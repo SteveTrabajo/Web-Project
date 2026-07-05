@@ -73,7 +73,7 @@ export default function AdminShell({ admin, setAdmin }) {
 
   if (!isAuthed) {
     return (
-      <div className="min-h-[calc(100vh-72px)] bg-background flex items-start justify-center px-4 pt-16">
+      <div className="bg-background flex items-start justify-center px-4 pt-16">
         <div className="w-full max-w-sm">
           <Card className="p-6">
             <AdminLogin

@@ -244,7 +244,7 @@ export default function LabsViewer() {
   };
 
   return (
-    <div className="max-w-250 mx-auto p-4 text-right text-content-primary" dir="rtl">
+    <div className="max-w-250 mx-auto p-2 sm:p-4 text-right text-content-primary" dir="rtl">
       <header className="mb-6">
         <h2 className="text-page-title mb-1 text-content-primary">לוח מעבדות</h2>
         <p className="text-body text-content-muted">ריכוז כל מועדי המעבדות לפי קורס, תאריך וקבוצה</p>
@@ -377,7 +377,7 @@ export default function LabsViewer() {
             key={group.courseCode}
             className="border border-surface-border rounded-xl overflow-hidden bg-surface-card shadow-sm"
           >
-            <div className="p-4 bg-surface-raised border-b border-surface-border flex justify-between items-center">
+            <div className="p-4 bg-surface-raised border-b border-surface-border flex flex-wrap justify-between items-center gap-2">
               <div className="text-heading text-content-primary">
                 {group.courseCode}{" "}
                 <span className="font-medium text-content-muted">- {group.courseName}</span>
@@ -388,11 +388,11 @@ export default function LabsViewer() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-212.5 text-body text-right border-collapse">
+              <table className="w-full min-w-160 text-body text-right border-collapse">
                 <thead>
                   <tr className="bg-surface-raised border-b border-surface-border text-content-muted">
                     {["מפגש", "תאריך", "יום", "שעה", "קבוצה", "צוות"].map((h) => (
-                      <th key={h} className="p-3 border-l border-surface-border last:border-l-0">{h}</th>
+                      <th key={h} className="p-2 sm:p-3 border-l border-surface-border last:border-l-0">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -404,12 +404,12 @@ export default function LabsViewer() {
                         idx % 2 === 0 ? "bg-surface-card" : "bg-surface-page"
                       }`}
                     >
-                      <td className="p-3 text-center text-content-primary">{row.session}</td>
-                      <td className="p-3 text-center font-bold tracking-tight text-content-primary">{formatDate(row.date)}</td>
-                      <td className="p-3 text-center text-content-primary">{row.day}</td>
-                      <td className="p-3 text-center text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</td>
-                      <td className="p-3 text-center text-content-primary">{row.group}</td>
-                      <td className="p-3 text-content-muted">{row.staff?.join(", ")}</td>
+                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.session}</td>
+                      <td className="p-2 sm:p-3 text-center font-bold tracking-tight text-content-primary">{formatDate(row.date)}</td>
+                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.day}</td>
+                      <td className="p-2 sm:p-3 text-center text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</td>
+                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.group}</td>
+                      <td className="p-2 sm:p-3 text-content-muted">{row.staff?.join(", ")}</td>
                     </tr>
                   ))}
                 </tbody>

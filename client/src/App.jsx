@@ -22,8 +22,8 @@ export default function App() {
 
   return (
     <div
-      className={`bg-surface-page text-content-primary ${
-        fitToScreen ? "h-screen overflow-hidden" : "min-h-screen"
+      className={`bg-surface-page text-content-primary flex flex-col ${
+        fitToScreen ? "h-dvh overflow-hidden" : "min-h-dvh"
       }`}
     >
       <Navbar
@@ -36,15 +36,15 @@ export default function App() {
       {view === "home" && <Hero onStart={() => setView("chat")} />}
 
       {view === "chat" && (
-        <main className="h-[calc(100vh-72px)] bg-surface-page">
-          <div className="h-full max-w-7xl mx-auto px-4 py-4">
+        <main className="flex-1 min-h-0 bg-surface-page">
+          <div className="h-full max-w-7xl mx-auto px-2 py-2 sm:px-4 sm:py-4">
             <ChatBot />
           </div>
         </main>
       )}
 
       {(view === "labs" || view === "admin") && (
-        <main className="min-h-[calc(100vh-72px)] bg-surface-page">
+        <main className="flex-1 bg-surface-page">
           <div className="max-w-7xl mx-auto px-4 py-8">
             {view === "labs" && <LabsViewer />}
             {view === "admin" && <AdminPanel admin={admin} setAdmin={setAdmin} />}

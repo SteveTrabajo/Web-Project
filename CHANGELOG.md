@@ -1,11 +1,11 @@
-2026-06-29
+2026-07-05
 
 ### Added
-- Semantic RAG over curated answers - ask.js now embeds the question (Gemini `text-embedding-004`) and cosine-matches cached curated-answer vectors BEFORE any generative call; a confident hit returns the admin answer with no Gemini generation
-- Conversation context - the bot sends the latest 7 turns of the current chat; the classifier and generative fallback use them so follow-up questions ("ומה הקדם שלו?") resolve correctly
-- Advisor redirect - study-related questions with no answer now route the student to their academic advisor (best-effort by semester, else the advisor menu) plus dean contact, instead of a dead-end "didn't understand"
-- Admin apiFetch GET cache (60s TTL, mutation-invalidated) to stop refetch-on-every-tab-switch
+- Mobile-adaptive layout (client requirement) - the site is now fully usable on phones; styling-only changes, no logic touched
+- Navbar hamburger menu below 768px - nav items and admin logout move into a dropdown panel; desktop navbar unchanged
 
 ### Modified
-- ask.js - replaced keyword `findCuratedAnswer` with embedding-based `ragCuratedAnswer`; `callRagFallback` -> `answerOrRoute` (returns answer / advisor / off-topic via NEED_ADVISOR / OFF_TOPIC sentinels, folding study-relevance into one call); generative Gemini fires only on a RAG miss
-- Bot.jsx - sends conversation `history`; input capped at 150 chars; message bubbles wrap instead of overflowing
+- Root font steps down 20px -> 17px below 640px (the documented mobile typography base)
+- App shell converted to a dvh flex column - removed all hard-coded `calc(100vh-72px)` offsets and fixed the mobile URL-bar viewport bug
+- Chat, Hero, and labs paddings/sizes gain `sm:` breakpoints; labs table min-width reduced so only modest side-scroll remains on phones
+- Theme toggle repositioned on mobile so it no longer covers the chat send button

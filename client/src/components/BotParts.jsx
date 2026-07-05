@@ -10,7 +10,7 @@ export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewCha
         className={
           isPanel
             ? "bot-bubble w-full max-w-2xl break-words"
-            : `max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
+            : `max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
                 m.sender === "user"
                   ? "bg-brand-navy text-white rounded-tl-none font-sans"
                   : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
@@ -60,7 +60,7 @@ export function ChatInput({
   hasYearbook,
 }) {
   return (
-    <div className="px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
+    <div className="px-3 sm:px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col gap-3">
         <div className="flex gap-4 items-center">
           <div className="flex-1 relative">
@@ -106,11 +106,11 @@ export function ChatInput({
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onKeyDown={(e) => e.key === "Enter" && onSend()}
                 placeholder={hasYearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                className="w-full bg-surface-page rounded-2xl px-6 py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
+                className="w-full bg-surface-page rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-12 sm:pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
               />
               <button
                 onClick={onSend}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />

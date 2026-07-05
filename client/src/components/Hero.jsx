@@ -3,7 +3,7 @@ import React from "react";
 export default function Hero({ onStart }) {
   return (
     <section
-      className="relative w-full h-[calc(100vh-72px)] bg-cover bg-center bg-no-repeat overflow-hidden flex items-center"
+      className="relative w-full flex-1 min-h-0 bg-cover bg-center bg-no-repeat overflow-hidden flex items-center"
       style={{ backgroundImage: "url(/assets/background.png)" }}
       dir="rtl"
     >
@@ -14,10 +14,10 @@ export default function Hero({ onStart }) {
       <div className="relative z-10 w-full flex justify-center px-6">
 
         {/* Semi-transparent bounding box */}
-        <div className="backdrop-blur-sm bg-brand-navy/55 border border-white/10 rounded-2xl px-10 py-12 max-w-xl w-full text-center text-white space-y-6 shadow-2xl">
+        <div className="backdrop-blur-sm bg-brand-navy/55 border border-white/10 rounded-2xl px-5 py-8 sm:px-10 sm:py-12 max-w-xl w-full text-center text-white space-y-6 shadow-2xl">
 
           {/* Hero display text intentionally larger than the standard scale */}
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight">
             עוזר חכם לסטודנטים
             <br />
             <span className="text-brand-gold">הנדסת ביוטכנולוגיה</span>

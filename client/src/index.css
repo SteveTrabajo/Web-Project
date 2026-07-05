@@ -161,6 +161,13 @@ html {
   font-size: 20px;
 }
 
+/* Mobile: step down to the documented 17px typography base */
+@media (max-width: 640px) {
+  html {
+    font-size: 17px;
+  }
+}
+
 html,
 body,
 #root {

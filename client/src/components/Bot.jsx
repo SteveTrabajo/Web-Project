@@ -297,7 +297,7 @@ const showReservesGuidelines = () => {
     "dark:border-bio-green-glow dark:text-bio-green-glow dark:hover:bg-surface-raised";
 
   const letterBtn =
-    "w-9 h-9 flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary " +
+    "w-full max-w-9 h-9 justify-self-center flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary " +
     "hover:border-brand-navy hover:text-brand-navy transition-all text-body font-bold font-sans shadow-sm " +
     "dark:hover:border-bio-green-glow dark:hover:text-bio-green-glow";
 
@@ -307,7 +307,7 @@ const showReservesGuidelines = () => {
       dir="rtl"
     >
       {/* Header */}
-      <div className="bg-brand-navy text-white px-8 py-2.5 flex flex-row-reverse items-center justify-between shadow-md z-10">
+      <div className="bg-brand-navy text-white px-4 sm:px-8 py-2.5 flex flex-row-reverse items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-heading leading-none text-left">BIO BOT</h1>
@@ -320,13 +320,13 @@ const showReservesGuidelines = () => {
             <>
               <button
                 onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
-                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+                className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
               >
                 החלפת נושא
               </button>
               <button
                 onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
-                className="text-caption bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+                className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
               >
                 שינוי סמסטר
               </button>
@@ -340,7 +340,7 @@ const showReservesGuidelines = () => {
         <div
           ref={chatRef}
           dir="ltr"
-          className="chat-scroll flex-1 overflow-y-auto p-5 bg-surface-page"
+          className="chat-scroll flex-1 overflow-y-auto p-3 sm:p-5 bg-surface-page"
         >
           <div dir="rtl" className="space-y-4">
           {messages.map((m, idx) => (
@@ -399,7 +399,7 @@ const showReservesGuidelines = () => {
             )}
 
             {context.topic === "advisor_input" && (
-              <div className="grid grid-cols-7 gap-2 max-w-md bg-surface-card p-5 rounded-2xl shadow-lg border border-surface-border animate-in fade-in zoom-in duration-200">
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 max-w-md bg-surface-card p-3 sm:p-5 rounded-2xl shadow-lg border border-surface-border animate-in fade-in zoom-in duration-200">
                 {HEB_LETTERS.map((L) => (
                   <button key={L} className={letterBtn} onClick={() => chooseLetter(L)}>{L}</button>
                 ))}
