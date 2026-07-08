@@ -25,14 +25,14 @@ router.get("/labs/:yearbook/:semester", async (req, res) => {
 // Full replacement of a semester doc — intentional, not a partial update.
 router.put("/labs/:yearbook/:semester", async (req, res) => {
   const { yearbook, semester } = req.params;
+  const { yearLabel, ...semesterData } = req.body || {};
 
   const yearRef = db.collection("lab_schedule").doc(yearbook);
   const semRef = yearRef.collection("semesters").doc(String(semester));
 
- 
   await yearRef.set(
     {
-      year: req.body?.yearLabel || yearbook,
+      year: yearLabel || yearbook,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -40,8 +40,9 @@ router.put("/labs/:yearbook/:semester", async (req, res) => {
 
   await semRef.set(
     {
-      ...req.body,
+      ...semesterData,
       semester: Number(semester),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: false }
   );

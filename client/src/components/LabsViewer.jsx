@@ -47,6 +47,16 @@ const formatDate = (iso) => {
   return d && m && y ? `${d}/${m}/${y}` : iso;
 };
 
+// Multi-day labs (date + dateEnd) render as "14-16/06/2026"
+const formatDateRange = (row) => {
+  if (!row?.dateEnd) return formatDate(row?.date);
+  const [y1, m1, d1] = String(row.date).split("-");
+  const [y2, m2, d2] = String(row.dateEnd).split("-");
+  if (!y1 || !y2) return formatDate(row.date);
+  if (y1 === y2 && m1 === m2) return `${d1}-${d2}/${m1}/${y1}`;
+  return `${d1}/${m1}-${d2}/${m2}/${y2}`;
+};
+
 function buildFlat(data, fallbackSemester) {
   if (Array.isArray(data?.labsFlat)) return data.labsFlat;
 
@@ -167,17 +177,17 @@ export default function LabsViewer() {
     const times = new Set();
     const groups = new Set();
     const lecturers = new Set();
-    const dates = new Set();
+    const dates = new Map(); // date -> display label (ranges show as "14-16/06/2026")
     labs.forEach((l) => {
       if (l.day) days.add(l.day);
       if (l.time) times.add(l.time);
       if (l.group) groups.add(l.group);
-      if (l.date) dates.add(l.date);
+      if (l.date && !dates.has(l.date)) dates.set(l.date, formatDateRange(l));
       (l.staff || []).forEach((s) => s && lecturers.add(s));
     });
     return {
       courses: coursesList.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}` })),
-      dates: [...dates].sort().map((d) => ({ value: d, label: formatDate(d) })),
+      dates: [...dates.keys()].sort().map((d) => ({ value: d, label: dates.get(d) })),
       days: [...days].sort((a, b) => dayRank(a) - dayRank(b)).map((d) => ({ value: d, label: d })),
       times: [...times].sort().map((t) => ({ value: t, label: t })),
       groups: [...groups].sort().map((g) => ({ value: g, label: g })),
@@ -405,7 +415,7 @@ export default function LabsViewer() {
                       }`}
                     >
                       <td className="p-2 sm:p-3 text-center text-content-primary">{row.session}</td>
-                      <td className="p-2 sm:p-3 text-center font-bold tracking-tight text-content-primary">{formatDate(row.date)}</td>
+                      <td className="p-2 sm:p-3 text-center font-bold tracking-tight text-content-primary">{formatDateRange(row)}</td>
                       <td className="p-2 sm:p-3 text-center text-content-primary">{row.day}</td>
                       <td className="p-2 sm:p-3 text-center text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</td>
                       <td className="p-2 sm:p-3 text-center text-content-primary">{row.group}</td>

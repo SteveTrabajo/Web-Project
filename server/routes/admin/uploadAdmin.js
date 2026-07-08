@@ -56,10 +56,10 @@ router.post("/upload/yearbook", upload.single("file"), (req, res) => {
 });
 
 // ======================
-// Upload labs
+// Upload labs (preview only - parses the file without writing to Firestore;
+// the admin reviews the result and commits via PUT /api/admin/labs/:yearbook/:semester)
 // ======================
 router.post("/upload/labs", upload.single("file"), (req, res) => {
-  const { yearId, yearLabel, semester } = req.body;
   const filePath = req.file?.path;
 
   if (!filePath) {
@@ -68,7 +68,7 @@ router.post("/upload/labs", upload.single("file"), (req, res) => {
 
   execFile(
     PYTHON_CMD,
-    ["parsers/labs_parser.py", filePath, yearId, yearLabel, semester],
+    ["parsers/labs_parser.py", filePath, "--dry-run"],
     (err, stdout, stderr) => {
       cleanupFile(filePath);
       if (err) {
@@ -78,7 +78,19 @@ router.post("/upload/labs", upload.single("file"), (req, res) => {
           details: stderr || err.message,
         });
       }
-      res.json({ ok: true });
+
+      let report = null;
+      let courses = null;
+      try {
+        const lines = stdout.trim().split(/\r?\n/);
+        const payload = JSON.parse(lines[lines.length - 1]);
+        report = payload.report || null;
+        courses = payload.courses || null;
+      } catch {
+        console.error("Failed to parse labs parser output");
+      }
+
+      res.json({ ok: true, report, courses });
     }
   );
 });

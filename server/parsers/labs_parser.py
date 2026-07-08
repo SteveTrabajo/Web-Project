@@ -1,12 +1,11 @@
 import sys
 import re
+import json
+import datetime as dt
 from pathlib import Path
 import os
 
 from openpyxl import load_workbook
-
-import firebase_admin
-from firebase_admin import credentials, firestore
 """
 labs_parser.py
 
@@ -19,6 +18,7 @@ labs_parser.py
 
 שימוש:
 python labs_parser.py <file_path> <year_id> <year_label> <semester>
+python labs_parser.py <file_path> --dry-run   (ניתוח בלבד, ללא כתיבה ל-Firestore)
 """
 
 # ==============================
@@ -103,6 +103,62 @@ def find_course_title_near(ws, header_row, max_col):
     return None, None
 
 
+def _iso(d, m, y):
+    y = str(y)
+    if len(y) == 2:
+        y = "20" + y
+    return "%s-%02d-%02d" % (y, int(m), int(d))
+
+
+def normalize_date_cell(value):
+    """
+    Normalize a raw date cell to (date, dateEnd) as ISO yyyy-mm-dd strings.
+    Handles datetime cells, d.m.yy text, day ranges (14-16.6.26) and
+    cross-month ranges (14.6-2.7.26). Unrecognized text is returned verbatim
+    with an empty dateEnd so the quality report can flag it.
+    """
+    if isinstance(value, (dt.datetime, dt.date)):
+        return value.strftime("%Y-%m-%d"), ""
+
+    t = norm(value)
+    if not t:
+        return "", ""
+    t = re.sub(r"^[א-ת]'?\s*", "", t).strip()
+
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", t)
+    if m:
+        return m.group(1), ""
+
+    m = re.match(r"^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$", t)
+    if m:
+        return _iso(m.group(1), m.group(2), m.group(3)), ""
+
+    m = re.match(r"^(\d{1,2})\s*[-–]\s*(\d{1,2})[./](\d{1,2})[./](\d{2,4})$", t)
+    if m:
+        return (
+            _iso(m.group(1), m.group(3), m.group(4)),
+            _iso(m.group(2), m.group(3), m.group(4)),
+        )
+
+    m = re.match(r"^(\d{1,2})[./](\d{1,2})\s*[-–]\s*(\d{1,2})[./](\d{1,2})[./](\d{2,4})$", t)
+    if m:
+        return (
+            _iso(m.group(1), m.group(2), m.group(5)),
+            _iso(m.group(3), m.group(4), m.group(5)),
+        )
+
+    return t, ""
+
+
+def normalize_time_cell(value):
+    """Normalize a time cell to HH:MM; text values pass through as-is."""
+    if isinstance(value, dt.datetime):
+        return value.strftime("%H:%M")
+    if isinstance(value, dt.time):
+        return "%02d:%02d" % (value.hour, value.minute)
+    return norm(value)
+
+
 def _looks_like_date(text):
     t = norm(text)
     if not t:
@@ -159,11 +215,13 @@ def parse_workbook_data(path: Path) -> dict:
             )
 
             last_date = ""
+            last_date_end = ""
             last_staff = ""
 
             rr = r + 1
             while rr <= ws.max_row:
-                date_val = norm(cell_value(ws, rr, header.get("date")))
+                raw_date = cell_value(ws, rr, header.get("date"))
+                date_val, date_end_val = normalize_date_cell(raw_date)
                 day_val = norm(cell_value(ws, rr, header.get("day")))
 
                 session_val = ""
@@ -183,11 +241,13 @@ def parse_workbook_data(path: Path) -> dict:
                 # fill-down within the same course table only
                 if not date_val and last_date and _looks_like_date(last_date):
                     date_val = last_date
+                    date_end_val = last_date_end
                 if not staff_val and last_staff and _is_fillable_staff(last_staff):
                     staff_val = last_staff
 
                 if _looks_like_date(date_val):
                     last_date = date_val
+                    last_date_end = date_end_val
                 if _is_fillable_staff(staff_val):
                     last_staff = staff_val
 
@@ -196,9 +256,11 @@ def parse_workbook_data(path: Path) -> dict:
                     "date": date_val,
                     "day": day_val,
                     "group": norm(cell_value(ws, rr, header.get("group"))),
-                    "time": norm(cell_value(ws, rr, header.get("time"))),
+                    "time": normalize_time_cell(cell_value(ws, rr, header.get("time"))),
                     "staff": [staff_val] if staff_val else [],
                 }
+                if date_end_val:
+                    lab["dateEnd"] = date_end_val
 
                 courses_map[course_code]["labs"].append(lab)
                 rr += 1
@@ -214,6 +276,7 @@ def count_lab_quality_issues(courses_map: dict) -> dict:
     missing_date = 0
     missing_staff = 0
     missing_any = 0
+    unparsed_dates = 0
     rows_with_issues = []
 
     for code, course in courses_map.items():
@@ -223,6 +286,9 @@ def count_lab_quality_issues(courses_map: dict) -> dict:
             if not lab.get("date"):
                 missing.append("date")
                 missing_date += 1
+            elif not re.match(r"^\d{4}-\d{2}-\d{2}$", lab["date"]):
+                missing.append("dateFormat")
+                unparsed_dates += 1
             if not lab.get("day"):
                 missing.append("day")
             if not lab.get("time"):
@@ -248,7 +314,25 @@ def count_lab_quality_issues(courses_map: dict) -> dict:
         "rowsWithMissingFields": missing_any,
         "missingDate": missing_date,
         "missingStaff": missing_staff,
+        "unparsedDates": unparsed_dates,
         "rowsWithIssues": rows_with_issues,
+    }
+
+
+def build_report(courses_map: dict) -> dict:
+    return {
+        "ok": True,
+        "totalCourses": len(courses_map),
+        "totalLabs": sum(len(c.get("labs") or []) for c in courses_map.values()),
+        "courses": [
+            {
+                "courseCode": c["courseCode"],
+                "courseName": c["courseName"],
+                "labCount": len(c.get("labs") or []),
+            }
+            for c in courses_map.values()
+        ],
+        "quality": count_lab_quality_issues(courses_map),
     }
 
 
@@ -256,6 +340,10 @@ def count_lab_quality_issues(courses_map: dict) -> dict:
 # Firebase write
 # ==============================
 def _init_firebase():
+    # Imported lazily so --dry-run works without firebase-admin installed
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+
     if firebase_admin._apps:
         return firestore.client()
     cred = credentials.Certificate({
@@ -270,6 +358,8 @@ def _init_firebase():
 
 
 def parse_workbook(path: Path, year_id: str, year_label: str, semester: str):
+    from firebase_admin import firestore
+
     db = _init_firebase()
     courses_map = parse_workbook_data(path)
 
@@ -292,19 +382,29 @@ def parse_workbook(path: Path, year_id: str, year_label: str, semester: str):
         merge=False,
     )
 
+    return courses_map
+
 
 # ==============================
 # ENTRY POINT
 # ==============================
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        raise Exception("Usage: labs_parser.py <file_path> <year_id> <year_label> <semester>")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
-    parse_workbook(
-        Path(sys.argv[1]),
-        sys.argv[2],
-        sys.argv[3],
-        sys.argv[4],
-    )
+    dry_run = "--dry-run" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--dry-run"]
 
-    print("OK")
+    if dry_run:
+        if len(args) < 1:
+            raise Exception("Usage: labs_parser.py <file_path> --dry-run")
+        courses_map = parse_workbook_data(Path(args[0]))
+    else:
+        if len(args) < 4:
+            raise Exception("Usage: labs_parser.py <file_path> <year_id> <year_label> <semester>")
+        courses_map = parse_workbook(Path(args[0]), args[1], args[2], args[3])
+
+    # Last stdout line is the JSON payload consumed by uploadAdmin.js
+    print(json.dumps({"report": build_report(courses_map), "courses": courses_map}))

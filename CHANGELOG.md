@@ -1,11 +1,10 @@
-2026-07-05
+2026-07-09
 
 ### Added
-- Mobile-adaptive layout (client requirement) - the site is now fully usable on phones; styling-only changes, no logic touched
-- Navbar hamburger menu below 768px - nav items and admin logout move into a dropdown panel; desktop navbar unchanged
+- Lab upload preview-then-confirm flow - uploading an Excel now parses only (no DB write); the admin reviews all parsed rows plus a quality report (missing fields, unparseable dates) and commits via the existing labs PUT endpoint
+- Parser `--dry-run` flag for validating a labs Excel locally without Firestore credentials
+- Multi-day ("מרוכז") lab support - date ranges like 14-16.6.26 are stored as `date` + `dateEnd` and render as 14-16/06/2026 in the viewer and chat
 
 ### Modified
-- Root font steps down 20px -> 17px below 640px (the documented mobile typography base)
-- App shell converted to a dvh flex column - removed all hard-coded `calc(100vh-72px)` offsets and fixed the mobile URL-bar viewport bug
-- Chat, Hero, and labs paddings/sizes gain `sm:` breakpoints; labs table min-width reduced so only modest side-scroll remains on phones
-- Theme toggle repositioned on mobile so it no longer covers the chat send button
+- Labs parser normalizes dates to ISO yyyy-mm-dd (handles Excel date cells, d.m.yy text, day/cross-month ranges) and times to HH:MM
+- Chat lab answers are range-aware (date/week filters and next-lab treat multi-day labs as intervals) and day filtering now matches "ב" against stored "ב'" and day ranges

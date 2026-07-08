@@ -21,6 +21,11 @@ function parseLabDate(dateStr) {
     .replace(/^[א-ת]\s*/, "")
     .trim();
 
+  const isoM = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoM) {
+    return new Date(+isoM[1], +isoM[2] - 1, +isoM[3]);
+  }
+
   const m = clean.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/);
   if (m) {
     let [, d, mth, y] = m;
@@ -32,49 +37,82 @@ function parseLabDate(dateStr) {
   return isNaN(iso) ? null : iso;
 }
 
-function inRange(d, start, end) {
-  return d && d >= start && d <= end;
+// A lab occupies [start, end]; single-day labs have end = start at 23:59:59
+function labDateRange(lab) {
+  const start = parseLabDate(lab.date);
+  if (!start) return null;
+
+  const end = (lab.dateEnd && parseLabDate(lab.dateEnd)) || new Date(start);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
 }
 
-function isTimeMatch(labDate, time) {
-  const d = parseLabDate(labDate);
-  if (!d) return false;
+function rangesOverlap(a, b) {
+  return a.start <= b.end && b.start <= a.end;
+}
+
+function dayWindow(base, offsetDays) {
+  const start = new Date(base);
+  start.setDate(start.getDate() + offsetDays);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function weekWindow(base, offsetWeeks) {
+  const start = new Date(base);
+  start.setDate(base.getDate() - base.getDay() + offsetWeeks * 7);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function isTimeMatch(lab, time) {
+  const range = labDateRange(lab);
+  if (!range) return false;
 
   const now = new Date();
 
-  if (time === "today") return d.toDateString() === now.toDateString();
-
-  if (time === "tomorrow") {
-    const t = new Date(now);
-    t.setDate(t.getDate() + 1);
-    return d.toDateString() === t.toDateString();
-  }
-
-  if (time === "week") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-
-    return inRange(d, start, end);
-  }
-
-  if (time === "next_week") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay() + 7);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-
-    return inRange(d, start, end);
-  }
+  if (time === "today") return rangesOverlap(range, dayWindow(now, 0));
+  if (time === "tomorrow") return rangesOverlap(range, dayWindow(now, 1));
+  if (time === "week") return rangesOverlap(range, weekWindow(now, 0));
+  if (time === "next_week") return rangesOverlap(range, weekWindow(now, 1));
 
   return true; // time = all
+}
+
+const DAY_LETTERS = "אבגדהו";
+
+function dayMatches(labDay, letter) {
+  const stored = String(labDay || "").trim();
+  if (!stored || !letter) return false;
+
+  // Day range like "א'- ג'": match if the letter falls inside the range
+  const m = stored.match(/^([א-ת])'?\s*[-–]\s*([א-ת])'?$/);
+  if (m) {
+    const idx = DAY_LETTERS.indexOf(letter);
+    const from = DAY_LETTERS.indexOf(m[1]);
+    const to = DAY_LETTERS.indexOf(m[2]);
+    if (idx >= 0 && from >= 0 && to >= 0) return idx >= from && idx <= to;
+  }
+
+  // Handles stored "ב'" (with geresh) vs queried "ב"
+  return stored.includes(letter);
+}
+
+function formatLabDateHtml(lab) {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const s = String(lab.date || "").match(iso);
+  if (!s) return lab.date || "-";
+
+  const e = String(lab.dateEnd || "").match(iso);
+  if (!e) return `${s[3]}/${s[2]}/${s[1]}`;
+
+  if (s[1] === e[1] && s[2] === e[2]) return `${s[3]}-${e[3]}/${s[2]}/${s[1]}`;
+  return `${s[3]}/${s[2]}-${e[3]}/${e[2]}/${e[1]}`;
 }
 
 /* ================= LLM ================= */
@@ -201,19 +239,19 @@ export default async function askLabs(req, res) {
     }
 
     if (parsed.day) {
-      labs = labs.filter((l) => l.day === parsed.day);
+      labs = labs.filter((l) => dayMatches(l.day, parsed.day));
     }
 
     if (parsed.date) {
       const target = parseLabDate(parsed.date);
       labs = labs.filter((l) => {
-        const d = parseLabDate(l.date);
-        return d && target && d.toDateString() === target.toDateString();
+        const range = labDateRange(l);
+        return range && target && target >= range.start && target <= range.end;
       });
     }
 
     if (parsed.time && parsed.time !== "all") {
-      labs = labs.filter((l) => isTimeMatch(l.date, parsed.time));
+      labs = labs.filter((l) => isTimeMatch(l, parsed.time));
     }
 
     /* ===== next lab ===== */
@@ -221,9 +259,9 @@ export default async function askLabs(req, res) {
     if (parsed.intent === "next_lab") {
       const now = new Date();
       const future = labs
-        .map((l) => ({ ...l, _d: parseLabDate(l.date) }))
-        .filter((l) => l._d && l._d >= now)
-        .sort((a, b) => a._d - b._d);
+        .map((l) => ({ ...l, _r: labDateRange(l) }))
+        .filter((l) => l._r && l._r.end >= now)
+        .sort((a, b) => a._r.start - b._r.start);
 
       if (!future.length) {
         return res.json({
@@ -260,7 +298,7 @@ export default async function askLabs(req, res) {
 
             <div class="mt-1">
               📅 <b>מועד:</b>
-              ${l.day || ""} ${l.date || "-"}
+              ${l.day || ""} ${formatLabDateHtml(l)}
               <span class="mx-1 opacity-60">|</span>
               ⏰ ${l.time || "-"}
             </div>
