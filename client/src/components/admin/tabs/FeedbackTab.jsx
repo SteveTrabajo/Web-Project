@@ -17,7 +17,7 @@ const REASON_LABELS = {
   other:         "אחר",
 };
 
-function FeedbackCard({ item }) {
+function FeedbackCard({ item, onDelete }) {
   const isPositive = item.rating === "positive";
   const relativeTime = (() => {
     if (!item.createdAt) return "";
@@ -48,6 +48,13 @@ function FeedbackCard({ item }) {
         )}
         <div className="text-caption text-muted-foreground">{relativeTime}</div>
       </div>
+      <button
+        onClick={() => onDelete(item.id)}
+        className="self-start shrink-0 size-8 flex items-center justify-center rounded-md border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+        title="מחק משוב"
+      >
+        🗑
+      </button>
     </div>
   );
 }
@@ -79,6 +86,17 @@ export default function FeedbackTab({ toast }) {
       toast("error", e.message);
     } finally {
       setFeedbackLoading(false);
+    }
+  };
+
+  const deleteFeedback = async (id) => {
+    if (!confirm("למחוק משוב זה לצמיתות?")) return;
+    try {
+      await apiFetch(`/api/admin/feedback/${encodeURIComponent(id)}`, { method: "DELETE" });
+      setFeedback((prev) => prev.filter((f) => f.id !== id));
+      toast("ok", "המשוב נמחק");
+    } catch (e) {
+      toast("error", e.message);
     }
   };
 
@@ -216,7 +234,7 @@ export default function FeedbackTab({ toast }) {
           <div className="py-10 text-center text-body text-muted-foreground">אין משובים עדיין</div>
         ) : (
           <div className="space-y-3">
-            {feedback.map((f) => <FeedbackCard key={f.id} item={f} />)}
+            {feedback.map((f) => <FeedbackCard key={f.id} item={f} onDelete={deleteFeedback} />)}
             {feedbackHasMore && (
               <div className="pt-2 flex justify-center">
                 <Button size="sm" variant="outline" onClick={() => loadFeedback(feedbackPage + 1)} disabled={feedbackLoading}>

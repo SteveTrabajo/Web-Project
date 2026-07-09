@@ -256,9 +256,9 @@ export default function UploadLabs({ onUploadSuccess }) {
                       {course.labs.map((lab, i) => (
                         <tr key={i} className="border-t">
                           <td className="p-2">{lab.session}</td>
-                          <td className="p-2" dir="ltr">{formatDateRange(lab)}</td>
+                          <td className="p-2 text-right" dir="ltr">{formatDateRange(lab)}</td>
                           <td className="p-2">{lab.day}</td>
-                          <td className="p-2" dir="ltr">{lab.time}</td>
+                          <td className="p-2 text-right" dir="ltr">{lab.time}</td>
                           <td className="p-2">{lab.group}</td>
                           <td className="p-2">{(lab.staff || []).join(", ")}</td>
                         </tr>

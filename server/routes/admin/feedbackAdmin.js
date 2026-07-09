@@ -36,4 +36,15 @@ router.get("/feedback", async (req, res) => {
   }
 });
 
+// DELETE /api/admin/feedback/:id
+router.delete("/feedback/:id", async (req, res) => {
+  try {
+    await db.collection("feedback").doc(req.params.id).delete();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("feedbackAdmin DELETE error:", err);
+    res.status(500).json({ error: "שגיאת שרת פנימית" });
+  }
+});
+
 export default router;
