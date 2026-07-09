@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from "@/components/ui/select";
 
 const SEMS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -109,21 +113,6 @@ function Btn({ children, className = "", ...props }) {
   );
 }
 
-function PrimaryBtn({ children, className = "", ...props }) {
-  return (
-    <button
-      className={
-        "flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold shadow-md transition-all duration-200 " +
-        "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 " +
-        "dark:bg-indigo-500 dark:hover:bg-indigo-600 " +
-        className
-      }
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
 
 function DangerBtn({ children, className = "", ...props }) {
   return (
@@ -284,47 +273,37 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 bg-slate-50/50 min-h-screen dark:bg-black/20 font-sans">
+    <div className="space-y-4">
 
-      {/* Sticky Header */}
-      <div className="sticky top-4 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap transition-all">
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-            <span className="w-2 h-6 bg-indigo-500 rounded-full inline-block"></span>
-            ניהול סמסטר
-          </h1>
-          <div className="text-xs font-medium text-slate-400 flex items-center gap-2 mt-1">
-            <span>עריכת הנחיות הרישום · סמסטר {semester}</span>
-            {loading && <span className="animate-pulse text-indigo-500">● מסנכרן...</span>}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <select
-              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl ps-4 pe-10 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:border-indigo-300 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-              value={semester}
-              onChange={(e) => setSemester(Number(e.target.value))}
-            >
+      {/* Header - same format as the other admin tabs */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="text-heading">
+          ניהול סמסטר
+          {loading && (
+            <span className="ms-2 text-caption font-normal text-muted-foreground animate-pulse">מסנכרן...</span>
+          )}
+        </h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={String(semester)} onValueChange={(v) => setSemester(Number(v))}>
+            <SelectTrigger dir="rtl" className="h-8 w-32">
+              <span>סמסטר {semester}</span>
+            </SelectTrigger>
+            <SelectContent>
               {SEMS.map((s) => (
-                <option key={s} value={s}>סמסטר {s}</option>
+                <SelectItem key={s} value={String(s)}>סמסטר {s}</SelectItem>
               ))}
-            </select>
-            <div className="absolute end-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-          </div>
-
-          <div className="h-8 w-px bg-slate-200 mx-1 dark:bg-slate-700"></div>
-
-          <Btn onClick={load} title="רענון נתונים">
-            <Icons.Refresh className={loading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">רענון</span>
-          </Btn>
-          <PrimaryBtn onClick={save} className={dirty ? "ring-2 ring-indigo-300 ring-offset-2 dark:ring-offset-slate-900" : ""}>
-            <Icons.Save />
-            <span>שמירה{dirty ? "*" : ""}</span>
-          </PrimaryBtn>
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+            רענון
+          </Button>
+          <Button
+            size="sm"
+            className="bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep hover:opacity-90"
+            onClick={save}
+          >
+            שמירה{dirty ? "*" : ""}
+          </Button>
         </div>
       </div>
 
