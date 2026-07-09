@@ -126,6 +126,17 @@ export async function getAllRegDocs() {
 }
 
 /* =============================
+   Registration window formatting
+============================= */
+// Renders only the parts that exist so empty from/to never produce "בין ל-".
+export function formatRegistrationWindow(w) {
+  if (!w) return "טרם פורסם";
+  const range = w.from && w.to ? `בין ${w.from} ל-${w.to}` : "";
+  const out = [w.date, range].filter(Boolean).join(" ");
+  return out || "טרם פורסם";
+}
+
+/* =============================
    Forms helper
 ============================= */
 function appendForms(forms, intent) {
@@ -285,7 +296,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
     return `
       <div class="text-sm">
         ⏰ <b class="bot-title">חלון הרישום – סמסטר ${sem}${cohort}</b><br/>
-        ${w.date} בין ${w.from} ל-${w.to}
+        ${formatRegistrationWindow(w)}
       </div>`;
   }
 

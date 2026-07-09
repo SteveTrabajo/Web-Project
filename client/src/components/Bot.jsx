@@ -37,6 +37,9 @@ export default function ChatBot() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Topic pills show at chat start, hide once a topic is picked or a typed
+  // question gets answered, and return via the header button or a new chat.
+  const [showTopicPills, setShowTopicPills] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasExchange, setHasExchange] = useState(false);
   const [askedTyped, setAskedTyped] = useState(false);
@@ -110,6 +113,7 @@ export default function ChatBot() {
     setHasExchange(false);
     setAskedTyped(false);
     setRecentQuestions([]);
+    setShowTopicPills(true);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
     addBot(greetingHtml());
   };
@@ -173,6 +177,7 @@ export default function ChatBot() {
       addBot(data.html || "לא נמצאה תשובה בבסיס הנתונים.");
       setHasExchange(true);
       setAskedTyped(true);
+      setShowTopicPills(false);
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
@@ -221,6 +226,7 @@ const showReservesGuidelines = () => {
   const chooseTopic = (t) => {
     const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג" ,reserves: "מילואים"};
     addUser(labels[t]);
+    setShowTopicPills(false);
     if (t === "exceptional") {
       showExceptionalRegistration();
     }
@@ -316,21 +322,22 @@ const showReservesGuidelines = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Brings the topic pills back on demand after they were dismissed */}
+          {context.yearbook && (context.topic || !showTopicPills) && (
+            <button
+              onClick={() => { setContext(p => ({ ...p, topic: null, semesterNum: null })); setShowTopicPills(true); }}
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+            >
+              בחירת נושא
+            </button>
+          )}
           {context.topic && (
-            <>
-              <button
-                onClick={() => setContext(p => ({ ...p, topic: null, semesterNum: null }))}
-                className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
-              >
-                החלפת נושא
-              </button>
-              <button
-                onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
-                className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
-              >
-                שינוי סמסטר
-              </button>
-            </>
+            <button
+              onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+            >
+              שינוי סמסטר
+            </button>
           )}
         </div>
       </div>
@@ -376,7 +383,7 @@ const showReservesGuidelines = () => {
               </div>
             )}
 
-            {context.yearbook && !context.topic && (
+            {context.yearbook && !context.topic && showTopicPills && (
               <div className="flex flex-col items-end gap-3 w-full">
                 <div className="flex items-center gap-2 mb-1 text-brand-navy dark:text-bio-green-glow text-heading px-1 animate-in fade-in slide-in-from-right-2 duration-300">
                   <span>אפשר לבחור נושא כמו</span>

@@ -18,6 +18,7 @@ import {
   getRegistrationSummary,
   getContactsSummary,
   findContactsByQuery,
+  formatRegistrationWindow,
 } from "./registration.service.js";
 
 const router = express.Router();
@@ -103,6 +104,44 @@ function detectGreeting(question = "", qNorm = null) {
   );
 }
 
+// Topics students ask about that the bot has no data for (exams, grades,
+// syllabus). Detected early so a course mention in the same question does
+// not fall through to an unrelated course answer.
+const UNSUPPORTED_TOPICS = [
+  // "מועד/מועדי א/ב" with a word boundary so "מועד בשבוע" is not read as an exam sitting
+  { label: "מועדי מבחנים", keywords: ["מבחן", "מבחנים", "בחינה", "בחינות"], patterns: [/מועדי? [אב]['׳]?(\s|$)/] },
+  { label: "ציונים", keywords: ["ציון", "ציונים"] },
+  { label: "סילבוס", keywords: ["סילבוס", "סילאבוס"] },
+  // Intercepted before registration routing, which otherwise misreads any
+  // "מתי" question as a registration-window ask
+  {
+    label: "מועדי ביטול קורסים",
+    keywords: ["ביטול", "לבטל", "מבטלים"],
+    hint: 'את טופס הביטול/רישום חריג אפשר למצוא דרך הנושא "רישום חריג" בתפריט למטה.',
+  },
+];
+
+function detectUnsupportedTopic(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  for (const t of UNSUPPORTED_TOPICS) {
+    if (t.keywords.some((k) => q.includes(normalizeHebrew(k)))) return t;
+    if ((t.patterns || []).some((p) => p.test(q))) return t;
+  }
+  return null;
+}
+
+function buildUnsupportedTopicAnswer(topic) {
+  return `
+    <div class="text-sm">
+      ℹ️ אין לי כרגע מידע על ${topic.label} - ניתן לבדוק זאת בתחנת המידע לסטודנט.<br/>
+      ${topic.hint ? `${topic.hint}<br/>` : ""}<br/>
+      <b class="bot-subtitle">אפשר לשאול אותי על:</b><br/>
+      • קורסי קדם ודרישות בין קורסים<br/>
+      • לוחות מעבדה ומועדי מפגשים<br/>
+      • הנחיות רישום, יועצים ואנשי קשר
+    </div>`;
+}
+
 function isCourseLookupQuestion(question = "", qNorm = null) {
   const q = qNorm ?? normalizeHebrew(question);
 
@@ -129,9 +168,43 @@ function isCourseLookupQuestion(question = "", qNorm = null) {
   return false;
 }
 
+// True when the question is only a course name/code (plus filler like "קורס"),
+// with no actual ask - the bot should clarify instead of guessing an intent.
+function isBareCourseMention(qNorm, course) {
+  if (!course) return false;
+  const leftovers = String(qNorm)
+    .replaceAll(course.nameNorm, " ")
+    .replaceAll(course.codeNorm, " ")
+    .replace(/[?!,:;()]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !["קורס", "הקורס", "על", "לגבי"].includes(w));
+  return leftovers.length === 0;
+}
+
 function detectPrerequisitesFallback(question = "", qNorm = null) {
   const q = qNorm ?? normalizeHebrew(question);
   return PREREQ_KEYWORDS.some((k) => q.includes(normalizeHebrew(k)));
+}
+
+// Reverse direction: "which courses REQUIRE X" - must be told apart from
+// "what does X require", or the prerequisite branch answers backwards.
+const REVERSE_PREREQ_PHRASES = [
+  "לאילו קורסים",
+  "לאיזה קורסים",
+  "אילו קורסים דורשים",
+  "איזה קורסים דורשים",
+  "היא דרישת קדם",
+  "הוא דרישת קדם",
+  "היא קדם",
+  "הוא קדם",
+  "נדרש עבור",
+  "נדרשת עבור",
+  "אפשר לקחת אחרי",
+  "לומדים אחרי",
+];
+
+function isReversePrereqQuestion(qNorm) {
+  return REVERSE_PREREQ_PHRASES.some((p) => qNorm.includes(normalizeHebrew(p)));
 }
 
 
@@ -233,6 +306,31 @@ function extractMultipleCourses(question, allCourses, qNorm = null) {
 ============================= */
 const _relationTypeCache = new Map();
 const RELATION_CACHE_TTL_MS = 5 * 60 * 1000;
+
+// Reverse index prereqCode -> courses that list it as a relation, built from
+// one collectionGroup fetch per yearbook and cached like the other lookups.
+const _reverseRelationsCache = new Map();
+
+async function getCoursesRequiringCached(yearbookId, courseCode) {
+  const now = Date.now();
+  let cached = _reverseRelationsCache.get(yearbookId);
+
+  if (!cached || now - cached.ts >= RELATION_CACHE_TTL_MS) {
+    const snap = await db.collectionGroup("relations").get();
+    const byPrereq = new Map();
+    for (const doc of snap.docs) {
+      if (!doc.ref.path.startsWith(`yearbooks/${yearbookId}/`)) continue;
+      const dependentCode = doc.ref.parent.parent?.id;
+      if (!dependentCode) continue;
+      if (!byPrereq.has(doc.id)) byPrereq.set(doc.id, []);
+      byPrereq.get(doc.id).push({ dependentCode, type: doc.data()?.type || null });
+    }
+    cached = { ts: now, byPrereq };
+    _reverseRelationsCache.set(yearbookId, cached);
+  }
+
+  return cached.byPrereq.get(courseCode) || [];
+}
 
 async function getRelationType(yearbookId, courseA_code, courseB_code) {
   const key = `${yearbookId}:${courseA_code}:${courseB_code}`;
@@ -696,7 +794,7 @@ async function logUsageEvent({
 
 // Auto-saves the question to unansweredQuestions when the bot reaches the fallback.
 // Deduplicates against other auto-saved entries by normalizedQuestion.
-async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
+async function autoSaveUnanswered({ question, yearbook, semester, topic, reason = "fallback_no_answer" }) {
   try {
     const qNorm = normalizeHebrew(question);
     const dup = await db
@@ -711,7 +809,7 @@ async function autoSaveUnanswered({ question, yearbook, semester, topic }) {
       yearbook: yearbook || null,
       semester: semester || null,
       topic: topic || null,
-      reasons: ["fallback_no_answer"],
+      reasons: [reason],
       comment: "",
       createdAt: new Date().toISOString(),
       status: "open",
@@ -745,6 +843,21 @@ router.post("/ask", async (req, res) => {
       });
     }
 
+    // Topics the bot has no data for. A curated admin answer (תשובות מוכנות)
+    // overrides this, so covering such a topic later needs no code change -
+    // the keyword list only routes to an honest fallback message.
+    const unsupportedTopic = detectUnsupportedTopic(question, qNorm);
+    if (unsupportedTopic) {
+      const curated = await ragCuratedAnswer(question, yearbookId);
+      if (curated) {
+        logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "rag_curated", wasAnswered: true });
+        return res.json({ html: curated.answerHtml });
+      }
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "unsupported_topic", wasAnswered: false });
+      autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, reason: "unsupported_topic" });
+      return res.json({ html: buildUnsupportedTopicAnswer(unsupportedTopic) });
+    }
+
     // 1) Labs schedule
     if (isLabQuestion(question, qLower)) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "labs", wasAnswered: true });
@@ -774,8 +887,7 @@ router.post("/ask", async (req, res) => {
               <div class="mb-2">
                 <b class="bot-subtitle">סמסטר ${d.semesterNumber}</b>
                 ${d.audience?.cohortText ? ` (${d.audience.cohortText})` : ""}<br/>
-                ${d.registrationWindow?.date}
-                בין ${d.registrationWindow?.from} ל-${d.registrationWindow?.to}
+                ${formatRegistrationWindow(d.registrationWindow)}
               </div>
             `
               )
@@ -976,6 +1088,35 @@ router.post("/ask", async (req, res) => {
     const kind = classification?.kind || null;
     const intent = classification?.intent || detectIntent(question, qNorm);
 
+    // Reverse prerequisites: "לאילו קורסים X היא דרישת קדם" - answers with the
+    // courses that require courseMain. Must precede the forward branch, which
+    // would otherwise answer the mirrored question with X's own prerequisites.
+    if (courseMain && isReversePrereqQuestion(qNorm)) {
+      const rels = await getCoursesRequiringCached(yearbookId, courseMain.courseCode);
+      const dependents = [...new Set(
+        rels.filter((r) => r.type === "PREREQUISITE").map((r) => r.dependentCode)
+      )];
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses_reverse", wasAnswered: true, detectedCourses: coursesFromQuestion });
+
+      if (!dependents.length) {
+        return res.json({
+          html: `<div class="text-sm">ℹ️ <b>${courseMain.courseName}</b> לא מופיע כדרישת קדם לקורסים אחרים בשנתון.</div>`,
+        });
+      }
+
+      const names = dependents.map(
+        (code) => allCourses.find((c) => c.courseCode === code)?.courseName || code
+      );
+      return res.json({
+        html: `
+          <div class="text-sm leading-6">
+            📘 <b class="bot-title">קורסים הדורשים את ${courseMain.courseName} כקדם</b><br/><br/>
+            ${names.map((n) => `• ${n}`).join("<br/>")}
+          </div>
+        `,
+      });
+    }
+
     // Prerequisites (with cache)
     if (courseMain && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
       const prereqs = await getAllPrerequisitesRecursiveCached(yearbookId, courseMain.courseCode);
@@ -997,8 +1138,27 @@ router.post("/ask", async (req, res) => {
       });
     }
 
-    // Lookup
-    if ((kind === "lookup" || coursesFromQuestion.length === 1) && courseMain) {
+    // Bare course name ("חדוא 1") - ask what the user wants to know about it.
+    // Checked before lookup because the LLM tends to classify a bare name as lookup.
+    if (courseMain && coursesFromQuestion.length === 1 && isBareCourseMention(qNorm, courseMain)) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "course_clarify", wasAnswered: true, detectedCourses: coursesFromQuestion });
+      return res.json({
+        html: `
+          <div class="text-sm">
+            🤔 מה תרצה/י לדעת על <b>${courseMain.courseName}</b> (${courseMain.courseCode})?<br/><br/>
+            אפשר לשאול למשל:<br/>
+            • מה קורסי הקדם של ${courseMain.courseName}?<br/>
+            • מתי המעבדה הבאה ב${courseMain.courseName}?<br/>
+            • אילו קורסים אפשר לקחת במקביל ל${courseMain.courseName}?
+          </div>
+        `,
+      });
+    }
+
+    // Lookup - only on genuine "does course X exist / what is its code" intent.
+    // A bare course mention is NOT enough; anything else falls through to the
+    // RAG/generative fallback so unknown asks are answered there or logged as unanswered.
+    if (courseMain && (kind === "lookup" || isCourseLookupQuestion(question, qNorm))) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
       return res.json({
         html: `<div class="text-sm">✅ <b>${courseMain.courseName}</b> (${courseMain.courseCode})</div>`,
