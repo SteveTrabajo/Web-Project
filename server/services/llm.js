@@ -82,6 +82,29 @@ export async function callLLMJson(prompt, { temperature = 0 } = {}) {
   }
 }
 
+// Tool-calling completion. Returns the raw assistant message, which may carry
+// a `tool_calls` array (the model chose a function) or plain `content` (it
+// declined / answered directly). Null on failure.
+export async function callLLMTools(messages, tools, { temperature = 0, toolChoice = "auto" } = {}) {
+  try {
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        temperature,
+        tools,
+        tool_choice: toolChoice,
+        messages,
+      }),
+    });
+    const data = await resp.json();
+    return data?.choices?.[0]?.message || null;
+  } catch {
+    return null;
+  }
+}
+
 // Embedding vector (number[]) for a single text, or null on failure.
 export async function embed(text) {
   try {

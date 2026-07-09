@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { db } from "../../server.js";
 import askLabs from "./askLabs.js";
+import { routeWithTools } from "./toolRouter.js";
 import {
   isRegistrationQuestion,
   classifyRegistrationIntent,
@@ -1267,6 +1268,24 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
   } catch (err) {
     console.error("ASK ERROR:", err);
     res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
+  }
+});
+
+/* =============================
+   Route: /ask-tools  (PROTOTYPE - tool-calling router, runs beside /ask)
+============================= */
+
+router.post("/ask-tools", async (req, res) => {
+  try {
+    const { yearbookId, question } = req.body || {};
+    if (!question || !yearbookId) return res.status(400).json({ html: "❌ חסרה שאלה" });
+
+    const result = await routeWithTools(question, yearbookId);
+    // _debug exposes which tool fired and with what args, for side-by-side testing.
+    return res.json({ html: result.html, _debug: { type: result.type, tool: result.tool || null, args: result.args || null } });
+  } catch (err) {
+    console.error("ASK-TOOLS ERROR:", err);
+    return res.status(500).json({ html: "שגיאה בעיבוד השאלה" });
   }
 });
 
