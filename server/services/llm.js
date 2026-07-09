@@ -82,9 +82,8 @@ export async function callLLMJson(prompt, { temperature = 0 } = {}) {
   }
 }
 
-// Tool-calling completion. Returns the raw assistant message, which may carry
-// a `tool_calls` array (the model chose a function) or plain `content` (it
-// declined / answered directly). Null on failure.
+// Tool-calling completion. Returns the raw assistant message (may carry a
+// `tool_calls` array or plain `content`), or null on failure.
 export async function callLLMTools(messages, tools, { temperature = 0, toolChoice = "auto" } = {}) {
   try {
     const resp = await fetch(CHAT_URL, {

@@ -1,11 +1,19 @@
 import express from "express";
-import { callLLM, callLLMJson, embed } from "../../services/llm.js";
+import { callLLM, callLLMJson } from "../../services/llm.js";
 import { readFile } from "fs/promises";
 import { fileURLToPath } from "url";
 import path from "path";
 import { db } from "../../server.js";
 import askLabs from "./askLabs.js";
 import { routeWithTools } from "./toolRouter.js";
+import {
+  normalizeHebrew,
+  extractCourseCode,
+  getAllCoursesCached,
+  matchCourse,
+  getRelationIndex,
+} from "../../services/courseData.js";
+import { ragCuratedAnswer } from "../../services/curatedRag.js";
 import {
   isRegistrationQuestion,
   classifyRegistrationIntent,
@@ -25,17 +33,10 @@ import {
 const router = express.Router();
 
 /* =============================
-   Utils (MUST be defined BEFORE usage)
+   Utils (normalizeHebrew, matchCourse, course/relation caches live in
+   services/courseData.js; RAG lives in services/curatedRag.js)
 ============================= */
 
-function normalizeHebrew(s = "") {
-  return String(s)
-    .replace(/["׳״'`]/g, "")
-    .replace(/[.-]/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-    .trim();
-}
 const PREREQ_KEYWORDS = [
   "קדם",
   "דרישת קדם",
@@ -50,12 +51,6 @@ const PREREQ_KEYWORDS = [
 
 function escapeRegex(str = "") {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-const isCourseCode = (s) => /^\d{5,6}$/.test(String(s || "").trim());
-
-function extractCourseCode(question = "") {
-  const m = String(question).match(/\b\d{5,6}\b/);
-  return m ? m[0] : null;
 }
 
 /* =============================
@@ -217,68 +212,8 @@ function detectIntent(question = "", qNorm = null) {
 }
 
 /* =============================
-   Cache: Courses (Firestore)
-============================= */
-
-const _coursesCache = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-async function getAllCoursesCached(yearbookId) {
-  const now = Date.now();
-  const cached = _coursesCache.get(yearbookId);
-  if (cached && now - cached.ts < CACHE_TTL_MS) return cached.courses;
-
-  const coursesRef = db.collection("yearbooks").doc(yearbookId).collection("requiredCourses");
-  const semestersSnap = await coursesRef.get();
-
-  const semesterDocs = semestersSnap.docs;
-  const coursePromises = semesterDocs.map((sem) => sem.ref.collection("courses").get());
-  const coursesSnaps = await Promise.all(coursePromises);
-
-  const allCourses = [];
-  coursesSnaps.forEach((snap, idx) => {
-    const semesterKey = semesterDocs[idx].id;
-    snap.forEach((doc) => {
-      const data = doc.data() || {};
-      const courseCode = String(data.courseCode || doc.id);
-      const courseName = String(data.courseName || "");
-      allCourses.push({
-        courseCode,
-        courseName,
-        semesterKey,
-        nameNorm: normalizeHebrew(courseName),
-        codeNorm: courseCode.replace(/\s+/g, ""),
-      });
-    });
-  });
-
-  _coursesCache.set(yearbookId, { ts: now, courses: allCourses });
-  return allCourses;
-}
-
-/* =============================
    Matching / Extraction
 ============================= */
-
-function matchCourse(raw, courses, nameIndex) {
-  if (!raw) return null;
-  const s = String(raw).trim();
-
-  if (isCourseCode(s)) return courses.find((c) => c.courseCode === s) || null;
-
-  const n = normalizeHebrew(s);
-  if (!n) return null;
-
-  if (nameIndex?.has(n)) return nameIndex.get(n);
-
-  if (nameIndex) {
-    for (const [key, course] of nameIndex.entries()) {
-      if (key.includes(n) || n.includes(key)) return course;
-    }
-  }
-
-  return null;
-}
 
 function extractMultipleCourses(question, allCourses, qNorm = null) {
   const q = qNorm ?? normalizeHebrew(question);
@@ -307,31 +242,6 @@ function extractMultipleCourses(question, allCourses, qNorm = null) {
 ============================= */
 const _relationTypeCache = new Map();
 const RELATION_CACHE_TTL_MS = 5 * 60 * 1000;
-
-// Reverse index prereqCode -> courses that list it as a relation, built from
-// one collectionGroup fetch per yearbook and cached like the other lookups.
-const _reverseRelationsCache = new Map();
-
-async function getCoursesRequiringCached(yearbookId, courseCode) {
-  const now = Date.now();
-  let cached = _reverseRelationsCache.get(yearbookId);
-
-  if (!cached || now - cached.ts >= RELATION_CACHE_TTL_MS) {
-    const snap = await db.collectionGroup("relations").get();
-    const byPrereq = new Map();
-    for (const doc of snap.docs) {
-      if (!doc.ref.path.startsWith(`yearbooks/${yearbookId}/`)) continue;
-      const dependentCode = doc.ref.parent.parent?.id;
-      if (!dependentCode) continue;
-      if (!byPrereq.has(doc.id)) byPrereq.set(doc.id, []);
-      byPrereq.get(doc.id).push({ dependentCode, type: doc.data()?.type || null });
-    }
-    cached = { ts: now, byPrereq };
-    _reverseRelationsCache.set(yearbookId, cached);
-  }
-
-  return cached.byPrereq.get(courseCode) || [];
-}
 
 async function getRelationType(yearbookId, courseA_code, courseB_code) {
   const key = `${yearbookId}:${courseA_code}:${courseB_code}`;
@@ -497,91 +407,6 @@ function buildEmotionPrompt(question) {
 
 async function detectEmotion(question) {
   return callLLMJson(buildEmotionPrompt(question));
-}
-
-/* =============================
-   Curated answers (admin-published Q&A)
-   Consulted only as a safety net, right before the generic fallback.
-============================= */
-
-const _curatedCache = { ts: 0, items: [] };
-const CURATED_TTL = 5 * 60 * 1000;
-
-async function getCuratedAnswersCached() {
-  const now = Date.now();
-  if (_curatedCache.ts && now - _curatedCache.ts < CURATED_TTL) return _curatedCache.items;
-  try {
-    const snap = await db
-      .collection("curatedAnswers")
-      .where("status", "==", "published")
-      .get();
-    _curatedCache.items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    _curatedCache.ts = now;
-  } catch {
-    // keep stale cache on failure
-  }
-  return _curatedCache.items;
-}
-
-/* =============================
-   Semantic RAG over curated answers (embeddings)
-============================= */
-
-const RAG_THRESHOLD = 0.78; // min cosine similarity to treat a curated answer as a confident hit
-
-function cosineSim(a, b) {
-  let dot = 0, na = 0, nb = 0;
-  const n = Math.min(a.length, b.length);
-  for (let i = 0; i < n; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
-  }
-  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
-}
-
-function hashText(s = "") {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return String(h);
-}
-
-// Curated-answer vectors cached by doc id + text hash, so each unique text is
-// embedded only once and reused across the 5-minute curated cache windows.
-const _embedCache = new Map();
-
-async function getCuratedEmbedded() {
-  const items = await getCuratedAnswersCached();
-  const out = [];
-  for (const a of items) {
-    const text = `${a.question || ""} ${(a.keywords || []).join(" ")}`.trim();
-    if (!text) continue;
-    const h = hashText(text);
-    let entry = _embedCache.get(a.id);
-    if (!entry || entry.hash !== h) {
-      const vector = await embed(text);
-      if (!vector) continue;
-      entry = { hash: h, vector };
-      _embedCache.set(a.id, entry);
-    }
-    out.push({ ...a, vector: entry.vector });
-  }
-  return out;
-}
-
-// Best curated answer above the similarity threshold for this yearbook, or null.
-async function ragCuratedAnswer(question, yearbookId) {
-  const qVec = await embed(question);
-  if (!qVec) return null;
-  const corpus = await getCuratedEmbedded();
-  let best = null;
-  let bestSim = 0;
-  for (const a of corpus) {
-    if (a.yearbook && a.yearbook !== yearbookId) continue;
-    const sim = cosineSim(qVec, a.vector);
-    if (sim > bestSim) { bestSim = sim; best = a; }
-  }
-  return best && bestSim >= RAG_THRESHOLD ? best : null;
 }
 
 /* =============================
@@ -844,6 +669,25 @@ router.post("/ask", async (req, res) => {
       });
     }
 
+    // USE_TOOL_ROUTER=true routes free-text questions through the LLM tool
+    // router instead of the keyword pipeline below. Off by default.
+    if (process.env.USE_TOOL_ROUTER === "true") {
+      const routed = await routeWithTools(question, yearbookId);
+      const answered = routed.type === "tool";
+      logUsageEvent({
+        question,
+        yearbook: yearbookId,
+        semester: clientSemester || null,
+        topic: clientTopic || null,
+        answerSource: answered ? `tool:${routed.tool}` : routed.type,
+        wasAnswered: answered,
+      });
+      if (!answered) {
+        autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, reason: routed.type });
+      }
+      return res.json({ html: routed.html });
+    }
+
     // Topics the bot has no data for. A curated admin answer (תשובות מוכנות)
     // overrides this, so covering such a topic later needs no code change -
     // the keyword list only routes to an honest fallback message.
@@ -1093,9 +937,9 @@ router.post("/ask", async (req, res) => {
     // courses that require courseMain. Must precede the forward branch, which
     // would otherwise answer the mirrored question with X's own prerequisites.
     if (courseMain && isReversePrereqQuestion(qNorm)) {
-      const rels = await getCoursesRequiringCached(yearbookId, courseMain.courseCode);
+      const { reverse } = await getRelationIndex(yearbookId);
       const dependents = [...new Set(
-        rels.filter((r) => r.type === "PREREQUISITE").map((r) => r.dependentCode)
+        (reverse.get(courseMain.courseCode) || []).filter((r) => r.type === "PREREQUISITE").map((r) => r.code)
       )];
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses_reverse", wasAnswered: true, detectedCourses: coursesFromQuestion });
 

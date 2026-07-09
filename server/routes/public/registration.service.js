@@ -456,5 +456,98 @@ export function buildAllLabsAnswer(docs) {
     </div>`;
 }
 
+// Returns an HTML answer for a registration question. `aspect` is one of:
+// window | advisors | mentors | credits | links | internship | exemptions |
+// contacts | labs | general.
+export async function answerRegistration({ semester = null, aspect = "general", forms = [] } = {}) {
+  const finalIntent = aspect || "general";
+  const semNum = semester;
+
+  if (finalIntent === "window" && !semNum) {
+    const allDocs = await getAllRegDocs();
+    return `
+      <div class="text-sm leading-6">
+        <b class="bot-title">⏰ חלונות רישום לכל הסמסטרים</b><br/><br/>
+        ${allDocs
+          .map(
+            (d) => `
+          <div class="mb-2">
+            <b class="bot-subtitle">סמסטר ${d.semesterNumber}</b>
+            ${d.audience?.cohortText ? ` (${d.audience.cohortText})` : ""}<br/>
+            ${formatRegistrationWindow(d.registrationWindow)}
+          </div>
+        `
+          )
+          .join("")}
+      </div>`;
+  }
+
+  if (!semNum) {
+    const allDocs = await getAllRegDocs();
+
+    if (finalIntent === "credits") {
+      return `<div class="text-sm"><b class="bot-title">נקודות זכות לתואר</b><br/>נדרש מינימום 165 נ״ז</div>`;
+    }
+
+    if (finalIntent === "exemptions") {
+      return `<div class="text-sm">ℹ️ פטורים וחריגים מטופלים מול הגורם האקדמי הרלוונטי.<br/>אנא ציין/י סמסטר או פנה/י ליועץ/ת האקדמי/ת.</div>`;
+    }
+
+    if (finalIntent === "contacts") {
+      return `<div class="text-sm">ℹ️ לפניות בנושא רישום ניתן לפנות ליועצים האקדמיים או לתמיכת הרישום של הסמסטר הרלוונטי.</div>`;
+    }
+
+    if (finalIntent === "advisors") return buildAllAdvisorsAnswer(allDocs);
+    if (finalIntent === "labs") return buildAllLabsAnswer(allDocs);
+
+    if (finalIntent === "mentors") {
+      const docsWithMentors = allDocs.filter((d) => (d.contacts?.mentors || []).length > 0);
+      if (!docsWithMentors.length) return `<div class="text-sm">ℹ️ אין סטודנט/ית מלווה בשנתון זה.</div>`;
+      if (docsWithMentors.length === 1) {
+        const d = docsWithMentors[0];
+        const m = d.contacts.mentors[0];
+        return `<div class="text-sm leading-6">👩‍🎓 <b class="bot-title">סטודנט/ית מלווה יש רק בסמסטר ${d.semesterNumber}</b><br/><br/>• <b>${m.name}</b><br/><a href="mailto:${m.email}">${m.email}</a></div>`;
+      }
+      return `<div class="text-sm">ℹ️ יש מספר מלווים. אנא ציין/י סמסטר.</div>`;
+    }
+
+    if (finalIntent === "links") {
+      const docsWithLinks = allDocs.filter((d) => (d.links || []).length > 0);
+      if (!docsWithLinks.length) return `<div class="text-sm">ℹ️ לא נמצאו קישורי הדרכה.</div>`;
+      if (docsWithLinks.length === 1) return await buildRegistrationAnswer("links", docsWithLinks[0]);
+      return `<div class="text-sm"><b class="bot-title">קישורי הדרכה לפי סמסטר</b><br/><br/>${docsWithLinks
+        .map(
+          (d) =>
+            `<b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>` +
+            d.links.map((l) => `• <a href="${l.url}" target="_blank">${l.label}</a>`).join("<br/>")
+        )
+        .join("<br/><br/>")}</div>`;
+    }
+
+    if (finalIntent === "internship") {
+      return `<div class="text-sm">ℹ️ תנאי סטאז' משתנים לפי סמסטר. אנא ציין/י סמסטר.</div>`;
+    }
+
+    if (finalIntent === "general") {
+      return `<div class="text-sm">ℹ️ ניתן לשאול על רישום: חלון רישום, יועצים, מעבדות (אנשי קשר), מלווה, נקודות זכות, קישורים או תנאי סטאז'.</div>`;
+    }
+
+    return `<div class="text-sm">ℹ️ אנא ציין/י סמסטר (לדוגמה: סמסטר 2)</div>`;
+  }
+
+  const regDoc = await getRegDoc(semNum);
+  if (!regDoc) return `<div class="text-sm">❌ לא מצאתי הנחיות רישום לסמסטר ${semNum}.</div>`;
+
+  if (finalIntent === "internship") {
+    const rules = (regDoc.keyRules || []).filter((r) => r.code?.includes("INTERNSHIP"));
+    if (!rules.length) return `<div class="text-sm">ℹ️ אין מידע על סטאז' בסמסטר זה.</div>`;
+    return `<div class="text-sm"><b class="bot-title">תנאי סטאז' – סמסטר ${semNum}</b><br/><br/>${rules
+      .map((r) => `• ${r.text}`)
+      .join("<br/>")}</div>`;
+  }
+
+  return await buildRegistrationAnswer(finalIntent, regDoc, { forms });
+}
+
 
 

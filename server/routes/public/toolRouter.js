@@ -1,107 +1,47 @@
-import { db } from "../../server.js";
 import { callLLMTools } from "../../services/llm.js";
+import { getAllCoursesCached, matchCourse, getRelationIndex } from "../../services/courseData.js";
+import { ragCuratedAnswer } from "../../services/curatedRag.js";
+import { getLatestYearId, getAllLabs, filterLabs, findNextLab, renderLabsHtml } from "../../services/labsData.js";
+import { answerRegistration, findContactsByQuery } from "./registration.service.js";
 
 /*
- * toolRouter.js - PROTOTYPE
- * -------------------------
- * A minimal tool-calling router that replaces keyword matching with an LLM
- * that picks a function from natural-language descriptions. Runs beside the
- * existing keyword pipeline (see /api/ask-tools in ask.js) so it can be tested
- * on real data without touching production routing.
- *
- * Two tools are wired up (forward + reverse prerequisites) so the LLM must
- * disambiguate "prereqs of X" from "courses requiring X" - the distinction the
- * keyword pipeline kept getting backwards. Promotion would (a) extract the
- * course-data helpers below into a shared module imported by both this file and
- * ask.js, and (b) register the remaining builders (labs, registration) as tools.
+ * Tool-calling router: an LLM picks a tool from natural-language descriptions
+ * instead of keyword matching. Data/RAG come from the shared services modules.
+ * Adding a capability = one executor + one schema entry in TOOLS. No keyword lists.
  */
-
-/* ---------- prototype-local course-data helpers ---------- */
-
-function normalizeHebrew(s = "") {
-  return String(s)
-    .replace(/["׳״'`]/g, "")
-    .replace(/[.-]/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-    .trim();
-}
-
-const _coursesCache = new Map();
-const TTL_MS = 5 * 60 * 1000;
-
-async function getCourses(yearbookId) {
-  const now = Date.now();
-  const cached = _coursesCache.get(yearbookId);
-  if (cached && now - cached.ts < TTL_MS) return cached.courses;
-
-  const semSnap = await db.collection("yearbooks").doc(yearbookId).collection("requiredCourses").get();
-  const perSem = await Promise.all(semSnap.docs.map((s) => s.ref.collection("courses").get()));
-
-  const courses = [];
-  perSem.forEach((snap) => {
-    snap.forEach((doc) => {
-      const d = doc.data() || {};
-      const courseCode = String(d.courseCode || doc.id);
-      const courseName = String(d.courseName || "");
-      courses.push({ courseCode, courseName, nameNorm: normalizeHebrew(courseName), codeNorm: courseCode.replace(/\s+/g, "") });
-    });
-  });
-
-  _coursesCache.set(yearbookId, { ts: now, courses });
-  return courses;
-}
-
-function matchCourse(raw, courses) {
-  const n = normalizeHebrew(raw);
-  if (!n) return null;
-  if (/^\d{5,6}$/.test(n)) return courses.find((c) => c.codeNorm === n) || null;
-  return (
-    courses.find((c) => c.nameNorm === n) ||
-    courses.find((c) => c.nameNorm.includes(n) || n.includes(c.nameNorm)) ||
-    null
-  );
-}
-
-// One collectionGroup scan builds both directions, cached per yearbook.
-// forward: course -> its prerequisites; reverse: course -> courses that require it.
-const _relIndexCache = new Map();
-
-async function getRelationIndex(yearbookId) {
-  const now = Date.now();
-  const cached = _relIndexCache.get(yearbookId);
-  if (cached && now - cached.ts < TTL_MS) return cached.index;
-
-  const snap = await db.collectionGroup("relations").get();
-  const forward = new Map();
-  const reverse = new Map();
-  for (const doc of snap.docs) {
-    if (!doc.ref.path.startsWith(`yearbooks/${yearbookId}/`)) continue;
-    const dependentCode = doc.ref.parent.parent?.id;
-    const prereqCode = doc.id;
-    if (!dependentCode) continue;
-    const type = doc.data()?.type || null;
-    if (!forward.has(dependentCode)) forward.set(dependentCode, []);
-    forward.get(dependentCode).push({ code: prereqCode, type });
-    if (!reverse.has(prereqCode)) reverse.set(prereqCode, []);
-    reverse.get(prereqCode).push({ code: dependentCode, type });
-  }
-
-  const index = { forward, reverse };
-  _relIndexCache.set(yearbookId, { ts: now, index });
-  return index;
-}
-
-/* ---------- tool executors ---------- */
 
 const nameOf = (courses, code) => courses.find((c) => c.courseCode === code)?.courseName || code;
 
-async function runGetCoursesRequiring({ course }, { yearbookId }) {
-  const courses = await getCourses(yearbookId);
+// Honest admission when the bot has no data, instead of a guessed answer.
+const NO_ANSWER_HTML =
+  `<div class="text-sm">ℹ️ אין לי תשובה לשאלה הזו כרגע. ` +
+  `מומלץ לפנות למזכירות המחלקה או ליועץ/ת האקדמי/ת לקבלת מידע מדויק.</div>`;
+
+// Direct prerequisites only (not the recursive chain).
+async function runGetPrerequisites({ course }, { yearbookId }) {
+  const courses = await getAllCoursesCached(yearbookId);
   const target = matchCourse(course, courses);
-  if (!target) {
-    return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${course}".</div>`;
+  if (!target) return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${course}".</div>`;
+
+  const { forward } = await getRelationIndex(yearbookId);
+  const prereqs = [...new Set((forward.get(target.courseCode) || []).filter((r) => r.type === "PREREQUISITE").map((r) => r.code))];
+
+  if (!prereqs.length) {
+    return `<div class="text-sm">ℹ️ ל־<b>${target.courseName}</b> אין קורסי קדם ישירים בשנתון.</div>`;
   }
+
+  const names = prereqs.map((code) => nameOf(courses, code));
+  return `
+    <div class="text-sm leading-6">
+      📘 <b class="bot-title">קורסי קדם ל־${target.courseName}</b><br/><br/>
+      ${names.map((n) => `• ${n}`).join("<br/>")}
+    </div>`;
+}
+
+async function runGetCoursesRequiring({ course }, { yearbookId }) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const target = matchCourse(course, courses);
+  if (!target) return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${course}".</div>`;
 
   const { reverse } = await getRelationIndex(yearbookId);
   const dependents = [...new Set((reverse.get(target.courseCode) || []).filter((r) => r.type === "PREREQUISITE").map((r) => r.code))];
@@ -118,27 +58,114 @@ async function runGetCoursesRequiring({ course }, { yearbookId }) {
     </div>`;
 }
 
-// Direct prerequisites only. Promotion would call ask.js's recursive builder.
-async function runGetPrerequisites({ course }, { yearbookId }) {
-  const courses = await getCourses(yearbookId);
-  const target = matchCourse(course, courses);
-  if (!target) {
-    return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${course}".</div>`;
+function runEmotionalSupport() {
+  return `
+    <div dir="rtl" class="text-sm leading-6 text-right">
+      💙 זה בסדר להרגיש ככה, את/ה לא לבד.<br/>
+      הרבה סטודנטים חווים עומס ובלבול במהלך הלימודים.<br/><br/>
+
+      אם את/ה מרגיש/ה צורך בעזרה נוספת, אפשר וכדאי לפנות לדיקנט הסטודנטים.<br/><br/>
+
+      <div class="mt-2 rounded-lg border border-gray-200 bg-white p-3 text-right
+                  dark:bg-slate-950 dark:border-slate-700">
+        <div class="font-semibold mb-1">📌 פרטי הדיקנט</div>
+        <div class="space-y-1 text-sm">
+          <div>📞 טלפון: <span dir="ltr">04-9901906</span></div>
+          <div>
+            ✉️ דוא״ל:
+            <a class="underline text-blue-700 dark:text-sky-300" href="mailto:dean@braude.ac.il">
+              dean@braude.ac.il
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        אפשר גם לפנות ליועץ/ת האקדמי/ת שלך.<br/>
+        ניתן למצוא יועץ/ת דרך התפריט למטה 👇
+      </div>
+    </div>`;
+}
+
+async function runSearchKnowledgeBase({ query }, { yearbookId }) {
+  const hit = await ragCuratedAnswer(query, yearbookId);
+  if (!hit) return NO_ANSWER_HTML;
+  return hit.answerHtml;
+}
+
+// Direct relations only (does not catch an indirect prereq).
+async function runGetCourseRelations({ course_a, course_b }, { yearbookId }) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const A = matchCourse(course_a, courses);
+  const B = matchCourse(course_b, courses);
+  if (!A || !B) {
+    return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${!A ? course_a : course_b}".</div>`;
   }
 
   const { forward } = await getRelationIndex(yearbookId);
-  const prereqs = [...new Set((forward.get(target.courseCode) || []).filter((r) => r.type === "PREREQUISITE").map((r) => r.code))];
+  const relsA = forward.get(A.courseCode) || [];
+  const relsB = forward.get(B.courseCode) || [];
+  const bIsPrereqOfA = relsA.some((r) => r.code === B.courseCode && r.type === "PREREQUISITE");
+  const aIsPrereqOfB = relsB.some((r) => r.code === A.courseCode && r.type === "PREREQUISITE");
+  const coreq =
+    relsA.some((r) => r.code === B.courseCode && r.type === "COREQUISITE") ||
+    relsB.some((r) => r.code === A.courseCode && r.type === "COREQUISITE");
 
-  if (!prereqs.length) {
-    return `<div class="text-sm">ℹ️ ל־<b>${target.courseName}</b> אין קורסי קדם ישירים בשנתון.</div>`;
+  if (bIsPrereqOfA) {
+    return `<div class="text-sm leading-6">⛔ לא ניתן ללמוד יחד.<br/>📌 קודם צריך לסיים <b>${B.courseName}</b>, ואז לקחת <b>${A.courseName}</b>.</div>`;
   }
+  if (aIsPrereqOfB) {
+    return `<div class="text-sm leading-6">⛔ לא ניתן ללמוד יחד.<br/>📌 קודם צריך לסיים <b>${A.courseName}</b>, ואז לקחת <b>${B.courseName}</b>.</div>`;
+  }
+  if (coreq) {
+    return `<div class="text-sm leading-6">✅ אפשר ללמוד במקביל 🙂<br/>• ${A.courseName} ו־${B.courseName}</div>`;
+  }
+  return `<div class="text-sm leading-6">ℹ️ לא נראה שיש דרישות קדם ביניהם - אפשר ללמוד יחד 😊</div>`;
+}
 
-  const names = prereqs.map((code) => nameOf(courses, code));
+async function runGetRegistrationInfo(args) {
+  return answerRegistration({ semester: args.semester ?? null, aspect: args.aspect || "general", forms: [] });
+}
+
+async function runFindContact({ query }) {
+  const hits = await findContactsByQuery(query || "");
+  if (!hits.length) return `<div class="text-sm">ℹ️ לא מצאתי איש קשר מתאים לשאלה.</div>`;
+  const rows = hits
+    .map((c) => {
+      const role = c.role ? ` – ${c.role}` : "";
+      const email = c.email ? `<br/><a href="mailto:${c.email}">${c.email}</a>` : "";
+      const phone = c.phone ? `<br/>📞 <span dir="ltr">${c.phone}</span>` : "";
+      return `<div class="mb-2"><b>${c.name}</b>${role}${email}${phone}</div>`;
+    })
+    .join("");
+  return `<div dir="rtl" class="text-sm leading-6 text-right">${rows}</div>`;
+}
+
+async function runGetRequiredCourses({ semester }, { yearbookId }) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const inSem = courses.filter((c) => c.semesterKey === `semester_${semester}`);
+  if (!inSem.length) return `<div class="text-sm">ℹ️ לא נמצאו קורסי חובה לסמסטר ${semester}.</div>`;
   return `
     <div class="text-sm leading-6">
-      📘 <b class="bot-title">קורסי קדם ל־${target.courseName}</b><br/><br/>
-      ${names.map((n) => `• ${n}`).join("<br/>")}
+      📚 <b class="bot-title">קורסי חובה - סמסטר ${semester}</b><br/><br/>
+      ${inSem.map((c) => `• ${c.courseName} (${c.courseCode})`).join("<br/>")}
     </div>`;
+}
+
+async function runGetLabSchedule(args) {
+  const yearId = await getLatestYearId();
+  if (!yearId) return `<div class="text-sm">ℹ️ לא נמצאה שנת לימודים פעילה.</div>`;
+
+  let labs = filterLabs(await getAllLabs(yearId), args);
+
+  if (args.intent === "next_lab") {
+    const next = findNextLab(labs);
+    if (!next) return `<div class="text-sm">ℹ️ לא נמצאה מעבדה עתידית.</div>`;
+    labs = [next];
+  }
+
+  if (!labs.length) return `<div class="text-sm">ℹ️ לא נמצאו מעבדות מתאימות.</div>`;
+  return renderLabsHtml(labs);
 }
 
 /* ---------- tool registry ---------- */
@@ -179,6 +206,157 @@ const TOOLS = [
     },
     run: runGetCoursesRequiring,
   },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "get_course_relations",
+        description:
+          "בודק את היחס בין שני קורסים - האם אפשר ללמוד אותם יחד/במקביל, או שאחד מהם דרישת קדם לשני. " +
+          "השתמש רק כאשר המשתמש מזכיר שני קורסים ושואל אם אפשר לקחת אותם יחד/במקביל או מה הסדר ביניהם. " +
+          "אל תשתמש לשאלה על קורס יחיד.",
+        parameters: {
+          type: "object",
+          properties: {
+            course_a: { type: "string", description: "הקורס הראשון (שם או קוד)." },
+            course_b: { type: "string", description: "הקורס השני (שם או קוד)." },
+          },
+          required: ["course_a", "course_b"],
+        },
+      },
+    },
+    run: runGetCourseRelations,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "find_contact",
+        description:
+          "מחזיר פרטי קשר (שם, תפקיד, מייל, טלפון) של איש/אשת סגל ספציפי/ת - למשל מזכירת המחלקה, " +
+          "ראש המחלקה, רכז/ת. השתמש כאשר המשתמש מבקש מי אחראי על תפקיד מסוים או את פרטי הקשר שלו/ה.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "התפקיד או השם המבוקש, למשל 'מזכירת המחלקה' או 'ראש המחלקה'." },
+          },
+          required: ["query"],
+        },
+      },
+    },
+    run: runFindContact,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "get_required_courses",
+        description:
+          "מחזיר את רשימת קורסי החובה בסמסטר נתון. השתמש כאשר המשתמש שואל אילו קורסים/קורסי חובה יש בסמסטר מסוים.",
+        parameters: {
+          type: "object",
+          properties: {
+            semester: { type: "number", description: "מספר הסמסטר." },
+          },
+          required: ["semester"],
+        },
+      },
+    },
+    run: runGetRequiredCourses,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "get_registration_info",
+        description:
+          "מידע על תהליך הרישום לקורסים: חלון/מועד הרישום, יועצים אקדמיים, סטודנט/ית מלווה, נקודות זכות לתואר, " +
+          "קישורי הדרכה, תנאי סטאז'/התמחות, פטורים/חריגים, אנשי קשר לרישום, ואחראי מעבדות (אנשי קשר - לא לוח הזמנים). " +
+          "השתמש לשאלות על תהליך הרישום ומועדיו. אל תשתמש עבור מועדי/לוח מעבדות (לכך יש כלי נפרד).",
+        parameters: {
+          type: "object",
+          properties: {
+            semester: { type: "number", description: "מספר סמסטר, אם צוין." },
+            aspect: {
+              type: "string",
+              enum: ["window", "advisors", "mentors", "credits", "links", "internship", "exemptions", "contacts", "labs", "general"],
+              description:
+                "היבט הרישום: window=חלון/מועד רישום, advisors=יועצים אקדמיים, mentors=סטודנט מלווה, " +
+                "credits=נקודות זכות, links=קישורי הדרכה, internship=סטאז'/התמחות, exemptions=פטורים/חריגים, " +
+                "contacts=אנשי קשר לרישום, labs=אחראי מעבדות (אנשי קשר), general=כללי.",
+            },
+          },
+          required: ["aspect"],
+        },
+      },
+    },
+    run: runGetRegistrationInfo,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "get_lab_schedule",
+        description:
+          "מחזיר מועדי מעבדות (מעבדה = lab) - תאריך, יום, שעה, קבוצה ומרצה. השתמש כאשר המשתמש שואל על לוח מעבדות: " +
+          "'מתי המעבדה של X', 'המעבדה הבאה', 'אילו מעבדות יש ביום ה', מעבדות של מרצה מסוים וכו'. " +
+          "אך ורק למעבדות - אל תשתמש למועדי מבחנים/בחינות (מועד א', מועד ב', מועד ג'), אלה אינם מעבדות. " +
+          "כל הפרמטרים אופציונליים - מלא רק את מה שמופיע בשאלה.",
+        parameters: {
+          type: "object",
+          properties: {
+            course: { type: "string", description: "שם הקורס, אם צוין." },
+            semester: { type: "number", description: "מספר סמסטר, אם צוין." },
+            session: { type: "number", description: "מספר המעבדה/מפגש, אם צוין (למשל 'מעבדה 2' -> 2)." },
+            lecturer: { type: "string", description: "שם המרצה, אם צוין." },
+            group: { type: "string", description: "קבוצת מעבדה, אם צוינה." },
+            day: { type: "string", enum: ["א", "ב", "ג", "ד", "ה", "ו"], description: "יום בשבוע כאות בודדת, אם צוין." },
+            date: { type: "string", description: "תאריך ספציפי, אם צוין." },
+            time: { type: "string", enum: ["today", "tomorrow", "week", "next_week", "all"], description: "חלון זמן יחסי." },
+            intent: { type: "string", enum: ["lab_query", "next_lab"], description: "next_lab עבור 'המעבדה הבאה/הקרובה', אחרת lab_query." },
+          },
+          required: [],
+        },
+      },
+    },
+    run: runGetLabSchedule,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "emotional_support",
+        description:
+          "השתמש אך ורק כאשר יש ביטוי מפורש של מצוקה רגשית אישית - לחץ, חרדה, תסכול, שחיקה " +
+          "(למשל 'אני לא מסתדר', 'קשה לי מאוד', 'אני בלחץ מהלימודים', 'מרגיש שאני נכשל'). " +
+          "מספק תמיכה ופרטי דיקנט הסטודנטים. אל תשתמש עבור שאלות מידע, שאלות מעורפלות " +
+          "(כמו 'מה הזכאות שלי'), ברכות, או טקסט שאינו מביע מצוקה.",
+        parameters: { type: "object", properties: {}, required: [] },
+      },
+    },
+    run: runEmotionalSupport,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "search_knowledge_base",
+        description:
+          "כלי ברירת המחדל לכל שאלת מידע עניינית שאף כלי אחר אינו מכסה - נהלים, מדיניות, זכאות, " +
+          "מועדי מבחנים/בחינות, ציונים, ערעורים, פטורים, שכר לימוד, מעבר בין תארים, וכל שאלה עניינית אחרת. " +
+          "השתמש בו תמיד כשהמשתמש מבקש מידע ואין כלי ספציפי מתאים יותר. " +
+          "אל תשתמש עבור ברכות, טקסט חסר משמעות, שיחת חולין או בקשות זדוניות - אותם יש להשאיר ללא כלי.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "שאלת המשתמש, מנוסחת כפי שנשאלה." },
+          },
+          required: ["query"],
+        },
+      },
+    },
+    run: runSearchKnowledgeBase,
+  },
 ];
 
 /* ---------- router ---------- */
@@ -204,11 +382,8 @@ export async function routeWithTools(question, yearbookId) {
 
   const call = msg.tool_calls?.[0];
   if (!call) {
-    // No tool matched. This is the "unsupported topic" case - for free, with no keyword list.
-    return {
-      type: "no_tool",
-      html: `<div class="text-sm">ℹ️ ${msg.content || "אין לי מידע על כך כרגע."}</div>`,
-    };
+    // No tool matched: admit no answer rather than echo possibly-hallucinated text.
+    return { type: "no_tool", html: NO_ANSWER_HTML };
   }
 
   const tool = TOOLS.find((t) => t.schema.function.name === call.function.name);
@@ -216,7 +391,7 @@ export async function routeWithTools(question, yearbookId) {
   try {
     args = JSON.parse(call.function.arguments || "{}");
   } catch {
-    // leave args empty; executor handles the missing field
+    // executor handles missing fields
   }
 
   const html = await tool.run(args, { yearbookId });

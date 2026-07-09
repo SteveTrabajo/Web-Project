@@ -14,7 +14,24 @@ const QUESTIONS = [
   // forward direction - all should route to get_prerequisites (the disambiguation test)
   "מה קורסי הקדם של ביוכימיה?",
   "מה צריך ללמוד לפני ביוכימיה?",
-  // no matching tool - should decline honestly
+  // labs - should route to get_lab_schedule (NOT to a prereq tool despite the course name)
+  "מתי המעבדה הבאה בביוכימיה?",
+  "אילו מעבדות יש ביום ב?",
+  "מתי המעבדות של ביוכימיה בסמסטר 4?",
+  // two-course relations - should route to get_course_relations (NOT a single-course prereq tool)
+  "אפשר ללמוד ביוכימיה וכימיה כללית ואנליטית 2 יחד?",
+  "אפשר לקחת ביוכימיה במקביל לגנטיקה?",
+  // registration - should route to get_registration_info with the right aspect
+  "מתי חלון הרישום לסמסטר 2?",
+  "מי היועצים האקדמיים?",
+  "כמה נקודות זכות צריך לתואר?",
+  // disambiguation: lab CONTACTS (registration) vs lab SCHEDULE (get_lab_schedule)
+  "מי אחראי המעבדות בסמסטר 4?",
+  // emotional support - should route to emotional_support
+  "אני ממש בלחץ ולא מסתדר עם הלימודים",
+  // knowledge base - should route to search_knowledge_base (needs curated answers in Firestore)
+  "מה מדיניות הנוכחות במעבדות?",
+  // no matching tool and nothing in the KB - should decline honestly
   "עד מתי אפשר לבטל קורס?",
 ];
 
