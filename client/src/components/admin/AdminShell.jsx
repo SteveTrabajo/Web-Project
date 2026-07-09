@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MenuIcon, XIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import AdminLogin from "../AdminLogin.jsx";
@@ -54,11 +55,13 @@ const TAB_COMPONENTS = {
 /**
  * AdminShell
  * ----------
- * Dashboard shell with right-side vertical sidebar and single-column main area.
+ * Dashboard shell with a collapsible icon rail on the right and a
+ * single-column main area.
  * - Auth gate (login screen when not authed); auth state is owned by App
  *   and the logged-in admin info bar lives in the navbar
  * - Status banner (toast)
- * - Sticky sidebar nav on the right (RTL)
+ * - Always-visible icon rail sticks below the top navbar (72px); expanding
+ *   it overlays the content so the center box never reflows
  * - Each tab fills the remaining width with no overflow
  *
  * Each tab component manages its own data fetching, CRUD, and editor state.
@@ -67,6 +70,7 @@ const TAB_COMPONENTS = {
 export default function AdminShell({ admin, setAdmin }) {
   const [activeTab, setActiveTab] = useState("advisors");
   const [status, setStatus]       = useState({ type: "idle", msg: "" });
+  const [navOpen, setNavOpen]     = useState(false);
 
   const isAuthed = !!admin;
   const toast = (type, msg) => setStatus({ type, msg });
@@ -110,28 +114,48 @@ export default function AdminShell({ admin, setAdmin }) {
         </div>
       )}
 
-      {/* Dashboard layout: sidebar on right, content on left */}
-      <div dir="rtl" className="flex flex-col md:flex-row gap-4 items-start">
+      {/* Dashboard layout: icon rail on the right, content fills the rest */}
+      <div dir="rtl" className="flex gap-4 items-start">
 
-        {/* Right sidebar (visible right in RTL) */}
-        <aside className="w-full md:w-56 md:shrink-0">
-          <Card className="p-2 md:sticky md:top-4">
-            <nav className="flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+        {/* Icon rail - always visible, sticks below the 72px navbar. The rail
+            reserves a fixed 48px column; expanding widens the absolutely
+            positioned card over the content, so the center box never moves */}
+        <aside className="w-12 shrink-0 sticky top-[88px] z-40">
+          <Card
+            className={cn(
+              "absolute top-0 right-0 p-1.5 gap-0 shadow-md overflow-hidden transition-[width] duration-200",
+              navOpen ? "w-56" : "w-12"
+            )}
+          >
+            <nav className="flex flex-col gap-1 max-h-[calc(100dvh-120px)] overflow-y-auto overflow-x-hidden">
+              <button
+                onClick={() => setNavOpen((o) => !o)}
+                aria-expanded={navOpen}
+                title="תפריט ניהול"
+                className="flex items-center gap-2 h-9 px-2 rounded-lg text-body text-muted-foreground hover:bg-muted transition-colors w-full text-right"
+              >
+                <span className="w-5 flex justify-center shrink-0">
+                  {navOpen ? <XIcon className="size-5" /> : <MenuIcon className="size-5" />}
+                </span>
+                {navOpen && <span className="truncate font-semibold">תפריט ניהול</span>}
+              </button>
+
               {NAV_ITEMS.map((item) => {
                 const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => { setActiveTab(item.id); setNavOpen(false); }}
+                    title={item.label}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-body transition-colors text-right shrink-0 md:w-full",
+                      "flex items-center gap-2 h-9 px-2 rounded-lg text-body transition-colors w-full text-right",
                       isActive
                         ? "bg-primary text-primary-foreground font-semibold"
                         : "text-foreground hover:bg-muted"
                     )}
                   >
-                    <span className="text-base">{item.icon}</span>
-                    <span className="truncate">{item.label}</span>
+                    <span className="text-base w-5 text-center shrink-0">{item.icon}</span>
+                    {navOpen && <span className="truncate">{item.label}</span>}
                   </button>
                 );
               })}
