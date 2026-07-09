@@ -142,8 +142,8 @@ function appendForms(forms, intent) {
   }
   if (!relevant.length) return "";
   return `
-    <div class="mt-3 pt-2 border-t border-gray-200" style="font-size:12px;">
-      <b>טפסים רלוונטיים:</b><br/>
+    <div class="mt-3 pt-2 border-t border-gray-200">
+      <b class="bot-subtitle">טפסים רלוונטיים:</b><br/>
       ${relevant.map((f) => `• <a href="${f.url}" target="_blank" rel="noopener noreferrer">${f.label}</a>`).join("<br/>")}
     </div>`;
 }
@@ -260,7 +260,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
     if (links.length) {
       return `
         <div class="text-sm">
-          <b>הדרכות רישום – סמסטר ${sem}${cohort}</b><br/><br/>
+          <b class="bot-title">הדרכות רישום – סמסטר ${sem}${cohort}</b><br/><br/>
           ${links.map(l =>
             `• <a href="${l.url}" target="_blank">${l.label}</a>`
           ).join("<br/>")}
@@ -274,7 +274,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
 
     return `
       <div class="text-sm">
-        <b>הנחיות רישום – סמסטר ${sem}</b><br/><br/>
+        <b class="bot-title">הנחיות רישום – סמסטר ${sem}</b><br/><br/>
         ${rules || "הרישום מתבצע דרך אתר המכללה."}
       </div>`;
   }
@@ -284,7 +284,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
     const w = doc.registrationWindow;
     return `
       <div class="text-sm">
-        ⏰ <b>חלון הרישום – סמסטר ${sem}${cohort}</b><br/>
+        ⏰ <b class="bot-title">חלון הרישום – סמסטר ${sem}${cohort}</b><br/>
         ${w.date} בין ${w.from} ל-${w.to}
       </div>`;
   }
@@ -296,13 +296,13 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
     const formsHtml = appendForms(forms, intent);
     return `
       <div class="text-sm">
-        <b>יועצים אקדמיים - סמסטר ${sem}</b><br/><br/>
+        <b class="bot-title">יועצים אקדמיים - סמסטר ${sem}</b><br/><br/>
 
         ${a.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
 
         <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
 
-        <div style="font-size:12px; color:#6b7280; text-align:center;">
+        <div class="text-gray-500" style="text-align:center;">
           ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה
         </div>
         ${formsHtml}
@@ -316,7 +316,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
       return `<div class="text-sm">ℹ️ אין אחראי/ת מעבדות בסמסטר ${sem}.</div>`;
     return `
       <div class="text-sm">
-        <b>אחראי/ת מעבדות – סמסטר ${sem}</b><br/><br/>
+        <b class="bot-title">אחראי/ת מעבדות – סמסטר ${sem}</b><br/><br/>
         ${labs.map(l =>
           `• ${l.name} – <a href="mailto:${l.email}">${l.email}</a>`
         ).join("<br/>")}
@@ -330,7 +330,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
       return `<div class="text-sm">ℹ️ אין סטודנט/ית מלווה בסמסטר ${sem}.</div>`;
     return `
       <div class="text-sm">
-        <b>סטודנט/ית מלווה – סמסטר ${sem}</b><br/><br/>
+        <b class="bot-title">סטודנט/ית מלווה – סמסטר ${sem}</b><br/><br/>
         ${m.map(x =>
           `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
         ).join("<br/>")}
@@ -345,7 +345,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
       return `<div class="text-sm">ℹ️ אין מידע על פטורים בסמסטר זה.${formsHtml}</div>`;
     return `
       <div class="text-sm">
-        <b>פטורים / חריגים</b><br/><br/>
+        <b class="bot-title">פטורים / חריגים</b><br/><br/>
         ${e.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
         ${formsHtml}
       </div>`;
@@ -360,7 +360,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
 
     return `
       <div class="text-sm">
-        <b>סטאז' / התמחות – סמסטר ${sem}</b><br/><br/>
+        <b class="bot-title">סטאז' / התמחות – סמסטר ${sem}</b><br/><br/>
         ${rules || "מידע על סטאז' מתפרסם לפי סמסטר ובהנחיות המחלקה."}
       </div>`;
   }
@@ -369,7 +369,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
   if (intent === "credits") {
     return `
       <div class="text-sm">
-        <b>נקודות זכות</b><br/>
+        <b class="bot-title">נקודות זכות</b><br/>
         ${doc.audience?.creditsRuleText || "נדרש מינימום 165 נ״ז"}
       </div>`;
   }
@@ -382,13 +382,13 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
       return `<div class="text-sm">ℹ️ אין איש קשר ייעודי לרישום בסמסטר זה.${formsHtml}</div>`;
     return `
       <div class="text-sm">
-        <b>אנשי קשר לרישום</b><br/><br/>
+        <b class="bot-title">אנשי קשר לרישום</b><br/><br/>
         ${c.map((x) => `• ${x.name} - <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>")}
         ${formsHtml}
       </div>`;
   }
 
-  return `<div class="text-sm">${doc.title}${appendForms(forms, "general")}</div>`;
+  return `<div class="text-sm"><span class="bot-title">${doc.title}</span>${appendForms(forms, "general")}</div>`;
 }
 
 /* =============================
@@ -401,7 +401,7 @@ export function buildAllAdvisorsAnswer(docs = []) {
 
   return `
     <div class="text-sm">
-      <b>יועצים אקדמיים לפי סמסטר</b><br/><br/>
+      <b class="bot-title">יועצים אקדמיים לפי סמסטר</b><br/><br/>
 
       ${docs
         .map(d => {
@@ -410,7 +410,7 @@ export function buildAllAdvisorsAnswer(docs = []) {
 
           return `
             <div style="margin-bottom:10px;">
-              <b>סמסטר ${d.semesterNumber}</b><br/>
+              <b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>
               ${a
                 .map(x =>
                   `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
@@ -423,12 +423,7 @@ export function buildAllAdvisorsAnswer(docs = []) {
 
       <br/>
 
-      <p style="
-        font-size:13px;
-        color:#374151;
-        text-align:center;
-        margin-top:8px;
-      ">
+      <p class="text-gray-500" style="text-align:center; margin-top:8px;">
         ℹ️ ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה ⬇️
       </p>
     </div>
@@ -438,11 +433,11 @@ export function buildAllAdvisorsAnswer(docs = []) {
 export function buildAllLabsAnswer(docs) {
   return `
     <div class="text-sm">
-      <b>אחראי/ת מעבדות לפי סמסטר</b><br/><br/>
+      <b class="bot-title">אחראי/ת מעבדות לפי סמסטר</b><br/><br/>
       ${docs.map(d => {
         const l = d.contacts?.labs || [];
         if (!l.length) return "";
-        return `<b>סמסטר ${d.semesterNumber}</b><br/>` +
+        return `<b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>` +
           l.map(x =>
             `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
           ).join("<br/>");

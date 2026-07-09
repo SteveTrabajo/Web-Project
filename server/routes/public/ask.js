@@ -767,12 +767,12 @@ router.post("/ask", async (req, res) => {
 
         const html = `
           <div class="text-sm leading-6">
-            <b>⏰ חלונות רישום לכל הסמסטרים</b><br/><br/>
+            <b class="bot-title">⏰ חלונות רישום לכל הסמסטרים</b><br/><br/>
             ${allDocs
               .map(
                 (d) => `
               <div class="mb-2">
-                <b>סמסטר ${d.semesterNumber}</b>
+                <b class="bot-subtitle">סמסטר ${d.semesterNumber}</b>
                 ${d.audience?.cohortText ? ` (${d.audience.cohortText})` : ""}<br/>
                 ${d.registrationWindow?.date}
                 בין ${d.registrationWindow?.from} ל-${d.registrationWindow?.to}
@@ -792,7 +792,7 @@ router.post("/ask", async (req, res) => {
           return res.json({
             html: `
               <div class="text-sm">
-                <b>נקודות זכות לתואר</b><br/>
+                <b class="bot-title">נקודות זכות לתואר</b><br/>
                 נדרש מינימום 165 נ״ז
               </div>
             `,
@@ -838,7 +838,7 @@ router.post("/ask", async (req, res) => {
             return res.json({
               html: `
                 <div class="text-sm leading-6">
-                  👩‍🎓 <b>סטודנט/ית מלווה יש רק בסמסטר ${d.semesterNumber}</b><br/><br/>
+                  👩‍🎓 <b class="bot-title">סטודנט/ית מלווה יש רק בסמסטר ${d.semesterNumber}</b><br/><br/>
                   • <b>${m.name}</b><br/>
                   <a href="mailto:${m.email}">${m.email}</a>
                 </div>
@@ -863,11 +863,11 @@ router.post("/ask", async (req, res) => {
           return res.json({
             html: `
               <div class="text-sm">
-                <b>קישורי הדרכה לפי סמסטר</b><br/><br/>
+                <b class="bot-title">קישורי הדרכה לפי סמסטר</b><br/><br/>
                 ${docsWithLinks
                   .map(
                     (d) =>
-                      `<b>סמסטר ${d.semesterNumber}</b><br/>` +
+                      `<b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>` +
                       d.links
                         .map((l) => `• <a href="${l.url}" target="_blank">${l.label}</a>`)
                         .join("<br/>")
@@ -910,7 +910,7 @@ router.post("/ask", async (req, res) => {
         return res.json({
           html: `
             <div class="text-sm">
-              <b>תנאי סטאז' – סמסטר ${semNum}</b><br/><br/>
+              <b class="bot-title">תנאי סטאז' – סמסטר ${semNum}</b><br/><br/>
               ${rules.map((r) => `• ${r.text}`).join("<br/>")}
             </div>
           `,
@@ -990,7 +990,7 @@ router.post("/ask", async (req, res) => {
       return res.json({
         html: `
           <div class="text-sm leading-6">
-            📘 <b>קורסי קדם ל־${courseMain.courseName}</b><br/><br/>
+            📘 <b class="bot-title">קורסי קדם ל־${courseMain.courseName}</b><br/><br/>
             ${prereqs.map((p) => `• ${p.name}`).join("<br/>")}
           </div>
         `,

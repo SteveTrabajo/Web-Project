@@ -288,6 +288,20 @@ body,
 }
 
 /* ============================================================
+   BOT BUBBLE TYPOGRAPHY
+   Answers arrive as server-built HTML (and some titles come from
+   Firestore), so one scale is enforced here for every response:
+   .bot-title > .bot-subtitle > body. Inline font-size in the HTML
+   is neutralized so no answer can shrink below the scale.
+   ============================================================ */
+
+.bot-bubble { font-size: 0.875rem; line-height: 1.6; }
+.bot-bubble .bot-title    { font-size: 1rem; font-weight: 700; display: inline-block; margin-bottom: 0.25rem; }
+.bot-bubble .bot-subtitle { font-size: 0.9375rem; font-weight: 600; }
+.bot-bubble [style*="font-size"] { font-size: inherit !important; }
+.bot-bubble small { font-size: inherit; }
+
+/* ============================================================
    BOT BUBBLE DARK MODE OVERRIDES
    (dangerouslySetInnerHTML content cannot use Tailwind dark: variants)
    ============================================================ */

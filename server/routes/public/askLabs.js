@@ -288,7 +288,7 @@ export default async function askLabs(req, res) {
           <div class="mb-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm
                       text-gray-800
                       dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <div class="font-bold text-blue-700 dark:text-sky-300">
+            <div class="bot-title font-bold text-blue-700 dark:text-sky-300">
               📘 ${l.courseName || "-"} <span class="opacity-80">(סמסטר ${l.semester ?? "-"})</span>
             </div>
 
