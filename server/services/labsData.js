@@ -194,40 +194,76 @@ export function findNextLab(labs) {
   );
 }
 
-export function renderLabsHtml(labs) {
-  const html = labs
-    .map((l) => {
-      const staff = Array.isArray(l.staff) ? l.staff.join(", ") : l.staff || "-";
+const LAB_CARD_CLASS =
+  "mb-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm text-gray-800 " +
+  "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+
+const SEP = '<span class="mx-1 opacity-60">|</span>';
+
+// Detailed view: one card per (course, session); each meeting (date/group/staff)
+// is a line inside it, so the course header is not repeated per group and date.
+function renderLabsDetailed(labs) {
+  const groups = new Map();
+  for (const l of labs) {
+    const key = `${l.courseName}||${l.session}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(l);
+  }
+
+  const cards = [...groups.values()]
+    .map((rows) => {
+      const first = rows[0];
+      const meetings = rows
+        .map((l) => {
+          const staff = Array.isArray(l.staff) ? l.staff.join(", ") : l.staff || "-";
+          return `<div class="mt-1">📅 ${l.day || ""} ${formatLabDateHtml(l)} ${SEP} ⏰ ${l.time || "-"} ${SEP} 👥 קבוצה ${l.group || "-"} ${SEP} 👩‍🏫 ${staff}</div>`;
+        })
+        .join("");
       return `
-          <div class="mb-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm
-                      text-gray-800
-                      dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            <div class="bot-title font-bold text-blue-700 dark:text-sky-300">
-              📘 ${l.courseName || "-"} <span class="opacity-80">(סמסטר ${l.semester ?? "-"})</span>
-            </div>
-
-            <div class="mt-1">
-              🧪 <b>מעבדה:</b> ${l.session ?? "-"}
-            </div>
-
-            <div class="mt-1">
-              📅 <b>מועד:</b>
-              ${l.day || ""} ${formatLabDateHtml(l)}
-              <span class="mx-1 opacity-60">|</span>
-              ⏰ ${l.time || "-"}
-            </div>
-
-            <div class="mt-1">
-              👥 <b>קבוצה:</b> ${l.group || "-"}
-            </div>
-
-            <div class="mt-1">
-              👩‍🏫 <b>מרצה:</b> ${staff}
-            </div>
+        <div class="${LAB_CARD_CLASS}">
+          <div class="bot-title font-bold text-blue-700 dark:text-sky-300">
+            📘 ${first.courseName || "-"} <span class="opacity-80">(סמסטר ${first.semester ?? "-"})</span>
           </div>
-        `;
+          <div class="mt-1">🧪 <b>מעבדה:</b> ${first.session ?? "-"}</div>
+          ${meetings}
+        </div>`;
     })
     .join("");
 
-  return `<div class="text-sm">${html}</div>`;
+  return `<div class="text-sm">${cards}</div>`;
+}
+
+// Overview for broad questions ("which labs are in which semester"): distinct
+// course names grouped by semester, instead of every session.
+function renderLabsSummary(labs) {
+  const bySem = new Map();
+  for (const l of labs) {
+    const sem = l.semester ?? "?";
+    if (!bySem.has(sem)) bySem.set(sem, new Set());
+    bySem.get(sem).add(l.courseName || "-");
+  }
+
+  const rows = [...bySem.entries()]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([sem, names]) => `<div class="mb-1"><b class="bot-subtitle">סמסטר ${sem}</b>: ${[...names].join(", ")}</div>`)
+    .join("");
+
+  return `
+    <div class="text-sm leading-6">
+      📚 <b class="bot-title">מעבדות לפי סמסטר</b><br/><br/>
+      ${rows}
+      <div class="mt-2 text-gray-500">לפרטי מועדים, ציינו שם קורס.</div>
+    </div>`;
+}
+
+const LAB_SUMMARY_THRESHOLD = 8;
+
+// Broad question (no specific course/lecturer/session/date) with many results ->
+// summary; otherwise the detailed, session-grouped cards.
+export function renderLabs(labs, criteria = {}) {
+  const specific = criteria.course || criteria.lecturer || criteria.session != null || criteria.date;
+  if (!specific && criteria.intent !== "next_lab" && labs.length > LAB_SUMMARY_THRESHOLD) {
+    return renderLabsSummary(labs);
+  }
+  return renderLabsDetailed(labs);
 }

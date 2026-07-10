@@ -1,7 +1,7 @@
 import { callLLMTools } from "../../services/llm.js";
 import { getAllCoursesCached, matchCourse, getRelationIndex } from "../../services/courseData.js";
 import { ragCuratedAnswer } from "../../services/curatedRag.js";
-import { getLatestYearId, getAllLabs, filterLabs, findNextLab, renderLabsHtml } from "../../services/labsData.js";
+import { getLatestYearId, getAllLabs, filterLabs, findNextLab, renderLabs } from "../../services/labsData.js";
 import { answerRegistration, findContactsByQuery } from "./registration.service.js";
 
 /*
@@ -167,7 +167,7 @@ async function runGetLabSchedule(args) {
   }
 
   if (!labs.length) return `<div class="text-sm">ℹ️ לא נמצאו מעבדות מתאימות.</div>`;
-  return renderLabsHtml(labs);
+  return renderLabs(labs, args);
 }
 
 /* ---------- tool registry ---------- */
@@ -273,8 +273,10 @@ const TOOLS = [
         name: "get_registration_info",
         description:
           "מידע על תהליך הרישום לקורסים: חלון/מועד הרישום, יועצים אקדמיים, סטודנט/ית מלווה, נקודות זכות לתואר, " +
-          "קישורי הדרכה, תנאי סטאז'/התמחות, פטורים/חריגים, אנשי קשר לרישום, ואחראי מעבדות (אנשי קשר - לא לוח הזמנים). " +
-          "השתמש לשאלות על תהליך הרישום ומועדיו. אל תשתמש עבור מועדי/לוח מעבדות (לכך יש כלי נפרד).",
+          "קישורי הדרכה, תנאי סטאז'/התמחות, פטורים/חריגים, אנשי קשר לרישום, ומי איש הקשר האחראי על המעבדות. " +
+          "השתמש לשאלות על תהליך הרישום ומועדיו. " +
+          "אל תשתמש עבור מעבדות עצמן - רשימת מעבדות, אילו מעבדות יש בסמסטר, לוח או מועדי מעבדות (לכך יש get_lab_schedule); " +
+          "aspect=labs הוא אך ורק לשאלת 'מי אחראי המעבדות', לא לרשימת המעבדות.",
         parameters: {
           type: "object",
           properties: {
@@ -285,7 +287,7 @@ const TOOLS = [
               description:
                 "היבט הרישום: window=חלון/מועד רישום, advisors=יועצים אקדמיים, mentors=סטודנט מלווה, " +
                 "credits=נקודות זכות, links=קישורי הדרכה, internship=סטאז'/התמחות, exemptions=פטורים/חריגים, " +
-                "contacts=אנשי קשר לרישום, labs=אחראי מעבדות (אנשי קשר), general=כללי.",
+                "contacts=אנשי קשר לרישום, labs=מי איש הקשר האחראי על המעבדות (לא רשימת המעבדות), general=כללי.",
             },
           },
           required: ["aspect"],
@@ -300,9 +302,10 @@ const TOOLS = [
       function: {
         name: "get_lab_schedule",
         description:
-          "מחזיר מועדי מעבדות (מעבדה = lab) - תאריך, יום, שעה, קבוצה ומרצה. השתמש כאשר המשתמש שואל על לוח מעבדות: " +
-          "'מתי המעבדה של X', 'המעבדה הבאה', 'אילו מעבדות יש ביום ה', מעבדות של מרצה מסוים וכו'. " +
-          "אך ורק למעבדות - אל תשתמש למועדי מבחנים/בחינות (מועד א', מועד ב', מועד ג'), אלה אינם מעבדות. " +
+          "מחזיר מעבדות (מעבדה = lab) ומועדיהן - תאריך, יום, שעה, קבוצה ומרצה. " +
+          "השתמש לכל שאלה על מעבדות עצמן: 'מתי המעבדה של X', 'המעבדה הבאה', 'אילו מעבדות יש ביום ה', " +
+          "וגם 'אילו מעבדות/רשימת המעבדות/מה המעבדות בסמסטר X' (עם semester). " +
+          "אך ורק למעבדות - לא למועדי מבחנים/בחינות (מועד א'/ב'/ג'), ולא לאיש הקשר האחראי על המעבדות (לכך יש get_registration_info). " +
           "כל הפרמטרים אופציונליים - מלא רק את מה שמופיע בשאלה.",
         parameters: {
           type: "object",

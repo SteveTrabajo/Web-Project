@@ -442,18 +442,17 @@ export function buildAllAdvisorsAnswer(docs = []) {
 }
 
 export function buildAllLabsAnswer(docs) {
-  return `
-    <div class="text-sm">
-      <b class="bot-title">אחראי/ת מעבדות לפי סמסטר</b><br/><br/>
-      ${docs.map(d => {
-        const l = d.contacts?.labs || [];
-        if (!l.length) return "";
-        return `<b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>` +
-          l.map(x =>
-            `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`
-          ).join("<br/>");
-      }).join("<br/><br/>")}
-    </div>`;
+  const blocks = docs
+    .map((d) => {
+      const l = d.contacts?.labs || [];
+      if (!l.length) return "";
+      return `<b class="bot-subtitle">סמסטר ${d.semesterNumber}</b><br/>` +
+        l.map((x) => `• ${x.name} – <a href="mailto:${x.email}">${x.email}</a>`).join("<br/>");
+    })
+    .filter(Boolean);
+
+  if (!blocks.length) return `<div class="text-sm">ℹ️ לא נמצאו אחראי/ת מעבדות.</div>`;
+  return `<div class="text-sm"><b class="bot-title">אחראי/ת מעבדות לפי סמסטר</b><br/><br/>${blocks.join("<br/><br/>")}</div>`;
 }
 
 // Returns an HTML answer for a registration question. `aspect` is one of:

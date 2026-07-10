@@ -4,7 +4,7 @@ import {
   getAllLabs,
   filterLabs,
   findNextLab,
-  renderLabsHtml,
+  renderLabs,
 } from "../../services/labsData.js";
 
 /* ================= LLM ================= */
@@ -87,7 +87,7 @@ export default async function askLabs(req, res) {
       });
     }
 
-    return res.json({ html: renderLabsHtml(labs) });
+    return res.json({ html: renderLabs(labs, parsed) });
   } catch (err) {
     console.error("ASK LABS ERROR:", err);
     return res.status(500).json({
