@@ -63,6 +63,7 @@ router.get("/usage-stats", async (req, res) => {
     const topicCounts = {};
     const sourceCounts = {};
     const courseCounts = {};
+    const unansweredReasonCounts = {};
 
     for (const e of events) {
       const sem = e.semester || "לא ידוע";
@@ -73,6 +74,11 @@ router.get("/usage-stats", async (req, res) => {
 
       const src = e.answerSource || "unknown";
       sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+
+      // Why questions went unanswered - actionable for admins (kb_miss = add content).
+      if (!e.wasAnswered) {
+        unansweredReasonCounts[src] = (unansweredReasonCounts[src] || 0) + 1;
+      }
 
       for (const code of e.detectedCourses || []) {
         courseCounts[code] = (courseCounts[code] || 0) + 1;
@@ -89,6 +95,10 @@ router.get("/usage-stats", async (req, res) => {
 
     const byAnswerSource = Object.entries(sourceCounts)
       .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const unansweredByReason = Object.entries(unansweredReasonCounts)
+      .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count);
 
     const topCourses = Object.entries(courseCounts)
@@ -122,6 +132,7 @@ router.get("/usage-stats", async (req, res) => {
       bySemester,
       byTopic,
       byAnswerSource,
+      unansweredByReason,
       topCourses,
       recentUnanswered,
       feedbackSummary: {

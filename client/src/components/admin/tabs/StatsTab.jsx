@@ -14,17 +14,61 @@ const CHART_PALETTE = {
 
 /* ── display labels (used on x-axis AND in tooltip) ─────── */
 
-const SOURCE_LABELS = {
-  curated:      "תשובה מוכנה",
-  courses:      "קורסים",
-  labs:         "מעבדות",
-  advisor:      "יועץ אקדמי",
+// Collapses both the keyword pipeline and the tool router (tool:*) onto shared
+// Hebrew categories, so the chart is consistent regardless of USE_TOOL_ROUTER.
+const SOURCE_CATEGORY = {
+  labs: "מעבדות",
+  get_lab_schedule: "מעבדות",
   registration: "רישום",
-  military:     "מילואים",
-  emotional:    "ייעוץ רגשי",
-  fallback:     "ללא מענה",
-  unknown:      "לא ידוע",
+  get_registration_info: "רישום",
+  courses: "קורסים",
+  courses_reverse: "קורסים",
+  course_clarify: "קורסים",
+  get_prerequisites: "קורסים",
+  get_courses_requiring: "קורסים",
+  get_course_relations: "קורסים",
+  get_required_courses: "קורסים",
+  contacts: "אנשי קשר",
+  find_contact: "אנשי קשר",
+  emotional: "תמיכה רגשית",
+  emotional_support: "תמיכה רגשית",
+  rag_curated: "מאגר תשובות",
+  rag: "מאגר תשובות",
+  search_knowledge_base: "מאגר תשובות",
+  unsupported_topic: "ללא מענה",
+  offtopic: "ללא מענה",
+  advisor_redirect: "ללא מענה",
+  no_tool: "ללא מענה",
+  kb_miss: "ללא מענה",
+  error: "ללא מענה",
 };
+
+const canonicalSource = (src = "") => {
+  const key = String(src).replace(/^tool:/, "");
+  return SOURCE_CATEGORY[key] || "אחר";
+};
+
+// Labels for the "why unanswered" breakdown (raw source, tool: prefix stripped).
+const UNANSWERED_REASON_LABELS = {
+  kb_miss: "אין תשובה במאגר",
+  no_tool: "מחוץ לתחום / לא זוהה",
+  unsupported_topic: "נושא לא נתמך",
+  offtopic: "לא רלוונטי",
+  advisor_redirect: "הופנה ליועץ",
+  error: "שגיאה",
+};
+
+// Sum counts of sources that collapse to the same category.
+function groupBySource(items = []) {
+  const acc = {};
+  for (const { source, count } of items) {
+    const label = canonicalSource(source);
+    acc[label] = (acc[label] || 0) + count;
+  }
+  return Object.entries(acc)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
 
 const TOPIC_LABELS = {
   courses:      "קורסי חובה",
@@ -69,6 +113,11 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
   const labels = items.map((i) => i.label);
   const counts = items.map((i) => i.count);
   const total  = counts.reduce((s, c) => s + c, 0);
+  /* Headroom so the outside bar-top label is never clipped, at any scale:
+     ~15% of the tallest bar (min 1 unit). At max 3 -> 4, at 30 -> 35, at 100 -> 115.
+     MUI keeps the tick labels on nice round values within this ceiling. */
+  const maxCount = counts.length ? Math.max(...counts) : 0;
+  const yMax = maxCount > 0 ? maxCount + Math.max(1, Math.ceil(maxCount * 0.15)) : 1;
 
   /* y-axis title text */
   const yLabel = unit === "שאלות" ? "מספר שאלות" : "מספר משובים";
@@ -116,6 +165,8 @@ function ChartSection({ title, subtitle, items, unit = "שאלות", note }) {
                 }]}
                 yAxis={[{
                   tickMinStep: 1,
+                  /* cap the axis one above the tallest bar so its top label fits */
+                  max: yMax,
                   tickLabelStyle: { ...TICK_FONT, fill: palette.text },
                   /* y-axis title makes "number of questions" explicit */
                   label: yLabel,
@@ -309,14 +360,25 @@ export default function StatsTab({ toast }) {
       {/* ── chart 1: answer source ───────────────────────────── */}
       <ChartSection
         title="פילוח לפי מקור תשובה"
-        subtitle="כמה שאלות התקבלו מכל מקור תשובה"
-        items={(data.byAnswerSource || []).map(({ source, count }) => ({
-          count,
-          label: SOURCE_LABELS[source] || source || "אחר",
-        }))}
+        subtitle="כמה שאלות טופלו בכל תחום"
+        items={groupBySource(data.byAnswerSource)}
         unit="שאלות"
-        note="העמודות מציגות כמה שאלות נענו מכל סוג מקור"
+        note="העמודות מציגות כמה שאלות טופלו בכל תחום"
       />
+
+      {/* ── chart: why unanswered (actionable) ───────────────── */}
+      {(data.unansweredByReason?.length ?? 0) > 0 && (
+        <ChartSection
+          title="סיבות אי-מענה"
+          subtitle='מדוע שאלות לא נענו - "אין תשובה במאגר" מציין שכדאי להוסיף תשובה מוכנה'
+          items={(data.unansweredByReason || []).map(({ reason, count }) => ({
+            count,
+            label: UNANSWERED_REASON_LABELS[String(reason).replace(/^tool:/, "")] || reason || "אחר",
+          }))}
+          unit="שאלות"
+          note="הוספת תשובה מוכנה לנושאים החוזרים כאן תפחית שאלות ללא מענה"
+        />
+      )}
 
       {/* ── chart 2: topic ───────────────────────────────────── */}
       <ChartSection

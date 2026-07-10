@@ -674,16 +674,19 @@ router.post("/ask", async (req, res) => {
     if (process.env.USE_TOOL_ROUTER === "true") {
       const routed = await routeWithTools(question, yearbookId);
       const answered = routed.type === "tool";
+      const source = answered ? `tool:${routed.tool}` : (routed.source || routed.type);
+      const detectedCourses = [routed.args?.course, routed.args?.course_a, routed.args?.course_b].filter(Boolean);
       logUsageEvent({
         question,
         yearbook: yearbookId,
         semester: clientSemester || null,
         topic: clientTopic || null,
-        answerSource: answered ? `tool:${routed.tool}` : routed.type,
+        answerSource: source,
         wasAnswered: answered,
+        detectedCourses,
       });
       if (!answered) {
-        autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, reason: routed.type });
+        autoSaveUnanswered({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, reason: source });
       }
       return res.json({ html: routed.html });
     }

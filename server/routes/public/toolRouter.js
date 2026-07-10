@@ -89,7 +89,9 @@ function runEmotionalSupport() {
 
 async function runSearchKnowledgeBase({ query }, { yearbookId }) {
   const hit = await ragCuratedAnswer(query, yearbookId);
-  if (!hit) return NO_ANSWER_HTML;
+  // A miss is an info gap, not an answer: signal it so it counts as unanswered
+  // and reaches the admin unanswered-questions tab.
+  if (!hit) return { html: NO_ANSWER_HTML, answered: false, source: "kb_miss" };
   return hit.answerHtml;
 }
 
@@ -394,6 +396,11 @@ export async function routeWithTools(question, yearbookId) {
     // executor handles missing fields
   }
 
-  const html = await tool.run(args, { yearbookId });
-  return { type: "tool", tool: call.function.name, args, html };
+  // An executor returns either an HTML string (answered) or
+  // { html, answered:false, source } to signal it produced no real answer.
+  const out = await tool.run(args, { yearbookId });
+  if (typeof out === "object" && out?.answered === false) {
+    return { type: "no_answer", tool: call.function.name, args, html: out.html, source: out.source || "no_answer" };
+  }
+  return { type: "tool", tool: call.function.name, args, html: out };
 }
