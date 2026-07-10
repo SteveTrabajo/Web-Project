@@ -55,6 +55,13 @@ export default function AdminLogin({ onSuccess }) {
     setMsg("Password updated successfully");
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (mode === "login") login();
+    else if (mode === "forgot") sendCode();
+    else if (mode === "reset") resetPassword();
+  };
+
   const titles = {
     login: "Admin Login",
     forgot: "Reset Password",
@@ -68,7 +75,7 @@ export default function AdminLogin({ onSuccess }) {
   };
 
   return (
-    <div className="space-y-5" dir="ltr">
+    <form className="space-y-5" dir="ltr" onSubmit={handleSubmit}>
 
       {/* Header */}
       <div className="flex flex-col items-center gap-2 pb-1">
@@ -147,11 +154,12 @@ export default function AdminLogin({ onSuccess }) {
       <div className="space-y-2 pt-1">
         {mode === "login" && (
           <>
-            <Button className="w-full" onClick={login}>
+            <Button type="submit" className="w-full">
               Sign In
             </Button>
             <div className="text-center">
               <Button
+                type="button"
                 variant="link"
                 className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("forgot"); setMsg(""); setIsSuccess(false); }}
@@ -164,11 +172,12 @@ export default function AdminLogin({ onSuccess }) {
 
         {mode === "forgot" && (
           <>
-            <Button className="w-full" onClick={sendCode}>
+            <Button type="submit" className="w-full">
               Send Reset Code
             </Button>
             <div className="text-center">
               <Button
+                type="button"
                 variant="link"
                 className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
@@ -181,11 +190,12 @@ export default function AdminLogin({ onSuccess }) {
 
         {mode === "reset" && (
           <>
-            <Button className="w-full bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep hover:opacity-90" onClick={resetPassword}>
+            <Button type="submit" className="w-full bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep hover:opacity-90">
               Update Password
             </Button>
             <div className="text-center">
               <Button
+                type="button"
                 variant="link"
                 className="text-caption text-muted-foreground h-auto p-0"
                 onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
@@ -200,6 +210,6 @@ export default function AdminLogin({ onSuccess }) {
       <p className="text-center text-caption text-muted-foreground pt-1">
         BIO-BOT 2.0 - Admin Portal
       </p>
-    </div>
+    </form>
   );
 }
