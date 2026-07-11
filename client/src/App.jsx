@@ -37,8 +37,16 @@ export default function App() {
 
       {view === "chat" && (
         <main className="flex-1 min-h-0 bg-surface-page">
-          <div className="h-full max-w-7xl mx-auto px-2 py-2 sm:px-4 sm:py-4">
-            <ChatBot />
+          <div className="h-full max-w-7xl mx-auto px-2 py-2 sm:px-4 sm:py-4 flex flex-col">
+            <div className="flex-1 min-h-0">
+              <ChatBot />
+            </div>
+            <p
+              dir="rtl"
+              className="shrink-0 text-center text-caption text-content-muted pt-2 px-2"
+            >
+              חלק מהשאלות עשויות להישמר באופן אנונימי לשיפור הבוט. לא נאסף מידע אישי מזהה.
+            </p>
           </div>
         </main>
       )}

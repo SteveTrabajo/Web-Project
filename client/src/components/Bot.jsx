@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import FeedbackModal from "./FeedbackModal.jsx";
+import PrivacyNotice from "./PrivacyNotice.jsx";
 import { MessageBubble, ChatInput } from "./BotParts.jsx";
 import {
   greetingHtml,
@@ -34,6 +35,13 @@ export default function ChatBot() {
     lastNameLetter: null,
     track: null,
   });
+
+  // One-time (per browser) privacy notice on first chat open.
+  const [showPrivacy, setShowPrivacy] = useState(() => !localStorage.getItem("bio_privacy_ack"));
+  const ackPrivacy = () => {
+    localStorage.setItem("bio_privacy_ack", "1");
+    setShowPrivacy(false);
+  };
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -447,6 +455,8 @@ const showReservesGuidelines = () => {
         questions={recentQuestions}
         yearbook={context.yearbook}
       />
+
+      {showPrivacy && <PrivacyNotice onAcknowledge={ackPrivacy} />}
     </div>
   );
 }
