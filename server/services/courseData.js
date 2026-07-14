@@ -48,6 +48,10 @@ export async function getAllCoursesCached(yearbookId) {
         semesterKey,
         nameNorm: normalizeHebrew(courseName),
         codeNorm: courseCode.replace(/\s+/g, ""),
+        // Layer 3: precomputed full prerequisite chain (null for legacy imports).
+        transitivePrerequisites: Array.isArray(data.transitivePrerequisites)
+          ? data.transitivePrerequisites
+          : null,
       });
     });
   });

@@ -1,50 +1,32 @@
-2026-07-10
+2026-07-14
 
-## Tool-calling router - a new answer architecture for the chat
+## Yearbook import overhaul - full-LLM extraction, prerequisite graph, AI review
 
-The bot historically routed every free-text question through ~15 hand-maintained
-Hebrew keyword lists in `ask.js` (`isRegistrationQuestion`, `detectPrerequisitesFallback`,
-`UNSUPPORTED_TOPICS`, ...). Every new phrasing or topic meant editing code, and the
-lists still misrouted (e.g. "which courses require X" answered with X's own prereqs).
+Reworked how yearbooks (course catalogs) are imported so the bot answers "can I take
+course X with Y?" from a complete, grounded prerequisite graph instead of a brittle
+keyword/column parse that silently missed relations.
 
-This adds an alternative: an LLM reads plain-language **tool descriptions** and picks
-the right function plus its arguments. The answer *builders* (prereq graph, lab date
-logic, registration formatting) are unchanged and correct - only the *routing layer*
-changes. Adding a capability is now one executor + one description, not a keyword list;
-unknown topics decline automatically (no tool matches), and abuse/prompt-injection is
-refused for free.
+### Added
 
-### How it works
+- `parsers/yearbook_extractor.py` - format-detecting raw extractor for DOCX **and** PDF
+  (pdfplumber). Pulls tabular content only; writes nothing. Preserves the yearbook's
+  "underline = corequisite" convention as `<u>..</u>` markup for the LLM.
+- `services/yearbookImport.js` - gpt-4o structures each semester table into typed
+  courses/relations (`buildPreview`), then an analysis pass (`analyzeRelations`) proposes
+  implicit links + flags anomalies as **advisory suggestions** for admin approval.
+- `services/prereqGraph.js` - `computeTransitiveClosure()` builds each course's full
+  upstream prerequisite chain (with cycle detection) at commit time.
+- Preview -> review -> commit flow: `POST /upload/yearbook` returns a preview (no writes);
+  `POST /upload/yearbook/commit` writes reviewed data. New `UploadYearbook.jsx` review UI
+  surfaces detected courses, AI suggestions (approve to include), anomalies, and warnings.
 
-- `services/llm.js` - `callLLMTools()` wraps OpenAI function-calling.
-- `routes/public/toolRouter.js` - `routeWithTools(question, yearbookId)` sends the
-  question + 9 tool schemas to the LLM, runs the chosen tool, and returns
-  `{ type: "tool"|"no_tool"|"error", tool, html }`.
-- The 9 tools: `get_prerequisites`, `get_courses_requiring`, `get_course_relations`,
-  `get_lab_schedule`, `get_registration_info`, `find_contact`, `get_required_courses`,
-  `emotional_support`, `search_knowledge_base` (semantic RAG over curated answers).
+### Modified
 
-### Shared service modules (extracted so both pipelines use one implementation)
-
-- `services/courseData.js` - course cache, matching, and a single-scan relation index
-  (forward + reverse prerequisites).
-- `services/curatedRag.js` - the embedding/RAG stack (`ragCuratedAnswer`).
-- `services/labsData.js` - lab data access, filtering, next-lab, rendering (`askLabs.js`
-  is now a thin classifier + orchestration shell over it).
-- `answerRegistration()` in `registration.service.js` - the full registration orchestration.
-
-### Rollout
-
-- `USE_TOOL_ROUTER` env flag - `/api/ask` has a flag-gated early return after the
-  greeting fast-path. When `true`, free-text questions use the router; results map to
-  the existing `logUsageEvent` / `autoSaveUnanswered` so the admin unanswered-questions
-  tab keeps filling. Default (unset) runs the keyword pipeline unchanged - instant revert.
-- The guided pill flow (yearbook/topic/semester/letter) is client-side and never hits
-  this branch.
-- Validated with `test-tools.mjs` / `scale-test.mjs`: ~92% routing accuracy on real
-  logged questions, with correct declines on junk/abuse.
-
-### Also
-
-- The bot now gives one honest "no answer" admission on a knowledge-base miss or a
-  no-tool decline, instead of a technical "not in DB" message or possibly-hallucinated text.
+- `routes/public/ask.js` - the two-course "can study together" answer no longer defaults
+  to a confident yes when no relation exists; it now distinguishes "no data recorded" from
+  "confirmed compatible". Prerequisite lookups read the precomputed transitive chain
+  (`transitivePrerequisites`) with a fallback to the live recursive walk for legacy imports.
+- `services/llm.js` - `callLLMJson` accepts a per-call `model`; adds `IMPORT_MODEL` (gpt-4o).
+- `services/courseData.js` - course cache now carries `transitivePrerequisites`.
+- `server.js` - yearbook commit route bypasses the global 10kb JSON limit (own 8mb parser).
+- Only admin-approved AI suggestions ever reach the live data - the bot stays grounded.

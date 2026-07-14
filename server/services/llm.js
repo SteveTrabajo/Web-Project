@@ -14,6 +14,9 @@ const CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const EMBED_URL = "https://api.openai.com/v1/embeddings";
 const CHAT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const EMBED_MODEL = process.env.OPENAI_EMBED_MODEL || "text-embedding-3-small";
+// Stronger model for rare, reasoning-heavy jobs (yearbook import extraction &
+// relation inference). Overridable; defaults to gpt-4o.
+export const IMPORT_MODEL = process.env.OPENAI_IMPORT_MODEL || "gpt-4o";
 
 function authHeaders() {
   return {
@@ -60,13 +63,14 @@ export async function callLLM(prompt, { temperature = 0.2 } = {}) {
 
 // JSON completion via OpenAI JSON mode. Returns a parsed object, or null.
 // The system message guarantees the "json" keyword JSON mode requires.
-export async function callLLMJson(prompt, { temperature = 0 } = {}) {
+// Pass `model` to override the default chat model (e.g. IMPORT_MODEL).
+export async function callLLMJson(prompt, { temperature = 0, model = CHAT_MODEL } = {}) {
   try {
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
-        model: CHAT_MODEL,
+        model,
         temperature,
         response_format: { type: "json_object" },
         messages: [

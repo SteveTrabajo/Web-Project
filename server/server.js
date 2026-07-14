@@ -54,7 +54,14 @@ app.use(
 /* ======================
    Middlewares
 ====================== */
-app.use(express.json({ limit: "10kb" }));
+// Global body limit stays tight. The yearbook commit route carries a full
+// reviewed import (many courses + relations) and mounts its own larger parser,
+// so the global parser skips it to avoid a premature 413.
+const globalJson = express.json({ limit: "10kb" });
+app.use((req, res, next) => {
+  if (req.path.endsWith("/yearbook/commit")) return next();
+  return globalJson(req, res, next);
+});
 app.use("/files", express.static("files"));
 
 /* ======================

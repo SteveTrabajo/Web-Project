@@ -323,7 +323,14 @@ async function getAllPrerequisitesRecursiveCached(yearbookId, courseCode) {
   const cached = _prereqCache.get(key);
   if (cached && now - cached.ts < PREREQ_CACHE_TTL_MS) return cached.data;
 
-  const data = await getAllPrerequisitesRecursive(yearbookId, courseCode);
+  // Fast path: use the precomputed transitive chain (Layer 3) when present.
+  // Yearbooks imported before Layer 3 lack it, so fall back to the live walk.
+  const courses = await getAllCoursesCached(yearbookId);
+  const course = courses.find((c) => c.courseCode === courseCode);
+  const data = course?.transitivePrerequisites
+    ? course.transitivePrerequisites
+    : await getAllPrerequisitesRecursive(yearbookId, courseCode);
+
   _prereqCache.set(key, { ts: now, data });
   return data;
 }
