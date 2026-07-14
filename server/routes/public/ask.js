@@ -1076,8 +1076,13 @@ ${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
     return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
   }
 
-  // no relation found
-  answer += `ℹ️ לא נראה שיש דרישות קדם ביניהם — אפשר ללמוד יחד 😊`;
+  // No prerequisite/corequisite record between the courses. Absence of a record
+  // is NOT a confirmation they are compatible - the yearbook data may be
+  // incomplete - so answer honestly rather than giving a definitive "yes".
+  const pairNames = coursesFromQuestion.map((c) => c.courseName).filter(Boolean);
+  answer += `ℹ️ אין לי מידע על דרישת קדם בין הקורסים האלה${
+    pairNames.length ? ` (${pairNames.join(" ו־")})` : ""
+  }.<br/>סביר שניתן לקחת אותם יחד, אך איני יכול/ה להתחייב על כך - מומלץ לוודא מול היועץ/ת האקדמי/ת או השנתון.`;
   return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
 }
 

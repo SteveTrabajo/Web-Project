@@ -1,5 +1,5 @@
 /**
- * Known gaps documented in official source files — not parser bugs.
+ * Known gaps documented in official source files - not parser bugs.
  * Used by knowledge-check to surface as info instead of blocking warnings.
  */
 
