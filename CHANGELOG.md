@@ -1,32 +1,26 @@
-2026-07-14
+2026-07-15
 
-## Yearbook import overhaul - full-LLM extraction, prerequisite graph, AI review
+## Yearbook import - course-tables-only, faster, surfaces only unresolved relations
 
-Reworked how yearbooks (course catalogs) are imported so the bot answers "can I take
-course X with Y?" from a complete, grounded prerequisite graph instead of a brittle
-keyword/column parse that silently missed relations.
-
-### Added
-
-- `parsers/yearbook_extractor.py` - format-detecting raw extractor for DOCX **and** PDF
-  (pdfplumber). Pulls tabular content only; writes nothing. Preserves the yearbook's
-  "underline = corequisite" convention as `<u>..</u>` markup for the LLM.
-- `services/yearbookImport.js` - gpt-4o structures each semester table into typed
-  courses/relations (`buildPreview`), then an analysis pass (`analyzeRelations`) proposes
-  implicit links + flags anomalies as **advisory suggestions** for admin approval.
-- `services/prereqGraph.js` - `computeTransitiveClosure()` builds each course's full
-  upstream prerequisite chain (with cycle detection) at commit time.
-- Preview -> review -> commit flow: `POST /upload/yearbook` returns a preview (no writes);
-  `POST /upload/yearbook/commit` writes reviewed data. New `UploadYearbook.jsx` review UI
-  surfaces detected courses, AI suggestions (approve to include), anomalies, and warnings.
+Simplified the yearbook import so it targets just the required curriculum (semesters 1-8)
+and does far less AI work. Instead of proposing implicit links, flagging anomalies, and
+turning footnotes into FAQ entries, the pipeline now parses courses + their relations and
+surfaces only the spots where the AI could not map a relation to a course code.
 
 ### Modified
 
-- `routes/public/ask.js` - the two-course "can study together" answer no longer defaults
-  to a confident yes when no relation exists; it now distinguishes "no data recorded" from
-  "confirmed compatible". Prerequisite lookups read the precomputed transitive chain
-  (`transitivePrerequisites`) with a fallback to the live recursive walk for legacy imports.
-- `services/llm.js` - `callLLMJson` accepts a per-call `model`; adds `IMPORT_MODEL` (gpt-4o).
-- `services/courseData.js` - course cache now carries `transitivePrerequisites`.
-- `server.js` - yearbook commit route bypasses the global 10kb JSON limit (own 8mb parser).
-- Only admin-approved AI suggestions ever reach the live data - the bot stays grounded.
+- `parsers/yearbook_extractor.py` - now extracts **only** the per-semester course tables
+  (>=5 columns with real course codes). Prose, intro pages, footnotes, and the
+  elective/specialization sections ("לימודי התמחות", "קורסי בחירה") are skipped. Each table
+  is matched to the nearest `סמסטר N` heading **above it** (a page can hold several
+  semesters), with carry-over across page breaks. PDFs over 20 pages (DOCX over 80 tables)
+  are rejected up front. All note capture removed.
+- `services/yearbookImport.js` - dropped `analyzeRelations` (domain-knowledge suggestions +
+  anomalies) and `suggestAnswersFromNotes` (notes -> curated Q&A). `structureTable` now also
+  returns `unresolvedRelations` - relation-column text it could not turn into a code. A new
+  `collectUnresolved` pass builds one review list from those plus dangling code references.
+- `routes/admin/uploadAdmin.js` - commit folds admin-**resolved** relations (pick target
+  course + type) into the graph and prunes dangling links before closure/write; no longer
+  writes note-derived curated answers. Added a page-limit friendly error.
+- `components/UploadYearbook.jsx` - review UI replaces the suggestions/anomalies/answers
+  sections with a single "relations the AI could not resolve" list (resolve or dismiss each).

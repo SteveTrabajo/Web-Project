@@ -25,8 +25,6 @@ function authHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const confidenceVariant = { high: "default", medium: "secondary", low: "outline" };
-
 export default function UploadYearbook() {
   const fileRef = useRef(null);
 
@@ -41,16 +39,16 @@ export default function UploadYearbook() {
   const [importId, setImportId] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  // code -> name across every course in the preview, for rendering relations.
-  const nameMap = useMemo(() => {
-    const m = new Map();
-    if (!preview) return m;
-    [...preview.semesters.flatMap((s) => s.courses), ...preview.unassigned].forEach((c) =>
-      m.set(c.courseCode, c.courseName)
+  // All catalog courses (code + name), for rendering relations and for the
+  // "resolve to" course picker in the review list.
+  const catalog = useMemo(() => {
+    if (!preview) return [];
+    return [...preview.semesters.flatMap((s) => s.courses), ...preview.unassigned].sort(
+      (a, b) => (a.semesterNumber || 99) - (b.semesterNumber || 99) || a.courseCode.localeCompare(b.courseCode)
     );
-    return m;
   }, [preview]);
 
+  const nameMap = useMemo(() => new Map(catalog.map((c) => [c.courseCode, c.courseName])), [catalog]);
   const relLabel = (code) => `${nameMap.get(code) || code} (${code})`;
 
   const upload = async () => {
@@ -84,17 +82,17 @@ export default function UploadYearbook() {
     }
   };
 
-  const toggleSuggestion = (id) => {
-    setPreview((p) => ({
-      ...p,
-      suggestions: p.suggestions.map((s) => (s.id === id ? { ...s, approved: !s.approved } : s)),
-    }));
-  };
-
   const assignUnassigned = (idx, sem) => {
     setPreview((p) => ({
       ...p,
       unassigned: p.unassigned.map((c, i) => (i === idx ? { ...c, semesterNumber: Number(sem) } : c)),
+    }));
+  };
+
+  const patchUnresolved = (id, patch) => {
+    setPreview((p) => ({
+      ...p,
+      unresolvedRelations: p.unresolvedRelations.map((u) => (u.id === id ? { ...u, ...patch } : u)),
     }));
   };
 
@@ -119,7 +117,7 @@ export default function UploadYearbook() {
       resetAll();
       setMsg({
         type: "ok",
-        text: `נשמר בהצלחה: ${s.courses} קורסים, ${s.relations} קשרים, ${s.appliedSuggestions} הצעות אושרו${
+        text: `נשמר בהצלחה: ${s.courses} קורסים, ${s.relations} קשרים, ${s.resolvedRelations} קשרים שהושלמו ידנית${
           s.cycles ? ` (אזהרה: ${s.cycles} מעגלי קדם זוהו)` : ""
         }`,
       });
@@ -166,6 +164,11 @@ export default function UploadYearbook() {
             {file && <span dir="ltr" className="text-caption text-muted-foreground">{file.name}</span>}
           </div>
 
+          <p className="text-caption text-muted-foreground">
+            יש להעלות קובץ המכיל את טבלאות הקורסים לפי סמסטרים בלבד (עד 20 עמודים). עמודי מבוא, הערות
+            וקורסי בחירה/התמחות אינם נדרשים ולא ייובאו.
+          </p>
+
           <Button onClick={upload} disabled={loading}>
             {loading ? "מנתח את הקובץ..." : "ניתוח וייבוא"}
           </Button>
@@ -189,8 +192,9 @@ export default function UploadYearbook() {
           <Badge variant="secondary">{preview.stats.totalCourses} קורסים</Badge>
           <Badge variant="secondary">{preview.stats.semesters} סמסטרים</Badge>
           <Badge variant="outline">פורמט: {preview.format?.toUpperCase()}</Badge>
-          {preview.stats.suggestions > 0 && <Badge>{preview.stats.suggestions} הצעות AI</Badge>}
-          {preview.stats.anomalies > 0 && <Badge variant="destructive">{preview.stats.anomalies} חריגות</Badge>}
+          {preview.stats.unresolvedRelations > 0 && (
+            <Badge variant="destructive">{preview.stats.unresolvedRelations} קשרים לא זוהו</Badge>
+          )}
         </div>
       </CardHeader>
 
@@ -220,37 +224,64 @@ export default function UploadYearbook() {
           </section>
         )}
 
-        {/* AI suggestions - approve to include */}
-        {preview.suggestions?.length > 0 && (
+        {/* Relations the AI could not resolve - optional manual fix */}
+        {preview.unresolvedRelations?.length > 0 && (
           <section className="space-y-2">
-            <h3 className="text-body font-bold">הצעות קשרים מ-AI (אשר/י כדי לכלול)</h3>
-            <p className="text-caption text-muted-foreground">הצעות אלו אינן נכללות אלא אם תאשר/י אותן - הבוט עונה רק על סמך מידע מאושר.</p>
-            {preview.suggestions.map((s) => (
-              <label key={s.id} className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer">
-                <Checkbox checked={s.approved} onCheckedChange={() => toggleSuggestion(s.id)} className="mt-0.5" />
-                <div className="flex-1 space-y-1">
-                  <div className="text-caption">
-                    <b>{relLabel(s.from)}</b>{" "}
-                    {s.type === "COREQUISITE" ? "צמוד ל־" : "דורש קדם"}{" "}
-                    <b>{relLabel(s.to)}</b>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={confidenceVariant[s.confidence]}>{s.confidence}</Badge>
-                    <span className="text-caption text-muted-foreground">{s.reason}</span>
-                  </div>
+            <h3 className="text-body font-bold">קשרים שה-AI לא הצליח לזהות</h3>
+            <p className="text-caption text-muted-foreground">
+              עבור כל פריט ניתן לבחור את קורס הקדם/הצמוד הנכון כדי להוסיף את הקשר, או לסמן "התעלם".
+              קשרים שלא יטופלו לא ייכתבו.
+            </p>
+            {preview.unresolvedRelations.map((u) => (
+              <div key={u.id} className="space-y-2 rounded-lg border border-border p-3">
+                <div className="text-caption">
+                  <b>{relLabel(u.fromCode)}</b>
+                  {u.semesterNumber ? <span className="text-muted-foreground"> · סמסטר {u.semesterNumber}</span> : null}
                 </div>
-              </label>
-            ))}
-          </section>
-        )}
+                <div className="text-caption text-muted-foreground">
+                  {u.reason === "dangling"
+                    ? `הקוד ${u.rawText} מופיע כקשר אך אינו נמצא בין הקורסים שיובאו.`
+                    : `טקסט שלא זוהה כקוד קורס: "${u.rawText}"`}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={u.resolvedTo || ""}
+                    onValueChange={(v) => patchUnresolved(u.id, { resolvedTo: v, dismissed: false })}
+                    disabled={u.dismissed}
+                  >
+                    <SelectTrigger className="w-64 h-8">
+                      <span className="truncate">{u.resolvedTo ? relLabel(u.resolvedTo) : "בחר קורס קדם/צמוד"}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog
+                        .filter((c) => c.courseCode !== u.fromCode)
+                        .map((c) => (
+                          <SelectItem key={c.courseCode} value={c.courseCode}>
+                            {c.courseName} ({c.courseCode})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
 
-        {/* Anomalies - informational */}
-        {preview.anomalies?.length > 0 && (
-          <section className="space-y-2">
-            <h3 className="text-body font-bold">חריגות שזוהו</h3>
-            {preview.anomalies.map((a, i) => (
-              <div key={i} className="text-caption text-muted-foreground rounded-lg border border-border p-2">
-                <b>{a.name} ({a.code})</b> - {a.issue}
+                  <Select
+                    value={u.resolvedType}
+                    onValueChange={(v) => patchUnresolved(u.id, { resolvedType: v })}
+                    disabled={u.dismissed}
+                  >
+                    <SelectTrigger className="w-28 h-8">
+                      <span>{u.resolvedType === "COREQUISITE" ? "צמוד" : "קדם"}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PREREQUISITE">קדם</SelectItem>
+                      <SelectItem value="COREQUISITE">צמוד</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-caption">
+                    <Checkbox checked={u.dismissed} onCheckedChange={() => patchUnresolved(u.id, { dismissed: !u.dismissed, resolvedTo: "" })} />
+                    התעלם
+                  </label>
+                </div>
               </div>
             ))}
           </section>

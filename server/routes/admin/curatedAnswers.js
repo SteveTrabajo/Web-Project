@@ -1,43 +1,8 @@
 import express from "express";
 import { db } from "../../server.js";
+import { toSafeHtml, cleanKeywords, cleanYearbook } from "../../services/curatedAnswersUtil.js";
 
 const router = express.Router();
-
-// Admin answers render in the bot via dangerouslySetInnerHTML, and the backend
-// is the only sanitization layer. We therefore treat the answer as plain text:
-// escape everything, then re-introduce only line breaks and safe auto-links.
-function escapeHtml(s = "") {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function toSafeHtml(text = "") {
-  const escaped = escapeHtml(String(text).trim());
-  const linked = escaped.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline text-blue-700 dark:text-sky-300">$1</a>'
-  );
-  const withBreaks = linked.replace(/\n/g, "<br/>");
-  return `<div class="text-sm leading-6">${withBreaks}</div>`;
-}
-
-function cleanKeywords(keywords) {
-  return (Array.isArray(keywords) ? keywords : [])
-    .filter((k) => typeof k === "string")
-    .map((k) => k.trim().toLowerCase())
-    .filter(Boolean)
-    .slice(0, 30);
-}
-
-function cleanYearbook(yearbook) {
-  return typeof yearbook === "string" && yearbook.trim()
-    ? yearbook.trim().slice(0, 100)
-    : null;
-}
 
 // GET /api/admin/curated-answers?page=1&limit=50
 router.get("/curated-answers", async (req, res) => {

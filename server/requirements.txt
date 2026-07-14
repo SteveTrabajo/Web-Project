@@ -2,3 +2,4 @@ openpyxl
 python-docx
 firebase-admin
 pdfplumber
+python-bidi
