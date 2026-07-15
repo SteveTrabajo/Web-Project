@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import { callLLMJson } from "../../services/llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FILES_DIR = path.resolve(__dirname, "../../files");
@@ -237,6 +238,90 @@ async function publicListHandler(req, res) {
   }
 }
 
+// ---- Natural-language file matching (bot "קבצים" flow) ----
+
+// Hebrew-tolerant normalization: drop quotes/geresh, split on punctuation, and
+// fold final letters (ם/ן/ץ/ף/ך -> מ/נ/צ/פ/כ) so word-end variants still match.
+const FINALS = { "ם": "מ", "ן": "נ", "ץ": "צ", "ף": "פ", "ך": "כ" };
+function normHeb(s = "") {
+  return String(s)
+    .replace(/["׳״'`]/g, "")
+    .replace(/[._\-/\\]/g, " ")
+    .replace(/[םןץףך]/g, (c) => FINALS[c])
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+}
+
+function tokenize(s = "") {
+  return normHeb(s).split(" ").filter((t) => t.length >= 2);
+}
+
+// Token overlap between the query and a form's label+filename. Counts a query
+// token as matched if it equals, contains, or is contained by a form token
+// (handles Hebrew prefixes like ה/ב and minor spelling drift).
+function scoreForm(queryTokens, form) {
+  const formTokens = new Set([...tokenize(form.label), ...tokenize(form.filename)]);
+  let hits = 0;
+  for (const qt of queryTokens) {
+    for (const ft of formTokens) {
+      if (ft === qt || ft.includes(qt) || qt.includes(ft)) { hits++; break; }
+    }
+  }
+  return hits;
+}
+
+// Falls back to the LLM only when fuzzy scoring finds nothing, so common phrasings
+// stay free/instant and only genuinely fuzzy requests spend a (small) LLM call.
+async function pickWithLLM(query, forms) {
+  if (!forms.length) return [];
+  const list = forms.map((f, i) => `${i}. ${f.label} [${f.filename}]`).join("\n");
+  const prompt = `A student is asking (in Hebrew) for a downloadable form/file from the department.
+Pick the SINGLE best matching file for their request, or none if nothing is a reasonable match.
+
+Student request: "${query}"
+
+Files:
+${list}
+
+Return JSON: { "index": number | null }`;
+  const result = await callLLMJson(prompt, { temperature: 0 });
+  const idx = Number.isInteger(result?.index) ? result.index : null;
+  return idx != null && forms[idx] ? [forms[idx]] : [];
+}
+
+async function matchHandler(req, res) {
+  try {
+    const query = String(req.body?.query || "").trim();
+    const forms = await getFormsList();
+    const pub = forms.map((f) => toPublicForm(f, req));
+
+    if (!query || !pub.length) return res.json({ matches: [], all: pub });
+
+    const queryTokens = tokenize(query);
+    const scored = pub
+      .map((f) => ({ f, score: scoreForm(queryTokens, f) }))
+      .sort((a, b) => b.score - a.score);
+
+    const topScore = scored[0]?.score || 0;
+    const topGroup = scored.filter((s) => s.score === topScore).map((s) => s.f);
+
+    // Trust the lexical match only on a clear win: a strong overlap (>=2 query
+    // tokens), or a single unambiguous file at score 1. Everything else (no
+    // overlap, or several files tied on one common word) goes to the LLM, which
+    // disambiguates the short list far better than an arbitrary tie-break.
+    if (topScore >= 2 || (topScore === 1 && topGroup.length === 1)) {
+      return res.json({ matches: topGroup.slice(0, 3), all: pub });
+    }
+
+    const matches = await pickWithLLM(query, pub);
+    res.json({ matches, all: pub });
+  } catch (err) {
+    console.error("FORMS MATCH ERROR:", err);
+    res.status(500).json({ error: "failed to match file" });
+  }
+}
+
 adminRouter.get("/forms", listHandler);
 
 adminRouter.post("/forms/upload", (req, res) => {
@@ -326,6 +411,7 @@ adminRouter.delete("/forms/:filename", async (req, res) => {
 });
 
 publicRouter.get("/forms", publicListHandler);
+publicRouter.post("/forms/match", express.json({ limit: "16kb" }), matchHandler);
 
 export { publicRouter as formsPublicRoutes };
 export default adminRouter;

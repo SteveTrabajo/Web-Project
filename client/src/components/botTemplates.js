@@ -142,6 +142,53 @@ export const requiredCoursesHtml = (courses, sem) => {
       `;
 };
 
+// Escapes user/admin-provided text before interpolating into a bubble's HTML.
+const esc = (s = "") =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Display name: prefer the label, fall back to the filename, and show underscores
+// as spaces so machine-style names read naturally.
+export const fileDisplayName = (f) => String(f.label || f.filename || "").replace(/_/g, " ");
+
+const fileCard = (f) => `
+  <a href="${esc(f.url)}" target="_blank" rel="noreferrer" download
+     class="flex items-center justify-between gap-3 rounded-xl border border-surface-border bg-surface-page px-3 py-2 hover:border-bio-green transition-colors">
+    <span class="text-content-primary font-semibold leading-snug">${esc(fileDisplayName(f))}</span>
+    <span class="shrink-0 text-xs font-bold text-bio-green dark:text-bio-green-glow underline">להורדה ⬇</span>
+  </a>`;
+
+// Intro shown when the "קבצים" topic opens - pills render separately in Bot.jsx.
+export const filesPromptHtml = () => `
+  <div class="space-y-1.5 font-sans" dir="rtl">
+    <b class="text-brand-navy dark:text-bio-green-glow">אילו קבצים אפשר להוריד?</b>
+    <p class="text-sm text-gray-700 dark:text-gray-300">
+      בחר/י קובץ מהרשימה למטה, או פשוט הקלד/י בשפה חופשית איזה קובץ את/ה מחפש/ת
+      (למשל: "הטופס לביטול קורס" או "בקשה לחופשה") ואמצא אותו עבורך.
+    </p>
+  </div>
+`;
+
+// Bot bubble presenting matched files as download links.
+export const fileMatchesHtml = (matches) => `
+  <div class="space-y-2 font-sans" dir="rtl">
+    <b class="text-bio-green dark:text-bio-green-glow">${matches.length > 1 ? "מצאתי כמה קבצים מתאימים:" : "מצאתי את הקובץ:"}</b>
+    <div class="space-y-1.5">
+      ${matches.map(fileCard).join("")}
+    </div>
+  </div>
+`;
+
+// Bot bubble for a query with no confident match - offers the full list instead.
+export const noFileMatchHtml = (allFiles = []) => `
+  <div class="space-y-2 font-sans" dir="rtl">
+    <b class="text-amber-600 dark:text-amber-400">לא מצאתי קובץ שתואם בדיוק לבקשה.</b>
+    ${allFiles.length ? `
+      <p class="text-sm text-gray-700 dark:text-gray-300">אלו הקבצים הזמינים - אולי אחד מהם מתאים:</p>
+      <div class="space-y-1.5">${allFiles.map(fileCard).join("")}</div>
+    ` : `<p class="text-sm text-gray-700 dark:text-gray-300">אין כרגע קבצים זמינים להורדה.</p>`}
+  </div>
+`;
+
 export const advisorsHtml = (advisors, advisorFormUrl) => {
   const title = advisors.length > 1 ? "היועצים האקדמיים שלך:" : "היועץ האקדמי שלך:";
   const cards = advisors

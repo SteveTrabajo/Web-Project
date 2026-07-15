@@ -10,6 +10,10 @@ import {
   requiredCoursesHtml,
   advisorsHtml,
   exceptionalRegistrationHtml,
+  filesPromptHtml,
+  fileMatchesHtml,
+  noFileMatchHtml,
+  fileDisplayName,
 } from "./botTemplates.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -45,6 +49,8 @@ export default function ChatBot() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Student files (from the admin "טפסים" store) shown as pills in the קבצים flow.
+  const [files, setFiles] = useState([]);
   // Topic pills show at chat start, hide once a topic is picked or a typed
   // question gets answered, and return via the header button or a new chat.
   const [showTopicPills, setShowTopicPills] = useState(true);
@@ -57,7 +63,8 @@ export default function ChatBot() {
   const typingTimerRef = useRef(null);
 
   const fetchSuggestions = async (val) => {
-    if (val.length < 2 || !context.yearbook) {
+    // No course autocomplete in the files flow - the input is a file request there.
+    if (val.length < 2 || !context.yearbook || context.topic === "files") {
       setSuggestions([]);
       return;
     }
@@ -155,6 +162,13 @@ export default function ChatBot() {
     addUser(q);
     setRecentQuestions((prev) => [...prev, q].slice(-5));
     setInput("");
+
+    // In the files flow a typed message is a natural-language file request.
+    if (context.topic === "files") {
+      handleFileQuery(q);
+      return;
+    }
+
     setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
     setMessages((p) => [...p, { id: loadingId, sender: "bot", html: "רגע אני חושב..." }]);
@@ -232,18 +246,67 @@ const showReservesGuidelines = () => {
   };
 
   const chooseTopic = (t) => {
-    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג" ,reserves: "מילואים"};
+    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג", reserves: "מילואים", files: "קבצים" };
     addUser(labels[t]);
     setShowTopicPills(false);
     if (t === "exceptional") {
       showExceptionalRegistration();
     }
     else if (t === "reserves") {
-      showReservesGuidelines(); 
+      showReservesGuidelines();
+    }
+    else if (t === "files") {
+      loadFiles();
     } else {
       // Reset semester so the picker re-shows, even if one was chosen earlier this session.
       setContext((p) => ({ ...p, topic: t, semesterNum: null }));
       addBot("<b class='font-sans'>בחר/י סמסטר:</b>");
+    }
+  };
+
+  // Files flow: fetch the student-files list, show them as pills + an intro that
+  // invites a natural-language request. No semester needed.
+  const loadFiles = async () => {
+    setContext((p) => ({ ...p, topic: "files", semesterNum: null }));
+    try {
+      const res = await fetch(`${API_BASE}/api/forms`);
+      const data = await res.json();
+      const list = Array.isArray(data.forms) ? data.forms : [];
+      setFiles(list);
+      addBot(list.length ? filesPromptHtml() : noFileMatchHtml([]));
+    } catch {
+      addBot("<div class='font-sans'>שגיאה בטעינת הקבצים.</div>");
+    }
+  };
+
+  const chooseFile = (f) => {
+    addUser(fileDisplayName(f));
+    addBot(fileMatchesHtml([f]));
+    setHasExchange(true);
+    setAskedTyped(true);
+  };
+
+  const handleFileQuery = async (q) => {
+    setIsBotResponding(true);
+    const loadingId = crypto.randomUUID();
+    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: "מחפש קובץ מתאים..." }]);
+    try {
+      const res = await fetch(`${API_BASE}/api/forms/match`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = await res.json();
+      setMessages((p) => p.filter((m) => m.id !== loadingId));
+      const matches = data.matches || [];
+      addBot(matches.length ? fileMatchesHtml(matches) : noFileMatchHtml(data.all || files));
+      setHasExchange(true);
+      setAskedTyped(true);
+    } catch {
+      setMessages((p) => p.filter((m) => m.id !== loadingId));
+      addBot("<div class='font-sans'>שגיאה בחיפוש הקובץ.</div>");
+    } finally {
+      setIsBotResponding(false);
     }
   };
 
@@ -339,7 +402,7 @@ const showReservesGuidelines = () => {
               בחירת נושא
             </button>
           )}
-          {context.topic && (
+          {context.topic && context.topic !== "files" && (
             <button
               onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
               className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
@@ -401,6 +464,7 @@ const showReservesGuidelines = () => {
                   <button className={pillBtn} onClick={() => chooseTopic("advisor")}>יועץ אקדמי</button>
                   <button className={pillBtn} onClick={() => chooseTopic("exceptional")}>רישום חריג</button>
                   <button className={pillBtn} onClick={() => chooseTopic("reserves")}>מילואים</button>
+                  <button className={pillBtn} onClick={() => chooseTopic("files")}>קבצים</button>
                 </div>
               </div>
             )}
@@ -425,6 +489,16 @@ const showReservesGuidelines = () => {
               <div className="flex flex-wrap gap-3 justify-end">
                 {TRACKS.map((t) => (
                   <button key={t} className={pillBtn} onClick={() => { addUser(t); loadAdvisor(context.lastNameLetter, context.semesterNum, t); }}>{t}</button>
+                ))}
+              </div>
+            )}
+
+            {context.topic === "files" && files.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-end">
+                {files.map((f) => (
+                  <button key={f.filename} className={pillBtn} onClick={() => chooseFile(f)}>
+                    {fileDisplayName(f)}
+                  </button>
                 ))}
               </div>
             )}

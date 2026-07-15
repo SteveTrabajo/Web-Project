@@ -1,5 +1,27 @@
 2026-07-15
 
+## Bot "קבצים" flow - download student files by pill or natural language
+
+Students can now get downloadable forms/files directly in the chat: after picking a
+yearbook, a new **קבצים** topic pill opens the student-files store (the admin "טפסים"
+area) as pills, and also accepts a free-text request ("הטופס לביטול קורס") which the
+bot matches to the right file. Clicking a file shows a download link in the response -
+no auto-download.
+
+### Added
+
+- `POST /api/forms/match` (public, in `formsAdmin.js`) - natural-language file lookup over
+  the existing forms store. Hebrew-tolerant token scoring (final-letter folding, containment)
+  with a small `gpt-4o-mini` fallback only when the lexical match is weak or ambiguous.
+- `botTemplates.js` - `filesPromptHtml`, `fileMatchesHtml`, `noFileMatchHtml`, and a
+  `fileDisplayName` helper (shows underscores as spaces).
+
+### Modified
+
+- `Bot.jsx` - `קבצים` topic pill + files flow: `loadFiles` (pills from `/api/forms`),
+  `chooseFile`, and `handleFileQuery` (routes a typed message to `/api/forms/match` when the
+  topic is files). Reuses the existing `server/files` store - no new storage or admin section.
+
 ## Yearbook import - course-tables-only, faster, surfaces only unresolved relations
 
 Simplified the yearbook import so it targets just the required curriculum (semesters 1-8)
