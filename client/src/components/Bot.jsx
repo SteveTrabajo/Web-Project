@@ -252,7 +252,7 @@ const showReservesGuidelines = () => {
   };
 
   const chooseTopic = (t) => {
-    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג", reserves: "מילואים", files: "קבצים" };
+    const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג", reserves: "מילואים", files: "טפסים" };
     addUser(labels[t]);
     setShowTopicPills(false);
     // Leaving the reserves flow: drop the selected mitve/group so later questions
@@ -483,7 +483,7 @@ const showReservesGuidelines = () => {
                   <button className={pillBtn} onClick={() => chooseTopic("advisor")}>יועץ אקדמי</button>
                   <button className={pillBtn} onClick={() => chooseTopic("exceptional")}>רישום חריג</button>
                   <button className={pillBtn} onClick={() => chooseTopic("reserves")}>מילואים</button>
-                  <button className={pillBtn} onClick={() => chooseTopic("files")}>קבצים</button>
+                  <button className={pillBtn} onClick={() => chooseTopic("files")}>טפסים</button>
                 </div>
               </div>
             )}
