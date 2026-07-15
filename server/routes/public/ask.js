@@ -500,6 +500,82 @@ const RESERVES_GROUP_LABELS = {
 };
 
 /* =============================
+   Reserves (miluim) grounded answers
+   Each selected mitve maps to the official accommodations document for that exact
+   framework + semester. Reserve questions are answered strictly from that document
+   so students get concrete, source-grounded info instead of a generic reply.
+   (Transliteration of the year is inconsistent, so mapping is by year+semester.)
+============================= */
+const MITVE_TO_FILE = {
+  mitve_tashpah_sem_a: "tashpad_semA.txt", // תשפ"ד סמסטר א
+  mitve_tashpah_sem_b: "tashpad_semB.txt", // תשפ"ד סמסטר ב
+  mitve_tashpeh_sem_a: "tashpah_semA.txt", // תשפ"ה סמסטר א
+  mitve_tashpeh_sem_b: "tashpah_semB.txt", // תשפ"ה סמסטר ב
+  mitve_tashpuv_sem_a: "tashpav_semA.txt", // תשפ"ו (המסמך היחיד לתשפ"ו)
+};
+
+// Framework docs are static; read once and cache the content in memory.
+const _miluimDocs = new Map();
+async function readMiluimDoc(fileName) {
+  if (_miluimDocs.has(fileName)) return _miluimDocs.get(fileName);
+  let content = "";
+  try {
+    content = await readFile(path.resolve(__dirname_ask, "../../files", fileName), "utf8");
+  } catch {
+    content = "";
+  }
+  _miluimDocs.set(fileName, content);
+  return content;
+}
+
+// Escapes LLM free-text into a chat bubble, preserving line breaks.
+function miluimHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+}
+
+// Grounded QA over the selected reserve-duty framework document. Returns the
+// answer text, or null when there is no document for the chosen mitve.
+async function answerReserves(question, reservesMitve, reservesGroup, historyText) {
+  const fileName = MITVE_TO_FILE[reservesMitve];
+  if (!fileName) return null;
+  const framework = await readMiluimDoc(fileName);
+  if (!framework) return null;
+
+  const [academic, contacts] = await Promise.all([
+    readMiluimDoc("miluim_academic_support.txt"),
+    readMiluimDoc("miluim_contacts.txt"),
+  ]);
+
+  const mitveLabel = RESERVES_MITVE_LABELS[reservesMitve] || reservesMitve;
+  const groupLabel = RESERVES_GROUP_LABELS[reservesMitve]?.[reservesGroup] || "לא צוינה";
+
+  const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה, המסייע לסטודנטים המשרתים במילואים.
+ענה בעברית בלבד, בלשון נייטרלית הפונה לשני המינים (את/ה, תוכל/י, מומלץ).
+ענה אך ורק על סמך המסמכים שמצורפים למטה - אל תמציא מידע ואל תשתמש בידע חיצוני.
+הסטודנט/ית שייך/ת למתווה: ${mitveLabel}. קבוצת זכאות: ${groupLabel}.
+תעדף/י את ההתאמות הרלוונטיות לקבוצת הזכאות הזו. אם התשובה אינה מופיעה במסמכים, המלץ/י לפנות למרכז החוסן בדקנט הסטודנטים דרך תחנת המידע לסטודנט.
+${historyText ? `\nשיחה קודמת:\n${historyText}\n` : ""}
+שאלת הסטודנט/ית: ${question}
+
+=== מסמך המתווה: ${mitveLabel} ===
+${framework}
+
+=== תמיכה אקדמית כללית למשרתי מילואים ===
+${academic}
+
+=== אנשי קשר רלוונטיים ===
+${contacts}
+
+החזר/י תשובה תמציתית וברורה בטקסט רגיל בעברית. אפשר להשתמש בשורות המתחילות ב-'-' לרשימות.`;
+
+  return await callLLM(prompt, { temperature: 0.2 });
+}
+
+/* =============================
    Generative fallback (LLM)
 ============================= */
 async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesGroup) {
@@ -680,6 +756,16 @@ router.post("/ask", async (req, res) => {
           </div>
         `,
       });
+    }
+
+    // Reserve-duty (מילואים): after the student picks their framework in the guided
+    // flow, answer grounded in the official accommodations document for that mitve.
+    if (clientTopic === "reserves" && reservesMitve && MITVE_TO_FILE[reservesMitve]) {
+      const reserveAnswer = await answerReserves(question, reservesMitve, reservesGroup, historyText);
+      if (reserveAnswer) {
+        logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: "reserves", answerSource: "reserves_framework", wasAnswered: true });
+        return res.json({ html: `<div class="text-sm leading-6 font-sans">${miluimHtml(reserveAnswer)}</div>` });
+      }
     }
 
     // USE_TOOL_ROUTER=true routes free-text questions through the LLM tool

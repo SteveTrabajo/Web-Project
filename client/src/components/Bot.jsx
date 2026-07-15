@@ -255,10 +255,14 @@ const showReservesGuidelines = () => {
     const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג", reserves: "מילואים", files: "קבצים" };
     addUser(labels[t]);
     setShowTopicPills(false);
+    // Leaving the reserves flow: drop the selected mitve/group so later questions
+    // aren't answered from the reserve-duty document.
+    if (t !== "reserves") setContext((p) => ({ ...p, selectedMitve: null, selectedGroup: null }));
     if (t === "exceptional") {
       showExceptionalRegistration();
     }
     else if (t === "reserves") {
+      setContext((p) => ({ ...p, topic: "reserves", semesterNum: null }));
       showReservesGuidelines();
     }
     else if (t === "files") {
@@ -411,7 +415,7 @@ const showReservesGuidelines = () => {
           {/* Brings the topic pills back on demand after they were dismissed */}
           {context.yearbook && (context.topic || !showTopicPills) && (
             <button
-              onClick={() => { setContext(p => ({ ...p, topic: null, semesterNum: null })); setShowTopicPills(true); }}
+              onClick={() => { setContext(p => ({ ...p, topic: null, semesterNum: null, selectedMitve: null, selectedGroup: null })); setShowTopicPills(true); }}
               className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
             >
               בחירת נושא
