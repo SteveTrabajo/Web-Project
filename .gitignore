@@ -27,3 +27,7 @@ dist-ssr
 !.env.example
 CLAUDE.md
 project.md
+
+# Python bytecode
+__pycache__/
+*.pyc
