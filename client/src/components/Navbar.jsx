@@ -13,7 +13,7 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
         key={key}
         type="button"
         onClick={() => { onNavigate(key); setMenuOpen(false); }}
-        className={`px-5 py-2 rounded-lg text-body tracking-wide transition-all duration-250 ease-out
+        className={`px-3.5 xl:px-5 py-2 rounded-lg text-body tracking-wide transition-all duration-250 ease-out
           hover:-translate-y-px active:translate-y-0 active:scale-95
           ${fullWidth ? "w-full text-right" : ""}
           ${isActive
@@ -31,22 +31,22 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
       <div className="w-full px-4 md:px-8 h-[72px] flex items-center justify-between">
 
         {/* Left - logo, brand, admin info */}
-        <div className="flex items-center gap-5 shrink-0">
+        <div className="flex items-center gap-3 xl:gap-5 min-w-0">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); onNavigate("home"); setMenuOpen(false); }}
-            className="flex items-center gap-3.5 group"
+            className="flex items-center gap-3.5 group min-w-0"
           >
             <img
               src="/assets/logo.png"
               alt="BIO BOT"
-              className="w-11 h-11 object-contain bg-white rounded-full p-1 ring-2 ring-white/10 group-hover:ring-bio-green-glow/60 transition-all duration-300 group-hover:scale-105"
+              className="w-11 h-11 shrink-0 object-contain bg-white rounded-full p-1 ring-2 ring-white/10 group-hover:ring-bio-green-glow/60 transition-all duration-300 group-hover:scale-105"
             />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-page-title text-white leading-none uppercase">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-page-title text-white leading-none uppercase truncate">
                 BIO BOT 2.0
               </span>
-              <span className="text-caption text-blue-200/70 tracking-widest uppercase">
+              <span className="hidden xl:block text-caption text-blue-200/70 tracking-widest uppercase truncate">
                 Braude Biotechnology Assistant
               </span>
             </div>
@@ -54,13 +54,13 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
 
           {admin && (
             <>
-              <div className="hidden md:block w-px h-7 bg-white/15 mx-1" />
-              <div className="hidden md:flex items-center gap-3 rounded-xl border border-white/15 bg-white/8 px-3 py-1.5">
+              <div className="hidden lg:block w-px h-7 bg-white/15 mx-1" />
+              <div className="hidden lg:flex items-center gap-3 rounded-xl border border-white/15 bg-white/8 px-3 py-1.5">
                 <div className="text-right leading-tight min-w-0">
                   <p className="text-caption font-semibold text-bio-green-glow">
                     מחובר כמנהל ✓
                   </p>
-                  <p className="text-caption text-white/60 truncate max-w-[160px]">
+                  <p className="text-caption text-white/60 truncate max-w-[120px] xl:max-w-[180px]">
                     {admin.email}
                   </p>
                 </div>
@@ -73,12 +73,12 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
         </div>
 
         {/* Right - desktop nav */}
-        <nav className="hidden md:flex items-center gap-1.5" dir="rtl">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5" dir="rtl">
           {item("home", "בית")}
           {item("chat", "צ׳אט")}
           {item("labs", "לוח מעבדות")}
 
-          <div className="w-px h-5 bg-white/15 mx-3" />
+          <div className="w-px h-5 bg-white/15 mx-1.5 xl:mx-3" />
 
           {item("admin", "אזור מנהל")}
         </nav>
@@ -89,7 +89,7 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
           onClick={() => setMenuOpen((o) => !o)}
           aria-label={menuOpen ? "סגירת תפריט" : "פתיחת תפריט"}
           aria-expanded={menuOpen}
-          className="md:hidden flex items-center justify-center w-11 h-11 rounded-lg text-white/75 border border-transparent hover:text-white hover:bg-white/8 hover:border-white/15 transition-colors"
+          className="lg:hidden flex items-center justify-center w-11 h-11 rounded-lg text-white/75 border border-transparent hover:text-white hover:bg-white/8 hover:border-white/15 transition-colors"
         >
           {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -100,7 +100,7 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
       {menuOpen && (
         <nav
           dir="rtl"
-          className="md:hidden absolute top-full inset-x-0 z-50 bg-brand-navy dark:bg-brand-navy-deep border-b border-bio-green-glow/20 shadow-[0_8px_20px_rgba(0,0,0,0.35)] flex flex-col p-2 gap-1"
+          className="lg:hidden absolute top-full inset-x-0 z-50 bg-brand-navy dark:bg-brand-navy-deep border-b border-bio-green-glow/20 shadow-[0_8px_20px_rgba(0,0,0,0.35)] flex flex-col p-2 gap-1"
         >
           {item("home", "בית", true)}
           {item("chat", "צ׳אט", true)}
