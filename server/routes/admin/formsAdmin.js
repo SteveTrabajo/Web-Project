@@ -11,7 +11,18 @@ const METADATA_FILENAME = "forms.json";
 const METADATA_PATH = path.join(FILES_DIR, METADATA_FILENAME);
 
 const ALLOWED_EXT = new Set([".doc", ".docx", ".pdf"]);
+// usage = functional role the bot binds to (advisor form, exception form). Kept
+// narrow on purpose - the bot code special-cases these values.
 const ALLOWED_USAGE = new Set(["advisor", "exception_registration", "other"]);
+// category = topic taxonomy for organizing a wider library and grouping the bot
+// pills. Stable keys; Hebrew labels live client-side (formCategories.js).
+const ALLOWED_CATEGORY = new Set([
+  "advisor", "registration", "reserves", "leave",
+  "exemptions", "extension", "appeals", "graduation", "general",
+]);
+const MAX_KEYWORDS = 20;
+const MAX_KEYWORD_LEN = 40;
+const MAX_DESC_LEN = 300;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const adminRouter = express.Router();
@@ -71,6 +82,46 @@ function detectUsageFromFilename(filename) {
   return "other";
 }
 
+// Best-effort topic classification from the filename, used as the default when
+// an admin has not set a category. Purely a starting point - the admin can edit.
+function detectCategoryFromFilename(filename) {
+  // Order matters: distinctive topics first, so an appeal against study
+  // termination ("ערעור ... הפסקת לימודים") classifies as appeals, not leave.
+  const f = filename;
+  if (f.includes("מילואים")) return "reserves";
+  if (f.includes("ערעור")) return "appeals";
+  if (f.includes("פטור") || f.includes("הכר")) return "exemptions";
+  if (f.includes("הארכ") || f.includes("מכסת") || f.includes("נקודות זכות")) return "extension";
+  if (f.includes("חופשה") || f.includes("הפסקת")) return "leave";
+  if (f.includes("תואר") || f.includes("סיום") || f.includes("גמר")) return "graduation";
+  if (f.includes("ייעוץ")) return "advisor";
+  if (f.includes("רישום") || f.includes("ביטול")) return "registration";
+  return "general";
+}
+
+function sanitizeCategory(input, fallback = "general") {
+  const c = String(input || "").trim();
+  return ALLOWED_CATEGORY.has(c) ? c : (ALLOWED_CATEGORY.has(fallback) ? fallback : "general");
+}
+
+// Accepts an array or a comma/newline-separated string; trims, de-dupes, caps.
+function sanitizeKeywords(input) {
+  const arr = Array.isArray(input) ? input : String(input || "").split(/[,\n]/);
+  const seen = new Set();
+  const out = [];
+  for (const raw of arr) {
+    const k = String(raw || "").trim().slice(0, MAX_KEYWORD_LEN);
+    const key = k.toLowerCase();
+    if (k.length >= 2 && !seen.has(key)) { seen.add(key); out.push(k); }
+    if (out.length >= MAX_KEYWORDS) break;
+  }
+  return out;
+}
+
+function sanitizeDescription(input) {
+  return String(input || "").replace(/\s+/g, " ").trim().slice(0, MAX_DESC_LEN);
+}
+
 function defaultLabel(filename) {
   return path.basename(filename, path.extname(filename));
 }
@@ -108,6 +159,9 @@ async function scanDiskForms() {
       filename: safeName,
       label: defaultLabel(safeName),
       usage: detectUsageFromFilename(safeName),
+      category: detectCategoryFromFilename(safeName),
+      keywords: [],
+      description: "",
       uploadedAt: stat.mtime.toISOString(),
     });
   }
@@ -145,6 +199,9 @@ async function syncMetadataWithDisk(metadata) {
         filename: disk.filename,
         label: existing.label || disk.label,
         usage: ALLOWED_USAGE.has(existing.usage) ? existing.usage : disk.usage,
+        category: sanitizeCategory(existing.category, disk.category),
+        keywords: sanitizeKeywords(existing.keywords),
+        description: sanitizeDescription(existing.description),
         uploadedAt: existing.uploadedAt || disk.uploadedAt,
       };
     }
@@ -173,6 +230,9 @@ function toPublicForm(form, req) {
     filename: form.filename,
     label: form.label,
     usage: form.usage,
+    category: form.category || "general",
+    keywords: Array.isArray(form.keywords) ? form.keywords : [],
+    description: form.description || "",
     uploadedAt: form.uploadedAt,
     url: `${base}/files/${encoded}`,
   };
@@ -257,11 +317,18 @@ function tokenize(s = "") {
   return normHeb(s).split(" ").filter((t) => t.length >= 2);
 }
 
-// Token overlap between the query and a form's label+filename. Counts a query
+// Token overlap between the query and a form's label + filename + admin-authored
+// keywords + description. The extra signal is what lets a paraphrased request
+// ("מתי מגישים בקשה להארכה") resolve when the label alone is terse. Counts a query
 // token as matched if it equals, contains, or is contained by a form token
 // (handles Hebrew prefixes like ה/ב and minor spelling drift).
 function scoreForm(queryTokens, form) {
-  const formTokens = new Set([...tokenize(form.label), ...tokenize(form.filename)]);
+  const formTokens = new Set([
+    ...tokenize(form.label),
+    ...tokenize(form.filename),
+    ...(Array.isArray(form.keywords) ? form.keywords.flatMap((k) => tokenize(k)) : []),
+    ...tokenize(form.description || ""),
+  ]);
   let hits = 0;
   for (const qt of queryTokens) {
     for (const ft of formTokens) {
@@ -275,7 +342,12 @@ function scoreForm(queryTokens, form) {
 // stay free/instant and only genuinely fuzzy requests spend a (small) LLM call.
 async function pickWithLLM(query, forms) {
   if (!forms.length) return [];
-  const list = forms.map((f, i) => `${i}. ${f.label} [${f.filename}]`).join("\n");
+  const list = forms
+    .map((f, i) => {
+      const extra = [f.description, (f.keywords || []).join(", ")].filter(Boolean).join(" | ");
+      return `${i}. ${f.label} [${f.filename}]${extra ? ` - ${extra}` : ""}`;
+    })
+    .join("\n");
   const prompt = `A student is asking (in Hebrew) for a downloadable form/file from the department.
 Pick the SINGLE best matching file for their request, or none if nothing is a reasonable match.
 
@@ -346,6 +418,9 @@ adminRouter.post("/forms/upload", (req, res) => {
     const label = String(req.body.label || "").trim() || defaultLabel(safeName);
     const usageRaw = String(req.body.usage || "other").trim();
     const usage = ALLOWED_USAGE.has(usageRaw) ? usageRaw : "other";
+    const category = sanitizeCategory(req.body.category, detectCategoryFromFilename(safeName));
+    const keywords = sanitizeKeywords(req.body.keywords);
+    const description = sanitizeDescription(req.body.description);
 
     try {
       await ensureFilesDir();
@@ -364,6 +439,9 @@ adminRouter.post("/forms/upload", (req, res) => {
         filename: safeName,
         label,
         usage,
+        category,
+        keywords,
+        description,
         uploadedAt: new Date().toISOString(),
       };
 
@@ -377,6 +455,36 @@ adminRouter.post("/forms/upload", (req, res) => {
       res.status(500).json({ error: "שגיאת שרת בהעלאה" });
     }
   });
+});
+
+// Edit an existing file's metadata (label / usage / category / keywords /
+// description) without re-uploading - lets admins classify the existing library.
+adminRouter.patch("/forms/:filename", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const decoded = fixFilenameEncoding(decodeURIComponent(req.params.filename || ""));
+    const safeName = sanitizeFilename(decoded);
+    if (!safeName) return res.status(400).json({ error: "שם קובץ לא תקין" });
+
+    const metadata = await getFormsList();
+    const idx = metadata.findIndex((f) => f.filename === safeName);
+    if (idx < 0) return res.status(404).json({ error: "הקובץ לא נמצא" });
+
+    const cur = metadata[idx];
+    const patch = { ...cur };
+    if (req.body.label !== undefined) patch.label = String(req.body.label || "").trim() || defaultLabel(safeName);
+    if (req.body.usage !== undefined) patch.usage = ALLOWED_USAGE.has(String(req.body.usage)) ? String(req.body.usage) : "other";
+    if (req.body.category !== undefined) patch.category = sanitizeCategory(req.body.category, cur.category || "general");
+    if (req.body.keywords !== undefined) patch.keywords = sanitizeKeywords(req.body.keywords);
+    if (req.body.description !== undefined) patch.description = sanitizeDescription(req.body.description);
+
+    metadata[idx] = patch;
+    await writeMetadata(metadata);
+
+    res.json({ ok: true, form: await toAdminForm(patch, req) });
+  } catch (err) {
+    console.error("FORMS PATCH ERROR:", err);
+    res.status(500).json({ error: "שגיאה בעדכון הקובץ" });
+  }
 });
 
 adminRouter.delete("/forms/:filename", async (req, res) => {

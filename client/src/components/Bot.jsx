@@ -15,6 +15,7 @@ import {
   noFileMatchHtml,
   fileDisplayName,
 } from "./botTemplates.js";
+import { groupByCategory } from "./formCategories.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
@@ -51,6 +52,9 @@ export default function ChatBot() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   // Student files (from the admin "טפסים" store) shown as pills in the קבצים flow.
   const [files, setFiles] = useState([]);
+  // Collapse the file grid to a single "choose another" pill after a pick, so the
+  // bot's answer isn't buried under the full list.
+  const [filesExpanded, setFilesExpanded] = useState(true);
   // Topic pills show at chat start, hide once a topic is picked or a typed
   // question gets answered, and return via the header button or a new chat.
   const [showTopicPills, setShowTopicPills] = useState(true);
@@ -268,6 +272,7 @@ const showReservesGuidelines = () => {
   // invites a natural-language request. No semester needed.
   const loadFiles = async () => {
     setContext((p) => ({ ...p, topic: "files", semesterNum: null }));
+    setFilesExpanded(true);
     try {
       const res = await fetch(`${API_BASE}/api/forms`);
       const data = await res.json();
@@ -284,6 +289,7 @@ const showReservesGuidelines = () => {
     addBot(fileMatchesHtml([f]));
     setHasExchange(true);
     setAskedTyped(true);
+    setFilesExpanded(false);
   };
 
   const handleFileQuery = async (q) => {
@@ -302,6 +308,7 @@ const showReservesGuidelines = () => {
       addBot(matches.length ? fileMatchesHtml(matches) : noFileMatchHtml(data.all || files));
       setHasExchange(true);
       setAskedTyped(true);
+      setFilesExpanded(false);
     } catch {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאה בחיפוש הקובץ.</div>");
@@ -372,6 +379,12 @@ const showReservesGuidelines = () => {
     "px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-body font-medium " +
     "hover:bg-surface-raised transition-colors shadow-sm active:scale-95 font-sans " +
     "dark:border-bio-green-glow dark:text-bio-green-glow dark:hover:bg-surface-raised";
+
+  // Condensed variant for the file browser - smaller so many files stay readable.
+  const filePillBtn =
+    "px-2.5 py-1 rounded-full border border-bio-green/60 bg-surface-card text-bio-green text-caption font-medium " +
+    "hover:bg-surface-raised hover:border-bio-green transition-colors active:scale-95 font-sans " +
+    "dark:border-bio-green-glow/60 dark:text-bio-green-glow dark:hover:bg-surface-raised";
 
   const letterBtn =
     "w-full max-w-9 h-9 justify-self-center flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary " +
@@ -494,13 +507,26 @@ const showReservesGuidelines = () => {
             )}
 
             {context.topic === "files" && files.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-end">
-                {files.map((f) => (
-                  <button key={f.filename} className={pillBtn} onClick={() => chooseFile(f)}>
-                    {fileDisplayName(f)}
-                  </button>
-                ))}
-              </div>
+              filesExpanded ? (
+                <div className="flex flex-col items-end gap-2 w-full">
+                  {groupByCategory(files).map((group) => (
+                    <div key={group.value} className="flex flex-col items-end gap-1 w-full">
+                      <span className="text-[11px] font-bold text-brand-navy/70 dark:text-bio-green-glow/70 px-1">{group.label}</span>
+                      <div className="flex flex-wrap gap-1.5 justify-end">
+                        {group.items.map((f) => (
+                          <button key={f.filename} className={filePillBtn} onClick={() => chooseFile(f)}>
+                            {fileDisplayName(f)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-end w-full">
+                  <button className={pillBtn} onClick={() => setFilesExpanded(true)}>בחירת קובץ נוסף</button>
+                </div>
+              )
             )}
           </div>
           </div>
