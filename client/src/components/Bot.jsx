@@ -59,6 +59,8 @@ export default function ChatBot() {
   // question gets answered, and return via the header button or a new chat.
   const [showTopicPills, setShowTopicPills] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
+  // "positive" | "negative" - which thumb opened the feedback popup.
+  const [feedbackRating, setFeedbackRating] = useState(null);
   const [hasExchange, setHasExchange] = useState(false);
   const [askedTyped, setAskedTyped] = useState(false);
   const [recentQuestions, setRecentQuestions] = useState([]);
@@ -440,7 +442,7 @@ const showReservesGuidelines = () => {
               m={m}
               showActions={m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding}
               askedTyped={askedTyped}
-              onFeedback={() => setShowFeedback(true)}
+              onFeedback={(rating) => { setFeedbackRating(rating); setShowFeedback(true); }}
               onNewChat={startChat}
             />
           ))}
@@ -550,6 +552,7 @@ const showReservesGuidelines = () => {
 
       <FeedbackModal
         isOpen={showFeedback}
+        initialRating={feedbackRating}
         onClose={() => setShowFeedback(false)}
         onSubmit={() => { setShowFeedback(false); startChat(); }}
         questions={recentQuestions}

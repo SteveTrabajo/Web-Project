@@ -1,4 +1,4 @@
-import { RotateCcw, Check } from "lucide-react";
+import { RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
 
 // One chat bubble + (on the latest bot answer) the new-chat / feedback action icons.
 export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewChat }) {
@@ -20,16 +20,27 @@ export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewCha
       />
       {showActions && (
         <div className="flex items-center gap-1 mt-1.5">
-          {/* Review is offered only after a typed question, not a selection-only flow. */}
+          {/* Feedback is offered only after a typed question, not a selection-only flow.
+              Each thumb opens the feedback popup pre-set to that sentiment. */}
           {askedTyped && (
-            <button
-              onClick={onFeedback}
-              title="סיום שיחה והשארת משוב"
-              aria-label="סיום שיחה והשארת משוב"
-              className="p-2 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
-            >
-              <Check size={19} strokeWidth={2.5} />
-            </button>
+            <>
+              <button
+                onClick={() => onFeedback("positive")}
+                title="עזר לי"
+                aria-label="משוב חיובי - התשובה עזרה"
+                className="p-2 rounded-md text-content-muted hover:text-bio-green hover:bg-surface-raised transition-colors dark:hover:text-bio-green-glow"
+              >
+                <ThumbsUp size={18} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => onFeedback("negative")}
+                title="לא עזר"
+                aria-label="משוב שלילי - התשובה לא עזרה"
+                className="p-2 rounded-md text-content-muted hover:text-destructive hover:bg-surface-raised transition-colors"
+              >
+                <ThumbsDown size={18} strokeWidth={2} />
+              </button>
+            </>
           )}
           <button
             onClick={onNewChat}

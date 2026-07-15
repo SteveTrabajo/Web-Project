@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,13 +24,24 @@ const REASON_OPTIONS = [
 
 /**
  * FeedbackModal
- * Props: isOpen, onClose, onSubmit, questions, yearbook
+ * Props: isOpen, initialRating ("positive" | "negative" | null), onClose, onSubmit, questions, yearbook
  */
-export default function FeedbackModal({ isOpen, onClose, onSubmit, questions = [], yearbook = null }) {
+export default function FeedbackModal({ isOpen, initialRating = null, onClose, onSubmit, questions = [], yearbook = null }) {
   const [rating,  setRating]  = useState(null);
   const [reasons, setReasons] = useState([]);
   const [comment, setComment] = useState("");
   const [phase,   setPhase]   = useState("form");
+
+  // Each time the popup opens, start fresh seeded with the thumb the user clicked
+  // (the modal stays mounted, so its state would otherwise persist between opens).
+  useEffect(() => {
+    if (isOpen) {
+      setRating(initialRating);
+      setReasons([]);
+      setComment("");
+      setPhase("form");
+    }
+  }, [isOpen, initialRating]);
 
   const toggleReason = (key) => {
     setReasons((prev) =>
