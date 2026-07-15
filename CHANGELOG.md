@@ -1,5 +1,23 @@
 2026-07-15
 
+## Two-course relation answers - framing-aware, name the relationship, show the chain
+
+"Can I take X without Y" used to answer with a cheerful "✅ אפשר ללמוד במקביל", which
+was confusing (it ignored the "without" and rendered a corequisite as optional). Answers
+now parse the framing and state the actual relationship.
+
+### Modified
+
+- `ask.js` two-course block - detects `ללא`/`בלי` (without) vs together framing; names the
+  relation (prerequisite / corequisite) instead of a bare allowed/blocked verdict; and shows
+  the target's prerequisite chain. De-duplicates and orders the detected courses by first
+  mention, and checks relations in both directions so the answer is correct regardless of order.
+- `ask.js` `extractMultipleCourses` - fixed a latent bug: ASCII `\b` never matched Hebrew
+  course names (Hebrew letters aren't word chars) and single-digit tokens were dropped, so the
+  regex detector was effectively dead. Now uses Unicode lookaround boundaries and keeps numbers
+  (so "חדו״א 1" ≠ "חדו״א 2"). Course detection is the union of the LLM and regex detectors.
+- The single-course prerequisites handler now defers to the relation block when two courses are named.
+
 ## Bot "קבצים" flow - download student files by pill or natural language
 
 Students can now get downloadable forms/files directly in the chat: after picking a

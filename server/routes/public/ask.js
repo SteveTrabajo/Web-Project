@@ -222,10 +222,16 @@ function extractMultipleCourses(question, allCourses, qNorm = null) {
   for (const c of allCourses) {
     if (!c.nameNorm) continue;
 
-    const words = c.nameNorm.split(" ").filter(w => w.length >= 2);
+    // Keep multi-char words and standalone numbers - the number distinguishes
+    // e.g. "חדו״א 1" from "חדו״א 2"; drop lone Hebrew letters as too weak.
+    const words = c.nameNorm.split(" ").filter((w) => w.length >= 2 || /\d/.test(w));
+    if (!words.length) continue;
 
-    const found = words.every(w =>
-      new RegExp(`\\b${escapeRegex(w)}\\b`, "i").test(q)
+    // ASCII \b does not fire between Hebrew letters, so it never matched Hebrew
+    // course names. Guard each word with Unicode lookarounds against adjacent
+    // letters/digits instead (so "חדוא" is not matched inside a longer word).
+    const found = words.every((w) =>
+      new RegExp(`(?<![\\p{L}\\d])${escapeRegex(w)}(?![\\p{L}\\d])`, "iu").test(q)
     );
 
     if (found) matches.push(c);
@@ -903,7 +909,15 @@ router.post("/ask", async (req, res) => {
       ? classification.courses.map((c) => matchCourse(c, allCourses, nameIndex)).filter(Boolean)
       : [];
 
-    const coursesFromQuestion = llmCourses.length ? llmCourses : detectedCourses;
+    // Union of both detectors (LLM first, so courseMain stays the semantic pick):
+    // the LLM can drop a course after "ללא/בלי" (without), while the literal
+    // regex detector still finds it - keeping both is what lets a two-course
+    // "can I take X without Y" reach the relation logic instead of looking single.
+    const coursesFromQuestion = [...llmCourses];
+    const seenQuestionCodes = new Set(llmCourses.map((c) => c.courseCode));
+    for (const c of detectedCourses) {
+      if (!seenQuestionCodes.has(c.courseCode)) { coursesFromQuestion.push(c); seenQuestionCodes.add(c.courseCode); }
+    }
     const courseMain = coursesFromQuestion[0] || null;
 
     // Emotion
@@ -972,8 +986,9 @@ router.post("/ask", async (req, res) => {
       });
     }
 
-    // Prerequisites (with cache)
-    if (courseMain && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
+    // Prerequisites (with cache). Single-course only: when the student names two
+    // courses (e.g. "can I take X without Y") the relation block below handles it.
+    if (courseMain && coursesFromQuestion.length < 2 && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
       const prereqs = await getAllPrerequisitesRecursiveCached(yearbookId, courseMain.courseCode);
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
 
@@ -1020,78 +1035,73 @@ router.post("/ask", async (req, res) => {
       });
     }
 
-    // Relations (2+)
- if (coursesFromQuestion.length >= 2) {
-  logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
-  const prerequisites = new Set();
-  const parallels = new Set();
+    // Relations (2+): the student named a target course (first) and one or more
+    // others, asking how they relate ("with"/"without"/"before"). Rather than a
+    // bare allowed/blocked verdict, name the actual relationship and, for
+    // prerequisites, show the dependency chain. Negation ("ללא"/"בלי") flips the
+    // meaning: a prereq/coreq becomes the reason the answer is "no".
+    if (coursesFromQuestion.length >= 2) {
+      // Extraction returns catalog order and can repeat a course; work off a
+      // de-duplicated list ordered by first mention, so the FIRST course named is
+      // the target (the one the student wants to take).
+      const seenCodes = new Set();
+      const ordered = coursesFromQuestion
+        .filter((c) => c?.courseCode && !seenCodes.has(c.courseCode) && seenCodes.add(c.courseCode))
+        .map((c) => {
+          const pos = qNorm.indexOf(c.nameNorm || normalizeHebrew(c.courseName));
+          return { c, pos: pos < 0 ? Number.MAX_SAFE_INTEGER : pos };
+        })
+        .sort((a, b) => a.pos - b.pos)
+        .map((x) => x.c);
 
-  const target = coursesFromQuestion[0];
+      if (ordered.length >= 2) {
+        logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
 
-  for (let i = 0; i < coursesFromQuestion.length; i++) {
-    for (let j = i + 1; j < coursesFromQuestion.length; j++) {
-      const A = coursesFromQuestion[i];
-      const B = coursesFromQuestion[j];
+        const target = ordered[0];
+        const others = ordered.slice(1);
+        const asksWithout = qNorm.includes(normalizeHebrew("ללא")) || qNorm.includes(normalizeHebrew("בלי"));
 
-      const prereqsA = await getAllPrerequisitesRecursiveCached(yearbookId, A.courseCode);
-      const prereqsB = await getAllPrerequisitesRecursiveCached(yearbookId, B.courseCode);
+        // Classify each other course relative to the target, checking both
+        // directions so the answer is correct regardless of mention order.
+        const targetPrereqs = await getAllPrerequisitesRecursiveCached(yearbookId, target.courseCode);
+        const prereqCodes = new Set(targetPrereqs.map((p) => p.code));
+        const prereqNames = []; // others that must be completed before the target
+        const coreqNames = [];  // others that are parallel companions of the target
+        for (const other of others) {
+          const relTO = await getRelationType(yearbookId, target.courseCode, other.courseCode);
+          const relOT = await getRelationType(yearbookId, other.courseCode, target.courseCode);
+          if (relTO === "COREQUISITE" || relOT === "COREQUISITE") coreqNames.push(other.courseName);
+          else if (prereqCodes.has(other.courseCode) || relTO === "PREREQUISITE") prereqNames.push(other.courseName);
+        }
 
-      if (A.courseCode === target.courseCode &&
-          prereqsA.some(p => p.code === B.courseCode)) {
-        prerequisites.add(B.courseName);
-      }
+        const bold = (s) => `<b>${s}</b>`;
+        const joinHeb = (arr) => arr.map(bold).join(" ו־");
+        const isPrereq = (n) => (n > 1 ? "הם דרישות קדם" : "הוא דרישת קדם");
+        const isCoreq = (n) => (n > 1 ? "הם קורסים צמודים" : "הוא קורס צמוד");
+        // The dependency chain the student can act on - the target's own prerequisites.
+        const chainHtml = targetPrereqs.length
+          ? `<br/><span class="text-gray-500">כל קורסי הקדם של ${target.courseName}: ${targetPrereqs.map((p) => p.name).join(", ")}</span>`
+          : "";
 
-      if (B.courseCode === target.courseCode &&
-          prereqsB.some(p => p.code === A.courseCode)) {
-        prerequisites.add(A.courseName);
-      }
+        let answer;
+        if (prereqNames.length) {
+          answer = asksWithout
+            ? `⛔ לא - ${joinHeb(prereqNames)} ${isPrereq(prereqNames.length)} של ${bold(target.courseName)}, ולכן חובה לסיים ${prereqNames.length > 1 ? "אותם" : "אותו"} לפני.${chainHtml}`
+            : `⛔ לא ניתן ללמוד יחד - קודם צריך לסיים ${joinHeb(prereqNames)}, ואז לקחת ${bold(target.courseName)}.${chainHtml}`;
+        } else if (coreqNames.length) {
+          answer = asksWithout
+            ? `⚠️ לרוב לא - ${joinHeb(coreqNames)} ${isCoreq(coreqNames.length)} של ${bold(target.courseName)}, שיש ללמוד באותו סמסטר (או להשלים לפני). מומלץ לוודא מול היועץ/ת האקדמי/ת.${chainHtml}`
+            : `✅ כן - ${joinHeb(coreqNames)} ${isCoreq(coreqNames.length)} של ${bold(target.courseName)}, כך שנלמדים באותו סמסטר.${chainHtml}`;
+        } else {
+          const pairNames = ordered.map((c) => c.courseName).filter(Boolean);
+          answer = asksWithout
+            ? `ℹ️ אין תלות רשומה בין הקורסים${pairNames.length ? ` (${pairNames.join(" ו־")})` : ""}, כך שסביר שניתן לקחת את ${bold(target.courseName)} גם בלי ${joinHeb(others.map((o) => o.courseName))}. עדיין מומלץ לוודא מול היועץ/ת האקדמי/ת או השנתון.`
+            : `ℹ️ אין לי מידע על דרישת קדם בין הקורסים האלה${pairNames.length ? ` (${pairNames.join(" ו־")})` : ""}.<br/>סביר שניתן לקחת אותם יחד, אך איני יכול/ה להתחייב על כך - מומלץ לוודא מול היועץ/ת האקדמי/ת או השנתון.`;
+        }
 
-      // Corequisite — only when a relation record exists in Firestore.
-      const relAB = await getRelationType(yearbookId, A.courseCode, B.courseCode);
-      const relBA = await getRelationType(yearbookId, B.courseCode, A.courseCode);
-
-      if (relAB === "COREQUISITE" || relBA === "COREQUISITE") {
-        parallels.add(`${A.courseName} ו־${B.courseName}`);
+        return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
       }
     }
-  }
-
-  let answer = "";
-
-  // prerequisite block
-  if (prerequisites.size) {
-    const list = [...prerequisites];
-
-    answer += `⛔ לא ניתן ללמוד את הקורסים יחד.<br/>`;
-
-    if (list.length === 1) {
-      answer += `📌 קודם צריך לסיים <b>${list[0]}</b>, ואז לקחת <b>${target.courseName}</b>.<br/>`;
-    } else {
-      answer += `📌 קודם צריך לסיים:<br/>
-${list.map(c => `• ${c}`).join("<br/>")}
-<br/>ואז לקחת <b>${target.courseName}</b>.<br/>`;
-    }
-
-    return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
-  }
-
-  // corequisite/parallel reply
-  if (parallels.size) {
-    answer += `✅ אפשר ללמוד במקביל 🙂<br/>
-${[...parallels].map(c => `• ${c}`).join("<br/>")}`;
-
-    return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
-  }
-
-  // No prerequisite/corequisite record between the courses. Absence of a record
-  // is NOT a confirmation they are compatible - the yearbook data may be
-  // incomplete - so answer honestly rather than giving a definitive "yes".
-  const pairNames = coursesFromQuestion.map((c) => c.courseName).filter(Boolean);
-  answer += `ℹ️ אין לי מידע על דרישת קדם בין הקורסים האלה${
-    pairNames.length ? ` (${pairNames.join(" ו־")})` : ""
-  }.<br/>סביר שניתן לקחת אותם יחד, אך איני יכול/ה להתחייב על כך - מומלץ לוודא מול היועץ/ת האקדמי/ת או השנתון.`;
-  return res.json({ html: `<div class="text-sm leading-6">${answer}</div>` });
-}
 
 
     // 0) Direct contact lookup (e.g. "מי ראש המחלקה") from ניהול-סמסטר contacts.
