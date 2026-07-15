@@ -537,6 +537,10 @@ function miluimHtml(text) {
     .replace(/\n/g, "<br/>");
 }
 
+// Appended to every reserve-duty answer - the framework docs are the source, but
+// eligibility is decided officially by the college, so we never present it as final.
+const MILUIM_DISCLAIMER = `<div class="mt-2 pt-2 border-t border-amber-300/40 text-xs text-amber-700 dark:text-amber-400">⚠️ המידע עלול להיות לא מדויק ולכן מומלץ בכל מקרה לבדוק זכאות באתר המכללה.</div>`;
+
 // Grounded QA over the selected reserve-duty framework document. Returns the
 // answer text, or null when there is no document for the chosen mitve.
 async function answerReserves(question, reservesMitve, reservesGroup, historyText) {
@@ -764,7 +768,7 @@ router.post("/ask", async (req, res) => {
       const reserveAnswer = await answerReserves(question, reservesMitve, reservesGroup, historyText);
       if (reserveAnswer) {
         logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: "reserves", answerSource: "reserves_framework", wasAnswered: true });
-        return res.json({ html: `<div class="text-sm leading-6 font-sans">${miluimHtml(reserveAnswer)}</div>` });
+        return res.json({ html: `<div class="text-sm leading-6 font-sans">${miluimHtml(reserveAnswer)}${MILUIM_DISCLAIMER}</div>` });
       }
     }
 
