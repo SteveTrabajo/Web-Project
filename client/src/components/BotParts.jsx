@@ -79,7 +79,11 @@ export function ChatInput({
   typingTimerRef,
   isBotResponding,
   hasYearbook,
+  locked = false,
 }) {
+  // `locked` is driven by the parent: the box stays blocked through every guided
+  // selection step (yearbook -> topic -> semester -> ...) and opens only once
+  // there is no pending choice, so free-text can't jump ahead of the flow.
   return (
     <div className="px-3 sm:px-6 py-3 bg-surface-card border-t border-surface-border shadow-[0_-4px_10px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col gap-3">
@@ -110,7 +114,7 @@ export function ChatInput({
             )}
 
             <div
-              className={`star-border relative rounded-2xl border border-surface-border p-0.5 ${isBotResponding ? "star-border--responding" : ""}`}
+              className={`star-border relative rounded-2xl border border-surface-border p-0.5 ${isBotResponding || locked ? "star-border--responding" : ""} ${locked ? "opacity-70" : ""}`}
             >
               <span className="star-border__points star-border__points--bottom" aria-hidden="true" />
               <span className="star-border__points star-border__points--top" aria-hidden="true" />
@@ -118,6 +122,7 @@ export function ChatInput({
                 type="text"
                 maxLength={150}
                 value={input}
+                disabled={locked}
                 onChange={(e) => {
                   const val = e.target.value.slice(0, 150);
                   setInput(val);
@@ -125,13 +130,15 @@ export function ChatInput({
                   typingTimerRef.current = setTimeout(() => fetchSuggestions(val), 300);
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                onKeyDown={(e) => e.key === "Enter" && onSend()}
-                placeholder={hasYearbook ? "שאל על קורס (למשל: דרישות קדם לביוכימיה)..." : "אנא בחר שנתון קודם..."}
-                className="w-full bg-surface-page rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-12 sm:pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10"
+                onKeyDown={(e) => e.key === "Enter" && !locked && onSend()}
+                placeholder={locked ? (hasYearbook ? "יש לבחור מהאפשרויות שלמעלה כדי להמשיך..." : "יש לבחור שנתון מהרשימה כדי להתחיל...") : "שאל על קורס (למשל: דרישות קדם לביוכימיה)..."}
+                className="w-full bg-surface-page rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-12 sm:pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10 disabled:cursor-not-allowed"
               />
               <button
                 onClick={onSend}
-                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20"
+                disabled={locked}
+                aria-label="שליחה"
+                className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 bg-brand-navy dark:bg-bio-teal text-white p-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg active:scale-95 z-20 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />

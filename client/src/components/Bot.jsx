@@ -182,6 +182,13 @@ export default function ChatBot() {
       return;
     }
 
+    // Courses / advisor answers are semester-specific: if the student typed a
+    // question before choosing one, ask for the semester and re-show the pills.
+    if ((context.topic === "courses" || context.topic === "advisor") && !context.semesterNum) {
+      addBot("<b class='font-sans'>כדי לענות על השאלה יש לבחור סמסטר:</b>", { controls: "semester" });
+      return;
+    }
+
     setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
     setMessages((p) => [...p, { id: loadingId, sender: "bot", html: thinkingHtml() }]);
@@ -354,15 +361,23 @@ const showReservesGuidelines = () => {
   };
 
   const loadRequiredCourses = async (yb, sem) => {
-    addBot(thinkingHtml("שולף נתונים מהשנתון"));
+    setIsBotResponding(true);
+    const loadingId = crypto.randomUUID();
+    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: thinkingHtml("שולף נתונים מהשנתון") }]);
     try {
       const res = await fetch(`${API_BASE}/api/requiredcourses/${yb}/semester_${sem}`);
       const data = await res.json();
-      if (!res.ok || !data.courses?.length) return addBot("<div class='font-sans'>לא נמצאו קורסים.</div>");
+      setMessages((p) => p.filter((m) => m.id !== loadingId));
+      if (!res.ok || !data.courses?.length) { addBot("<div class='font-sans'>לא נמצאו קורסים.</div>"); return; }
 
       addBot(requiredCoursesHtml(data.courses, sem), { variant: "panel" });
       setHasExchange(true);
-    } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
+    } catch (e) {
+      setMessages((p) => p.filter((m) => m.id !== loadingId));
+      addBot("<div class='font-sans'>שגיאה.</div>");
+    } finally {
+      setIsBotResponding(false);
+    }
   };
 
   const chooseLetter = (L) => {
@@ -508,6 +523,11 @@ const showReservesGuidelines = () => {
     }
   };
 
+  // Lock at the start (no yearbook yet) and while a bot response is loading
+  // (e.g. fetching a semester's courses). Otherwise typing is allowed - a typed
+  // question without a chosen semester is handled by the guard in sendMessage.
+  const inputLocked = !context.yearbook || isBotResponding;
+
   return (
     <div
       className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-2xl shadow-2xl border border-surface-border ring-1 ring-black/5 flex flex-col overflow-hidden font-sans"
@@ -586,6 +606,7 @@ const showReservesGuidelines = () => {
         typingTimerRef={typingTimerRef}
         isBotResponding={isBotResponding}
         hasYearbook={!!context.yearbook}
+        locked={inputLocked}
       />
 
       <FeedbackModal
