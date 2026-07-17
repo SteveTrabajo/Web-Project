@@ -1,23 +1,33 @@
 import { RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
 
 // One chat bubble + (on the latest bot answer) the new-chat / feedback action icons.
-export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewChat }) {
+// `controls` is optional selection UI (pills) rendered INSIDE a bot bubble, so a
+// prompt and its choices read as a single message.
+export function MessageBubble({ m, showActions, controls, askedTyped, onFeedback, onNewChat }) {
   const isPanel = m.sender === "bot" && m.variant === "panel";
-  const colAlign = m.sender === "user" ? "items-start" : isPanel ? "items-center" : "items-end";
+  const isUser = m.sender === "user";
+  const hasControls = !!controls;
+  const colAlign = isUser ? "items-start" : isPanel ? "items-center" : "items-end";
+
   return (
     <div className={`flex flex-col ${colAlign} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
-      <div
-        className={
-          isPanel
-            ? "bot-bubble w-full max-w-2xl break-words"
-            : `max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
-                m.sender === "user"
-                  ? "bg-brand-navy text-white rounded-tl-none font-sans shadow-sm"
-                  : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans shadow-sm"
-              }`
-        }
-        dangerouslySetInnerHTML={{ __html: m.html }}
-      />
+      {isPanel ? (
+        <div className="bot-bubble w-full max-w-2xl break-words" dangerouslySetInnerHTML={{ __html: m.html }} />
+      ) : isUser ? (
+        <div
+          className="max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tl-none leading-relaxed text-body break-words [overflow-wrap:anywhere] bg-brand-navy text-white font-sans shadow-sm"
+          dangerouslySetInnerHTML={{ __html: m.html }}
+        />
+      ) : (
+        <div
+          className={`px-4 py-2.5 rounded-2xl rounded-tr-none leading-relaxed text-body break-words [overflow-wrap:anywhere] bot-bubble bg-surface-card border border-surface-border text-content-primary font-sans shadow-sm ${
+            hasControls ? "w-fit max-w-[92%] sm:max-w-xl" : "max-w-[85%] sm:max-w-[75%]"
+          }`}
+        >
+          <div dangerouslySetInnerHTML={{ __html: m.html }} />
+          {hasControls && <div className="mt-3">{controls}</div>}
+        </div>
+      )}
       {showActions && (
         <div className="flex items-center gap-1 mt-1.5">
           {/* Feedback is offered only after a typed question, not a selection-only flow.

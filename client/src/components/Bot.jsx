@@ -62,9 +62,6 @@ export default function ChatBot() {
   // Collapse the file grid to a single "choose another" pill after a pick, so the
   // bot's answer isn't buried under the full list.
   const [filesExpanded, setFilesExpanded] = useState(true);
-  // Topic pills show at chat start, hide once a topic is picked or a typed
-  // question gets answered, and return via the header button or a new chat.
-  const [showTopicPills, setShowTopicPills] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
   // "positive" | "negative" - which thumb opened the feedback popup.
   const [feedbackRating, setFeedbackRating] = useState(null);
@@ -124,7 +121,11 @@ export default function ChatBot() {
   }, []);
 
 
-  const addBot = (html) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html }]);
+  // Bot messages can carry a `variant` ("panel") and an attached `controls` key.
+  // The controls (selection pills) render INSIDE the bubble via MessageBubble, so
+  // the bot's prompt and its choices read as a single message - like ChatGPT/Claude.
+  const addBot = (html, opts = {}) =>
+    setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "bot", html, variant: opts.variant || null, controls: opts.controls || null }]);
   const addUser = (text) => setMessages((p) => [...p, { id: crypto.randomUUID(), sender: "user", html: text }]);
 
   // Compact plain-text form of a bubble, used to send conversation context to the server.
@@ -141,9 +142,8 @@ export default function ChatBot() {
     setHasExchange(false);
     setAskedTyped(false);
     setRecentQuestions([]);
-    setShowTopicPills(true);
     setContext({ yearbook: null, semesterNum: null, semesterKey: null, topic: null, lastNameLetter: null, track: null });
-    addBot(greetingHtml());
+    addBot(greetingHtml(), { controls: "yearbook" });
   };
 
   const loadYearbooks = async () => {
@@ -212,7 +212,6 @@ export default function ChatBot() {
       addBot(data.html || "לא נמצאה תשובה בבסיס הנתונים.");
       setHasExchange(true);
       setAskedTyped(true);
-      setShowTopicPills(false);
     } catch (e) {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאת שרת.</div>");
@@ -224,6 +223,19 @@ export default function ChatBot() {
   const chooseYearbook = (y) => {
     addUser(y.label);
     setContext((p) => ({ ...p, yearbook: y.id }));
+    addBot('<b class="font-sans">מצוין! במה אפשר לעזור? אפשר לבחור נושא:</b>', { controls: "topic" });
+  };
+
+  // Re-open topic selection from the header, as a fresh bot message.
+  const promptTopic = () => {
+    setContext((p) => ({ ...p, topic: null, semesterNum: null, selectedMitve: null, selectedGroup: null }));
+    addBot('<b class="font-sans">אפשר לבחור נושא:</b>', { controls: "topic" });
+  };
+
+  // Re-open the semester picker from the header, as a fresh bot message.
+  const promptSemester = () => {
+    setContext((p) => ({ ...p, semesterNum: null }));
+    addBot('<b class="font-sans">בחר/י סמסטר:</b>', { controls: "semester" });
   };
 
   window.handleReservesMitve = (mitveKey, mitveLabel) => handleReservesMitve(mitveKey, mitveLabel);
@@ -261,7 +273,6 @@ const showReservesGuidelines = () => {
   const chooseTopic = (t) => {
     const labels = { courses: "קורסי חובה", advisor: "יועץ אקדמי", exceptional: "רישום חריג", reserves: "מילואים", files: "טפסים" };
     addUser(labels[t]);
-    setShowTopicPills(false);
     // Leaving the reserves flow: drop the selected mitve/group so later questions
     // aren't answered from the reserve-duty document.
     if (t !== "reserves") setContext((p) => ({ ...p, selectedMitve: null, selectedGroup: null }));
@@ -277,7 +288,7 @@ const showReservesGuidelines = () => {
     } else {
       // Reset semester so the picker re-shows, even if one was chosen earlier this session.
       setContext((p) => ({ ...p, topic: t, semesterNum: null }));
-      addBot("<b class='font-sans'>בחר/י סמסטר:</b>");
+      addBot("<b class='font-sans'>בחר/י סמסטר:</b>", { controls: "semester" });
     }
   };
 
@@ -291,7 +302,8 @@ const showReservesGuidelines = () => {
       const data = await res.json();
       const list = Array.isArray(data.forms) ? data.forms : [];
       setFiles(list);
-      addBot(list.length ? filesPromptHtml() : noFileMatchHtml([]));
+      if (list.length) addBot(filesPromptHtml(), { controls: "files" });
+      else addBot(noFileMatchHtml([]));
     } catch {
       addBot("<div class='font-sans'>שגיאה בטעינת הקבצים.</div>");
     }
@@ -299,10 +311,10 @@ const showReservesGuidelines = () => {
 
   const chooseFile = (f) => {
     addUser(fileDisplayName(f));
-    addBot(fileMatchesHtml([f]));
+    setFilesExpanded(false);
+    addBot(fileMatchesHtml([f]), { controls: "files" });
     setHasExchange(true);
     setAskedTyped(true);
-    setFilesExpanded(false);
   };
 
   const handleFileQuery = async (q) => {
@@ -318,10 +330,10 @@ const showReservesGuidelines = () => {
       const data = await res.json();
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       const matches = data.matches || [];
-      addBot(matches.length ? fileMatchesHtml(matches) : noFileMatchHtml(data.all || files));
+      setFilesExpanded(false);
+      addBot(matches.length ? fileMatchesHtml(matches) : noFileMatchHtml(data.all || files), { controls: "files" });
       setHasExchange(true);
       setAskedTyped(true);
-      setFilesExpanded(false);
     } catch {
       setMessages((p) => p.filter((m) => m.id !== loadingId));
       addBot("<div class='font-sans'>שגיאה בחיפוש הקובץ.</div>");
@@ -336,7 +348,7 @@ const showReservesGuidelines = () => {
     setContext(updated);
     if (context.topic === "courses") loadRequiredCourses(updated.yearbook, n);
     else if (context.topic === "advisor") {
-      addBot("<b class='font-sans'>מה האות הראשונה של שם המשפחה?</b>");
+      addBot("<b class='font-sans'>מה האות הראשונה של שם המשפחה?</b>", { controls: "letters" });
       setContext((p) => ({ ...p, topic: "advisor_input", semesterNum: n }));
     }
   };
@@ -348,7 +360,7 @@ const showReservesGuidelines = () => {
       const data = await res.json();
       if (!res.ok || !data.courses?.length) return addBot("<div class='font-sans'>לא נמצאו קורסים.</div>");
 
-      addBot(requiredCoursesHtml(data.courses, sem), "panel");
+      addBot(requiredCoursesHtml(data.courses, sem), { variant: "panel" });
       setHasExchange(true);
     } catch (e) { addBot("<div class='font-sans'>שגיאה.</div>"); }
   };
@@ -357,7 +369,7 @@ const showReservesGuidelines = () => {
     addUser(L);
     if (context.semesterNum >= 5) {
       setContext(p => ({ ...p, lastNameLetter: L, topic: "track_input" }));
-      addBot("<b class='font-sans'>בחר התמחות:</b>");
+      addBot("<b class='font-sans'>בחר התמחות:</b>", { controls: "tracks" });
     } else {
       loadAdvisor(L, context.semesterNum, null);
     }
@@ -404,6 +416,98 @@ const showReservesGuidelines = () => {
     "transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-navy hover:text-brand-navy hover:bg-surface-raised text-body font-bold font-sans " +
     "dark:hover:border-bio-green-glow dark:hover:text-bio-green-glow";
 
+  // Selection controls attached to a bot message; rendered INSIDE that bubble so
+  // the prompt and its choices form one unit. dir=rtl on the bubble makes
+  // flex-wrap flow from the right, so no explicit justify-end is needed.
+  const renderControls = (type) => {
+    switch (type) {
+      case "yearbook":
+        if (loadingYearbooks)
+          return (
+            <div className="flex items-center gap-2 text-bio-green dark:text-bio-green-glow text-body">
+              <span className="h-4 w-4 rounded-full border-2 border-bio-green/30 border-t-bio-green dark:border-bio-green-glow/30 dark:border-t-bio-green-glow animate-spin" />
+              <span>טוען שנתונים...</span>
+            </div>
+          );
+        if (yearbooksError)
+          return (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-red-500 text-body">תקלה בחיבור לשרת הנתונים.</span>
+              <button className={pillBtn} onClick={loadYearbooks}>נסה שוב</button>
+            </div>
+          );
+        return (
+          <div className="flex flex-wrap gap-2">
+            {yearbooks.map((y) => (
+              <button key={y.id} className={pillBtn} onClick={() => chooseYearbook(y)}>{y.label}</button>
+            ))}
+          </div>
+        );
+
+      case "topic":
+        return (
+          <div className="flex flex-wrap gap-2.5">
+            <button className={pillBtn} onClick={() => chooseTopic("courses")}>קורסי חובה</button>
+            <button className={pillBtn} onClick={() => chooseTopic("advisor")}>יועץ אקדמי</button>
+            <button className={pillBtn} onClick={() => chooseTopic("exceptional")}>רישום חריג</button>
+            <button className={pillBtn} onClick={() => chooseTopic("reserves")}>מילואים</button>
+            <button className={pillBtn} onClick={() => chooseTopic("files")}>טפסים</button>
+          </div>
+        );
+
+      case "semester":
+        return (
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <button key={n} className={pillBtn} onClick={() => chooseSemester(n)}>סמסטר {n}</button>
+            ))}
+          </div>
+        );
+
+      case "letters":
+        return (
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2 max-w-md">
+            {HEB_LETTERS.map((L) => (
+              <button key={L} className={letterBtn} onClick={() => chooseLetter(L)}>{L}</button>
+            ))}
+          </div>
+        );
+
+      case "tracks":
+        return (
+          <div className="flex flex-wrap gap-2.5">
+            {TRACKS.map((t) => (
+              <button key={t} className={pillBtn} onClick={() => { addUser(t); loadAdvisor(context.lastNameLetter, context.semesterNum, t); }}>{t}</button>
+            ))}
+          </div>
+        );
+
+      case "files":
+        if (!files.length) return null;
+        return filesExpanded ? (
+          <div className="flex flex-col gap-2 w-full">
+            {groupByCategory(files).map((group) => (
+              <div key={group.value} className="flex flex-col gap-1 w-full">
+                <span className="text-[11px] font-bold text-brand-navy/70 dark:text-bio-green-glow/70">{group.label}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.items.map((f) => (
+                    <button key={f.filename} className={filePillBtn} onClick={() => chooseFile(f)}>
+                      {fileDisplayName(f)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button className={pillBtn} onClick={() => setFilesExpanded(true)}>בחירת קובץ נוסף</button>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
       className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-2xl shadow-2xl border border-surface-border ring-1 ring-black/5 flex flex-col overflow-hidden font-sans"
@@ -422,18 +526,18 @@ const showReservesGuidelines = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Brings the topic pills back on demand after they were dismissed */}
-          {context.yearbook && (context.topic || !showTopicPills) && (
+          {/* Re-opens topic selection as a fresh bot message */}
+          {context.yearbook && context.topic && (
             <button
-              onClick={() => { setContext(p => ({ ...p, topic: null, semesterNum: null, selectedMitve: null, selectedGroup: null })); setShowTopicPills(true); }}
+              onClick={promptTopic}
               className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
             >
               בחירת נושא
             </button>
           )}
-          {context.topic && context.topic !== "files" && (
+          {context.semesterNum && ["courses", "advisor", "advisor_input", "track_input"].includes(context.topic) && (
             <button
-              onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
+              onClick={promptSemester}
               className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
             >
               שינוי סמסטר
@@ -451,101 +555,20 @@ const showReservesGuidelines = () => {
           className="chat-scroll flex-1 overflow-y-auto p-3 sm:p-5 bg-surface-page"
         >
           <div dir="rtl" className="space-y-4">
-          {messages.map((m, idx) => (
-            <MessageBubble
-              key={m.id}
-              m={m}
-              showActions={m.sender === "bot" && idx === messages.length - 1 && hasExchange && !isBotResponding}
-              askedTyped={askedTyped}
-              onFeedback={(rating) => { setFeedbackRating(rating); setShowFeedback(true); }}
-              onNewChat={startChat}
-            />
-          ))}
-
-          {/* Quick action pills */}
-          <div className="pt-4 flex flex-col gap-4 items-end">
-            {!context.yearbook && (
-              <div className="flex flex-wrap gap-2 justify-end items-center">
-                {loadingYearbooks ? (
-                  <div className="flex items-center gap-2 text-bio-green dark:text-bio-green-glow text-body font-sans">
-                    <span className="h-4 w-4 rounded-full border-2 border-bio-green/30 border-t-bio-green dark:border-bio-green-glow/30 dark:border-t-bio-green-glow animate-spin" />
-                    <span>טוען שנתונים...</span>
-                  </div>
-                ) : yearbooksError ? (
-                  <div className="flex items-center gap-3 font-sans">
-                    <span className="text-red-500 text-body">תקלה בחיבור לשרת הנתונים.</span>
-                    <button className={pillBtn} onClick={loadYearbooks}>נסה שוב</button>
-                  </div>
-                ) : (
-                  yearbooks.map((y) => (
-                    <button key={y.id} className={pillBtn} onClick={() => chooseYearbook(y)}>{y.label}</button>
-                  ))
-                )}
-              </div>
-            )}
-
-            {context.yearbook && !context.topic && showTopicPills && (
-              <div className="flex flex-col items-end gap-3 w-full">
-                <div className="flex items-center gap-2 mb-1 text-brand-navy dark:text-bio-green-glow text-heading px-1 animate-in fade-in slide-in-from-right-2 duration-300">
-                  <span>אפשר לבחור נושא כמו</span>
-                </div>
-                <div className="flex flex-wrap gap-3 justify-end">
-                  <button className={pillBtn} onClick={() => chooseTopic("courses")}>קורסי חובה</button>
-                  <button className={pillBtn} onClick={() => chooseTopic("advisor")}>יועץ אקדמי</button>
-                  <button className={pillBtn} onClick={() => chooseTopic("exceptional")}>רישום חריג</button>
-                  <button className={pillBtn} onClick={() => chooseTopic("reserves")}>מילואים</button>
-                  <button className={pillBtn} onClick={() => chooseTopic("files")}>טפסים</button>
-                </div>
-              </div>
-            )}
-
-            {context.topic && !context.semesterNum && (context.topic === "courses" || context.topic === "advisor") && (
-              <div className="flex flex-wrap gap-2 justify-end">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                  <button key={n} className={pillBtn} onClick={() => chooseSemester(n)}>סמסטר {n}</button>
-                ))}
-              </div>
-            )}
-
-            {context.topic === "advisor_input" && (
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 max-w-md bg-surface-card p-3 sm:p-5 rounded-2xl shadow-lg border border-surface-border animate-in fade-in zoom-in duration-200">
-                {HEB_LETTERS.map((L) => (
-                  <button key={L} className={letterBtn} onClick={() => chooseLetter(L)}>{L}</button>
-                ))}
-              </div>
-            )}
-
-            {context.topic === "track_input" && (
-              <div className="flex flex-wrap gap-3 justify-end">
-                {TRACKS.map((t) => (
-                  <button key={t} className={pillBtn} onClick={() => { addUser(t); loadAdvisor(context.lastNameLetter, context.semesterNum, t); }}>{t}</button>
-                ))}
-              </div>
-            )}
-
-            {context.topic === "files" && files.length > 0 && (
-              filesExpanded ? (
-                <div className="flex flex-col items-end gap-2 w-full">
-                  {groupByCategory(files).map((group) => (
-                    <div key={group.value} className="flex flex-col items-end gap-1 w-full">
-                      <span className="text-[11px] font-bold text-brand-navy/70 dark:text-bio-green-glow/70 px-1">{group.label}</span>
-                      <div className="flex flex-wrap gap-1.5 justify-end">
-                        {group.items.map((f) => (
-                          <button key={f.filename} className={filePillBtn} onClick={() => chooseFile(f)}>
-                            {fileDisplayName(f)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex justify-end w-full">
-                  <button className={pillBtn} onClick={() => setFilesExpanded(true)}>בחירת קובץ נוסף</button>
-                </div>
-              )
-            )}
-          </div>
+          {messages.map((m, idx) => {
+            const isLast = idx === messages.length - 1;
+            return (
+              <MessageBubble
+                key={m.id}
+                m={m}
+                showActions={m.sender === "bot" && isLast && hasExchange && !isBotResponding}
+                controls={m.sender === "bot" && isLast && m.controls && !isBotResponding ? renderControls(m.controls) : null}
+                askedTyped={askedTyped}
+                onFeedback={(rating) => { setFeedbackRating(rating); setShowFeedback(true); }}
+                onNewChat={startChat}
+              />
+            );
+          })}
           </div>
         </div>
       </div>
