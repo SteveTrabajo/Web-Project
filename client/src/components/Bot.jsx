@@ -25,6 +25,13 @@ const HEB_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
 const FALLBACK_EXCEPTION_FORM_URL = `${API_BASE}/files/טופס_רישום_או_ביטול_קורס.doc`;
 const FALLBACK_ADVISOR_FORM_URL = `${API_BASE}/files/טופס_ייעוץ_לסטודנט.docx`;
 
+// Animated three-dot "thinking" indicator used for transient loading bubbles.
+const thinkingHtml = (label = "") =>
+  `<span class="inline-flex items-center gap-2">` +
+  `<span class="bot-typing" aria-hidden="true"><i></i><i></i><i></i></span>` +
+  (label ? `<span class="text-content-muted">${label}</span>` : "") +
+  `</span>`;
+
 export default function ChatBot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -177,7 +184,7 @@ export default function ChatBot() {
 
     setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
-    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: "רגע אני חושב..." }]);
+    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: thinkingHtml() }]);
 
     try {
       const res = await fetch(`${API_BASE}/api/ask`, {
@@ -301,7 +308,7 @@ const showReservesGuidelines = () => {
   const handleFileQuery = async (q) => {
     setIsBotResponding(true);
     const loadingId = crypto.randomUUID();
-    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: "מחפש קובץ מתאים..." }]);
+    setMessages((p) => [...p, { id: loadingId, sender: "bot", html: thinkingHtml("מחפש קובץ מתאים") }]);
     try {
       const res = await fetch(`${API_BASE}/api/forms/match`, {
         method: "POST",
@@ -335,7 +342,7 @@ const showReservesGuidelines = () => {
   };
 
   const loadRequiredCourses = async (yb, sem) => {
-    addBot("<div class='font-sans'>שולף נתונים מהשנתון...</div>");
+    addBot(thinkingHtml("שולף נתונים מהשנתון"));
     try {
       const res = await fetch(`${API_BASE}/api/requiredcourses/${yb}/semester_${sem}`);
       const data = await res.json();
@@ -382,33 +389,36 @@ const showReservesGuidelines = () => {
   };
 
   const pillBtn =
-    "px-4 py-2 rounded-full border border-bio-green bg-surface-card text-bio-green text-body font-medium " +
-    "hover:bg-surface-raised transition-colors shadow-sm active:scale-95 font-sans " +
-    "dark:border-bio-green-glow dark:text-bio-green-glow dark:hover:bg-surface-raised";
+    "px-4 py-2 rounded-full border border-bio-green/70 bg-surface-card text-bio-green text-body font-medium shadow-sm " +
+    "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-bio-green hover:bg-bio-green/5 active:translate-y-0 active:scale-95 font-sans " +
+    "dark:border-bio-green-glow/60 dark:text-bio-green-glow dark:hover:bg-bio-green-glow/10 dark:hover:border-bio-green-glow";
 
   // Condensed variant for the file browser - smaller so many files stay readable.
   const filePillBtn =
-    "px-2.5 py-1 rounded-full border border-bio-green/60 bg-surface-card text-bio-green text-caption font-medium " +
-    "hover:bg-surface-raised hover:border-bio-green transition-colors active:scale-95 font-sans " +
-    "dark:border-bio-green-glow/60 dark:text-bio-green-glow dark:hover:bg-surface-raised";
+    "px-2.5 py-1 rounded-full border border-bio-green/50 bg-surface-card text-bio-green text-caption font-medium " +
+    "transition-all duration-200 hover:-translate-y-0.5 hover:bg-bio-green/5 hover:border-bio-green active:translate-y-0 active:scale-95 font-sans " +
+    "dark:border-bio-green-glow/50 dark:text-bio-green-glow dark:hover:bg-bio-green-glow/10";
 
   const letterBtn =
-    "w-full max-w-9 h-9 justify-self-center flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary " +
-    "hover:border-brand-navy hover:text-brand-navy transition-all text-body font-bold font-sans shadow-sm " +
+    "w-full max-w-9 h-9 justify-self-center flex items-center justify-center rounded-lg border border-surface-border bg-surface-card text-content-primary shadow-sm " +
+    "transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-navy hover:text-brand-navy hover:bg-surface-raised text-body font-bold font-sans " +
     "dark:hover:border-bio-green-glow dark:hover:text-bio-green-glow";
 
   return (
     <div
-      className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-xl shadow-2xl border border-surface-border flex flex-col overflow-hidden font-sans"
+      className="w-full max-w-6xl mx-auto h-full bg-surface-card text-content-primary rounded-2xl shadow-2xl border border-surface-border ring-1 ring-black/5 flex flex-col overflow-hidden font-sans"
       dir="rtl"
     >
       {/* Header */}
-      <div className="bg-brand-navy text-white px-4 sm:px-8 py-2.5 flex flex-row-reverse items-center justify-between shadow-md z-10">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-heading leading-none text-left">BIO BOT</h1>
+      <div className="relative bg-gradient-to-l from-brand-navy to-brand-navy-deep text-white px-4 sm:px-6 py-3 flex flex-row-reverse items-center justify-between shadow-md z-10">
+        <div className="flex flex-row-reverse items-center gap-3">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 rounded-full bg-white text-brand-navy flex items-center justify-center font-black text-xl shadow-inner ring-2 ring-white/10">B</div>
+            <span className="absolute -bottom-0.5 -left-0.5 w-3 h-3 rounded-full bg-bio-green-glow ring-2 ring-brand-navy" />
           </div>
-          <div className="w-10 h-10 rounded-full bg-white text-brand-navy flex items-center justify-center font-black text-xl shadow-inner">B</div>
+          <div className="leading-tight text-right">
+            <h1 className="text-heading leading-none">BIO BOT</h1>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -416,7 +426,7 @@ const showReservesGuidelines = () => {
           {context.yearbook && (context.topic || !showTopicPills) && (
             <button
               onClick={() => { setContext(p => ({ ...p, topic: null, semesterNum: null, selectedMitve: null, selectedGroup: null })); setShowTopicPills(true); }}
-              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
             >
               בחירת נושא
             </button>
@@ -424,12 +434,13 @@ const showReservesGuidelines = () => {
           {context.topic && context.topic !== "files" && (
             <button
               onClick={() => setContext(p => ({ ...p, semesterNum: null }))}
-              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 transition-all border border-white/20 font-sans"
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
             >
               שינוי סמסטר
             </button>
           )}
         </div>
+        <div className="absolute bottom-0 inset-x-0 h-px brand-hairline" />
       </div>
 
       {/* Chat area */}

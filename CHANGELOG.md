@@ -1,21 +1,23 @@
-2026-07-15
+2026-07-18
 
-## Student files - topic categories + keywords for wider selection and better matching
+## UI redesign (navbar, hero, bot, labs, admin login) + direct-only course prerequisites
 
-The forms library had only 3 bot "usage" roles. Added a separate topic taxonomy and
-admin-authored keywords so the library can grow and the bot resolves free-text file
-requests far more reliably.
+A refined-polish visual pass across the main surfaces, keeping the Braude palette, plus a
+backend change so prerequisite answers report only the immediate course - not the whole chain.
 
 ### Added
 
-- `category` field (9-topic taxonomy) + `keywords` + `description` per file, separate from
-  the functional `usage` role. Auto-classified from the filename on first sight; admin-editable.
-- `PATCH /api/admin/forms/:filename` - edit an existing file's metadata without re-uploading.
-- `client/src/components/formCategories.js` - shared category labels + `groupByCategory` helper.
+- `client/src/index.css` - shared theme-aware helpers: animated `.bot-typing` dots, frosted
+  `.brand-nav-surface`, and a luminous `.brand-hairline` divider (all honor reduced-motion).
+- Hero secondary "לוח מעבדות" CTA (new `onLabs` prop) and feature chips.
+- Labs: per-course collapsible cards + a dedicated mobile stacked-card view for sessions.
 
 ### Modified
 
-- `/api/forms/match` now scores over label + filename + **keywords + description** (and passes
-  them to the LLM fallback), so paraphrased requests resolve even when the label is terse.
-- `AdminForms.jsx` - upload + inline-edit fields for category/keywords/description, category filter,
-  keyword-aware search. `Bot.jsx` - קבצים pills grouped by category.
+- `Navbar.jsx` - frosted-glass bar, nav icons, refined active pill, animated mobile drawer.
+- `Hero.jsx` - layered gradient overlay, gradient headline, dual CTA, entrance animation.
+- `Bot.jsx` / `BotParts.jsx` - avatar+status header, typing-dot loaders, tactile pills.
+- `LabsViewer.jsx` - icon header, skeleton loading + friendly empty state, hover rows.
+- `AdminLogin.jsx` - minimalist rewrite (dropped logo tile, separator, uppercase labels, footer).
+- `server/routes/public/ask.js` - prerequisite lookups now return direct (one-hop) קדם courses
+  and the direct צמוד course only; removed the recursive/transitive chain walk.

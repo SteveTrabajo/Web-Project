@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, FlaskConical, SlidersHorizontal, CalendarDays, Clock, Users, CalendarX } from "lucide-react";
 
 const SEMESTERS = [2, 3, 4, 5, 6, 7];
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
@@ -95,6 +95,9 @@ export default function LabsViewer() {
     course: "ALL", date: "ALL", day: "ALL", time: "ALL", group: "ALL", lecturer: "ALL",
   });
   const [filtersOpen, setFiltersOpen] = useState(true);
+  // Per-course collapse state, keyed by courseCode.
+  const [collapsed, setCollapsed] = useState({});
+  const toggleCourse = (code) => setCollapsed((c) => ({ ...c, [code]: !c[code] }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -255,9 +258,14 @@ export default function LabsViewer() {
 
   return (
     <div className="max-w-250 mx-auto p-2 sm:p-4 text-right text-content-primary" dir="rtl">
-      <header className="mb-6">
-        <h2 className="text-page-title mb-1 text-content-primary">לוח מעבדות</h2>
-        <p className="text-body text-content-muted">ריכוז כל מועדי המעבדות לפי קורס, תאריך וקבוצה</p>
+      <header className="mb-6 flex items-center gap-3.5">
+        <span className="shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-bio-teal to-bio-green text-white shadow-lg shadow-bio-teal/25">
+          <FlaskConical className="w-6 h-6" strokeWidth={2} />
+        </span>
+        <div>
+          <h2 className="text-page-title mb-0.5 text-content-primary">לוח מעבדות</h2>
+          <p className="text-body text-content-muted">ריכוז כל מועדי המעבדות לפי קורס, תאריך וקבוצה</p>
+        </div>
       </header>
 
       {/* Filters */}
@@ -270,7 +278,8 @@ export default function LabsViewer() {
             aria-expanded={filtersOpen}
           >
             <span className="text-heading text-content-primary flex items-center gap-2">
-              🔎 סינון
+              <SlidersHorizontal className="w-4 h-4 text-bio-teal dark:text-bio-teal-glow" strokeWidth={2.2} />
+              סינון
               {activeFilterCount > 0 && (
                 <span className="text-caption bg-bio-green/10 text-bio-green dark:bg-bio-green-glow/10 dark:text-bio-green-glow px-2 py-0.5 rounded-full font-semibold">
                   {activeFilterCount}
@@ -374,35 +383,72 @@ export default function LabsViewer() {
         </CardContent>
       </Card>
 
-      {loading && <div className="text-body text-bio-green animate-pulse">טוען נתונים...</div>}
-      {error && <div className="text-body text-red-600 font-bold">{error}</div>}
-      {!loading && !error && grouped.length === 0 && (
-        <div className="text-body text-red-600 mt-4">לא נמצאו נתונים</div>
+      {loading && (
+        <div className="space-y-4" aria-busy="true">
+          {[0, 1].map((i) => (
+            <div key={i} className="border border-surface-border rounded-2xl overflow-hidden bg-surface-card shadow-sm">
+              <div className="h-14 bg-surface-raised animate-pulse" />
+              <div className="p-4 space-y-3">
+                {[0, 1, 2].map((r) => (
+                  <div key={r} className="h-6 rounded-lg bg-surface-raised animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && (error || grouped.length === 0) && (
+        <div className="flex flex-col items-center justify-center text-center gap-3 py-16 rounded-2xl border border-dashed border-surface-border bg-surface-card">
+          <span className="flex items-center justify-center w-14 h-14 rounded-full bg-surface-raised text-content-muted">
+            <CalendarX className="w-7 h-7" strokeWidth={1.75} />
+          </span>
+          <p className="text-heading text-content-primary">לא נמצאו נתונים</p>
+          <p className="text-body text-content-muted max-w-xs">נסו לשנות את השנתון, הסמסטר או לאפס את הסינון.</p>
+        </div>
       )}
 
       {/* Course cards */}
-      <div className="space-y-6">
-        {grouped.map((group) => (
+      {!loading && !error && grouped.length > 0 && (
+      <div className="space-y-5">
+        {grouped.map((group) => {
+          const isCollapsed = collapsed[group.courseCode];
+          return (
           <div
             key={group.courseCode}
-            className="border border-surface-border rounded-xl overflow-hidden bg-surface-card shadow-sm"
+            className="group/card border border-surface-border rounded-2xl overflow-hidden bg-surface-card shadow-sm transition-shadow duration-200 hover:shadow-md"
           >
-            <div className="p-4 bg-surface-raised border-b border-surface-border flex flex-wrap justify-between items-center gap-2">
-              <div className="text-heading text-content-primary">
-                {group.courseCode}{" "}
-                <span className="font-medium text-content-muted">- {group.courseName}</span>
+            <button
+              type="button"
+              onClick={() => toggleCourse(group.courseCode)}
+              aria-expanded={!isCollapsed}
+              className={`relative w-full text-right p-4 pr-5 bg-surface-raised flex flex-wrap justify-between items-center gap-2 transition-colors hover:brightness-[0.98] dark:hover:brightness-110 ${
+                isCollapsed ? "" : "border-b border-surface-border"
+              }`}
+            >
+              <span className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-bio-teal to-bio-green" />
+              <div className="text-heading text-content-primary flex items-center gap-2">
+                <ChevronDownIcon
+                  className={`w-4 h-4 shrink-0 text-content-muted transition-transform duration-200 ${isCollapsed ? "-rotate-90" : ""}`}
+                />
+                <span>
+                  <span className="font-mono text-bio-teal dark:text-bio-teal-glow">{group.courseCode}</span>{" "}
+                  <span className="font-medium text-content-muted">- {group.courseName}</span>
+                </span>
               </div>
               <div className="text-caption bg-bio-green/10 text-bio-green dark:bg-bio-green-glow/10 dark:text-bio-green-glow px-3 py-1 rounded-full font-semibold">
                 {group.rows.length} מפגשים
               </div>
-            </div>
+            </button>
 
-            <div className="overflow-x-auto">
+            {!isCollapsed && (<>
+            {/* Desktop / tablet: table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full min-w-160 text-body text-right border-collapse">
                 <thead>
-                  <tr className="bg-surface-raised border-b border-surface-border text-content-muted">
+                  <tr className="bg-surface-raised/60 border-b border-surface-border text-content-muted text-caption uppercase tracking-wide">
                     {["מפגש", "תאריך", "יום", "שעה", "קבוצה", "צוות"].map((h) => (
-                      <th key={h} className="p-2 sm:p-3 border-l border-surface-border last:border-l-0">{h}</th>
+                      <th key={h} className="p-3 font-semibold border-l border-surface-border last:border-l-0">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -410,24 +456,62 @@ export default function LabsViewer() {
                   {group.rows.map((row, idx) => (
                     <tr
                       key={idx}
-                      className={`border-b border-surface-border last:border-0 ${
-                        idx % 2 === 0 ? "bg-surface-card" : "bg-surface-page"
+                      className={`border-b border-surface-border last:border-0 transition-colors hover:bg-bio-teal/5 dark:hover:bg-bio-teal-glow/5 ${
+                        idx % 2 === 0 ? "bg-surface-card" : "bg-surface-page/60"
                       }`}
                     >
-                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.session}</td>
-                      <td className="p-2 sm:p-3 text-center font-bold tracking-tight text-content-primary">{formatDateRange(row)}</td>
-                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.day}</td>
-                      <td className="p-2 sm:p-3 text-center text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</td>
-                      <td className="p-2 sm:p-3 text-center text-content-primary">{row.group}</td>
-                      <td className="p-2 sm:p-3 text-content-muted">{row.staff?.join(", ")}</td>
+                      <td className="p-3 text-center text-content-primary">{row.session}</td>
+                      <td className="p-3 text-center font-bold tracking-tight text-content-primary">{formatDateRange(row)}</td>
+                      <td className="p-3 text-center text-content-primary">{row.day}</td>
+                      <td className="p-3 text-center text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</td>
+                      <td className="p-3 text-center text-content-primary">{row.group}</td>
+                      <td className="p-3 text-content-muted">{row.staff?.join(", ")}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile: stacked session cards */}
+            <div className="sm:hidden divide-y divide-surface-border">
+              {group.rows.map((row, idx) => (
+                <div key={idx} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-body font-bold text-content-primary">מפגש {row.session}</span>
+                    {row.group && (
+                      <span className="text-caption bg-surface-raised text-content-muted px-2.5 py-0.5 rounded-full font-medium">
+                        קבוצה {row.group}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-caption text-content-muted">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarDays className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                      <span className="font-bold text-content-primary">{formatDateRange(row)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-content-primary">{row.day}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                      <span className="text-bio-teal dark:text-bio-teal-glow font-semibold">{row.time}</span>
+                    </div>
+                    {row.staff?.length > 0 && (
+                      <div className="flex items-center gap-1.5 col-span-2">
+                        <Users className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                        <span>{row.staff.join(", ")}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>)}
           </div>
-        ))}
+          );
+        })}
       </div>
+      )}
     </div>
   );
 }

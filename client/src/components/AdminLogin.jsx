@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 const ADMIN_API = `${API_BASE}/api/admin`;
@@ -63,41 +62,36 @@ export default function AdminLogin({ onSuccess }) {
   };
 
   const titles = {
-    login: "Admin Login",
-    forgot: "Reset Password",
-    reset: "Set New Password",
+    login: "Sign in",
+    forgot: "Reset password",
+    reset: "New password",
   };
 
   const subtitles = {
-    login: "Sign in to manage BIO-BOT content",
-    forgot: "Enter your email to receive a reset code",
-    reset: "Enter the code from your email and choose a new password",
+    login: "Manage BIO-BOT content",
+    forgot: "We'll email you a reset code",
+    reset: "Enter the code and choose a new password",
+  };
+
+  const submitLabel = {
+    login: "Sign in",
+    forgot: "Send reset code",
+    reset: "Update password",
   };
 
   return (
-    <form className="space-y-5" dir="ltr" onSubmit={handleSubmit}>
+    <form className="space-y-6" dir="ltr" onSubmit={handleSubmit}>
 
       {/* Header */}
-      <div className="flex flex-col items-center gap-2 pb-1">
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-brand-navy dark:bg-surface-raised shadow-md">
-          <span className="text-xl font-extrabold text-brand-gold">B</span>
-        </div>
-        <div>
-          <h2 className="text-center text-page-title text-brand-navy dark:text-bio-green-glow">
-            {titles[mode]}
-          </h2>
-          <p className="text-center text-caption text-muted-foreground mt-0.5">{subtitles[mode]}</p>
-        </div>
+      <div className="space-y-1">
+        <h2 className="text-page-title text-content-primary">{titles[mode]}</h2>
+        <p className="text-caption text-muted-foreground">{subtitles[mode]}</p>
       </div>
 
-      <Separator />
-
       {/* Fields */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-caption uppercase tracking-wide text-muted-foreground">
-            Email
-          </Label>
+          <Label htmlFor="email" className="text-caption text-muted-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -109,13 +103,13 @@ export default function AdminLogin({ onSuccess }) {
 
         {(mode === "login" || mode === "reset") && (
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-caption uppercase tracking-wide text-muted-foreground">
-              {mode === "login" ? "Password" : "New Password"}
+            <Label htmlFor="password" className="text-caption text-muted-foreground">
+              {mode === "login" ? "Password" : "New password"}
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder={mode === "login" ? "••••••••" : "Choose a new password"}
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -124,9 +118,7 @@ export default function AdminLogin({ onSuccess }) {
 
         {mode === "reset" && (
           <div className="space-y-1.5">
-            <Label htmlFor="code" className="text-caption uppercase tracking-wide text-muted-foreground">
-              Reset Code
-            </Label>
+            <Label htmlFor="code" className="text-caption text-muted-foreground">Reset code</Label>
             <Input
               id="code"
               placeholder="Paste code from email"
@@ -140,10 +132,10 @@ export default function AdminLogin({ onSuccess }) {
       {/* Feedback */}
       {msg && (
         <div
-          className={`text-caption rounded-xl px-3 py-2.5 border ${
+          className={`text-caption rounded-lg px-3 py-2.5 ${
             isSuccess
-              ? "text-bio-green dark:text-bio-green-glow bg-bio-green/10 border-bio-green/20"
-              : "text-destructive bg-destructive/10 border-destructive/20"
+              ? "text-bio-green dark:text-bio-green-glow bg-bio-green/10"
+              : "text-destructive bg-destructive/10"
           }`}
         >
           {msg}
@@ -151,65 +143,25 @@ export default function AdminLogin({ onSuccess }) {
       )}
 
       {/* Actions */}
-      <div className="space-y-2 pt-1">
-        {mode === "login" && (
-          <>
-            <Button type="submit" className="w-full">
-              Sign In
-            </Button>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                className="text-caption text-muted-foreground h-auto p-0"
-                onClick={() => { setMode("forgot"); setMsg(""); setIsSuccess(false); }}
-              >
-                Forgot password?
-              </Button>
-            </div>
-          </>
-        )}
-
-        {mode === "forgot" && (
-          <>
-            <Button type="submit" className="w-full">
-              Send Reset Code
-            </Button>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                className="text-caption text-muted-foreground h-auto p-0"
-                onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
-              >
-                Back to login
-              </Button>
-            </div>
-          </>
-        )}
-
-        {mode === "reset" && (
-          <>
-            <Button type="submit" className="w-full bg-bio-green dark:bg-bio-green-glow dark:text-brand-navy-deep hover:opacity-90">
-              Update Password
-            </Button>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                className="text-caption text-muted-foreground h-auto p-0"
-                onClick={() => { setMode("login"); setMsg(""); setIsSuccess(false); }}
-              >
-                Back to login
-              </Button>
-            </div>
-          </>
-        )}
+      <div className="space-y-3">
+        <Button type="submit" className="w-full">
+          {submitLabel[mode]}
+        </Button>
+        <div className="text-center">
+          <Button
+            type="button"
+            variant="link"
+            className="text-caption text-muted-foreground h-auto p-0"
+            onClick={() => {
+              setMode(mode === "login" ? "forgot" : "login");
+              setMsg("");
+              setIsSuccess(false);
+            }}
+          >
+            {mode === "login" ? "Forgot password?" : "Back to login"}
+          </Button>
+        </div>
       </div>
-
-      <p className="text-center text-caption text-muted-foreground pt-1">
-        BIO-BOT 2.0 - Admin Portal
-      </p>
     </form>
   );
 }

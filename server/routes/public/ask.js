@@ -280,26 +280,18 @@ async function getRelationType(yearbookId, courseA_code, courseB_code) {
   return val;
 }
 
-// Recursive prerequisite walk — very expensive without the cache.
+// Direct (one-hop) prerequisites only. The bot intentionally does not walk the
+// full dependency chain - a student is told a course's immediate קדם courses,
+// not every upstream requirement. Parallel (COREQUISITE) courses are handled
+// separately in the relation branch.
 const _prereqCache = new Map();
 const PREREQ_CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function getAllPrerequisitesRecursive(yearbookId, courseCode, visited = new Set(), courseMap = null) {
-  if (visited.has(courseCode)) return [];
-  visited.add(courseCode);
-
-  // Build the course map once and pass it through all recursive calls
-  if (!courseMap) {
-    const courses = await getAllCoursesCached(yearbookId);
-    courseMap = new Map(courses.map((c) => [c.courseCode, c]));
-  }
-
-  const course = courseMap.get(courseCode);
+async function getDirectPrerequisites(yearbookId, courseCode) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const course = courses.find((c) => c.courseCode === courseCode);
   if (!course?.semesterKey) return [];
 
-  const prereqs = [];
-
-  // Direct path query — no semester scan
   const relsSnap = await db
     .collection("yearbooks")
     .doc(yearbookId)
@@ -311,32 +303,19 @@ async function getAllPrerequisitesRecursive(yearbookId, courseCode, visited = ne
     .where("type", "==", "PREREQUISITE")
     .get();
 
-  for (const doc of relsSnap.docs) {
-    const prereqCode = doc.id;
-    const prereqName = doc.data().courseName || prereqCode;
-    prereqs.push({ code: prereqCode, name: prereqName });
-
-    const deeper = await getAllPrerequisitesRecursive(yearbookId, prereqCode, visited, courseMap);
-    prereqs.push(...deeper);
-  }
-
-  return prereqs;
+  return relsSnap.docs.map((doc) => ({
+    code: doc.id,
+    name: doc.data().courseName || doc.id,
+  }));
 }
 
-async function getAllPrerequisitesRecursiveCached(yearbookId, courseCode) {
+async function getDirectPrerequisitesCached(yearbookId, courseCode) {
   const key = `${yearbookId}:${courseCode}`;
   const now = Date.now();
   const cached = _prereqCache.get(key);
   if (cached && now - cached.ts < PREREQ_CACHE_TTL_MS) return cached.data;
 
-  // Fast path: use the precomputed transitive chain (Layer 3) when present.
-  // Yearbooks imported before Layer 3 lack it, so fall back to the live walk.
-  const courses = await getAllCoursesCached(yearbookId);
-  const course = courses.find((c) => c.courseCode === courseCode);
-  const data = course?.transitivePrerequisites
-    ? course.transitivePrerequisites
-    : await getAllPrerequisitesRecursive(yearbookId, courseCode);
-
+  const data = await getDirectPrerequisites(yearbookId, courseCode);
   _prereqCache.set(key, { ts: now, data });
   return data;
 }
@@ -1079,7 +1058,7 @@ router.post("/ask", async (req, res) => {
     // Prerequisites (with cache). Single-course only: when the student names two
     // courses (e.g. "can I take X without Y") the relation block below handles it.
     if (courseMain && coursesFromQuestion.length < 2 && (kind === "prerequisites" || detectPrerequisitesFallback(question, qNorm))) {
-      const prereqs = await getAllPrerequisitesRecursiveCached(yearbookId, courseMain.courseCode);
+      const prereqs = await getDirectPrerequisitesCached(yearbookId, courseMain.courseCode);
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "courses", wasAnswered: true, detectedCourses: coursesFromQuestion });
 
       if (!prereqs.length) {
@@ -1153,7 +1132,7 @@ router.post("/ask", async (req, res) => {
 
         // Classify each other course relative to the target, checking both
         // directions so the answer is correct regardless of mention order.
-        const targetPrereqs = await getAllPrerequisitesRecursiveCached(yearbookId, target.courseCode);
+        const targetPrereqs = await getDirectPrerequisitesCached(yearbookId, target.courseCode);
         const prereqCodes = new Set(targetPrereqs.map((p) => p.code));
         const prereqNames = []; // others that must be completed before the target
         const coreqNames = [];  // others that are parallel companions of the target
@@ -1168,9 +1147,9 @@ router.post("/ask", async (req, res) => {
         const joinHeb = (arr) => arr.map(bold).join(" ו־");
         const isPrereq = (n) => (n > 1 ? "הם דרישות קדם" : "הוא דרישת קדם");
         const isCoreq = (n) => (n > 1 ? "הם קורסים צמודים" : "הוא קורס צמוד");
-        // The dependency chain the student can act on - the target's own prerequisites.
+        // The target's direct prerequisites - the immediate courses to complete first.
         const chainHtml = targetPrereqs.length
-          ? `<br/><span class="text-gray-500">כל קורסי הקדם של ${target.courseName}: ${targetPrereqs.map((p) => p.name).join(", ")}</span>`
+          ? `<br/><span class="text-gray-500">קורסי הקדם הישירים של ${target.courseName}: ${targetPrereqs.map((p) => p.name).join(", ")}</span>`
           : "";
 
         let answer;

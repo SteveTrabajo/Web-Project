@@ -5,15 +5,15 @@ export function MessageBubble({ m, showActions, askedTyped, onFeedback, onNewCha
   const isPanel = m.sender === "bot" && m.variant === "panel";
   const colAlign = m.sender === "user" ? "items-start" : isPanel ? "items-center" : "items-end";
   return (
-    <div className={`flex flex-col ${colAlign}`}>
+    <div className={`flex flex-col ${colAlign} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
       <div
         className={
           isPanel
             ? "bot-bubble w-full max-w-2xl break-words"
-            : `max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
+            : `max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl leading-relaxed text-body break-words [overflow-wrap:anywhere] ${
                 m.sender === "user"
-                  ? "bg-brand-navy text-white rounded-tl-none font-sans"
-                  : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans"
+                  ? "bg-brand-navy text-white rounded-tl-none font-sans shadow-sm"
+                  : "bot-bubble bg-surface-card border border-surface-border text-content-primary rounded-tr-none font-sans shadow-sm"
               }`
         }
         dangerouslySetInnerHTML={{ __html: m.html }}

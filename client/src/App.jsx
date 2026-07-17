@@ -33,7 +33,9 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {view === "home" && <Hero onStart={() => setView("chat")} />}
+      {view === "home" && (
+        <Hero onStart={() => setView("chat")} onLabs={() => setView("labs")} />
+      )}
 
       {view === "chat" && (
         <main className="flex-1 min-h-0 bg-surface-page">
