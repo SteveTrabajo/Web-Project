@@ -12,6 +12,7 @@ import {
   getAllCoursesCached,
   matchCourse,
   getRelationIndex,
+  buildCourseInfoHtml,
 } from "../../services/courseData.js";
 import { ragCuratedAnswer } from "../../services/curatedRag.js";
 import {
@@ -162,6 +163,28 @@ function isCourseLookupQuestion(question = "", qNorm = null) {
   }
 
   return false;
+}
+
+// General course-attribute question (credits / weekly hours / semester of a
+// single course). "תואר"/"165" is the degree-credits question, which belongs to
+// registration - excluded so this stays a per-course detector.
+const COURSE_INFO_KEYWORDS = [
+  "נקז",
+  "נקודות זכות",
+  "כמה נקודות",
+  "כמה שעות",
+  "שעות שבועיות",
+  "שעות הרצאה",
+  "שעות תרגול",
+  "שעות מעבדה",
+  "באיזה סמסטר",
+  "באיזה סמס",
+];
+
+function isCourseInfoQuestion(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  if (q.includes(normalizeHebrew("תואר")) || q.includes("165")) return false;
+  return COURSE_INFO_KEYWORDS.some((k) => q.includes(normalizeHebrew(k)));
 }
 
 // True when the question is only a course name/code (plus filler like "קורס"),
@@ -798,6 +821,7 @@ router.post("/ask", async (req, res) => {
     if (
       isRegistrationQuestion(question) &&
       !isAcademicCourseIntent(question, qNorm) &&
+      !isCourseInfoQuestion(question, qNorm) &&
       !isCourseLookupQuestion(question, qNorm)
     ) {
       logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "registration", wasAnswered: true });
@@ -1077,6 +1101,12 @@ router.post("/ask", async (req, res) => {
       });
     }
 
+    // General course info (credits / weekly hours / semester) for one course.
+    if (courseMain && coursesFromQuestion.length < 2 && isCourseInfoQuestion(question, qNorm)) {
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: clientTopic || null, answerSource: "course_info", wasAnswered: true, detectedCourses: coursesFromQuestion });
+      return res.json({ html: buildCourseInfoHtml(courseMain) });
+    }
+
     // Bare course name ("חדוא 1") - ask what the user wants to know about it.
     // Checked before lookup because the LLM tends to classify a bare name as lookup.
     if (courseMain && coursesFromQuestion.length === 1 && isBareCourseMention(qNorm, courseMain)) {
@@ -1087,6 +1117,7 @@ router.post("/ask", async (req, res) => {
             🤔 מה תרצה/י לדעת על <b>${courseMain.courseName}</b> (${courseMain.courseCode})?<br/><br/>
             אפשר לשאול למשל:<br/>
             • מה קורסי הקדם של ${courseMain.courseName}?<br/>
+            • כמה נ"ז/שעות שבועיות יש ב${courseMain.courseName}?<br/>
             • מתי המעבדה הבאה ב${courseMain.courseName}?<br/>
             • אילו קורסים אפשר לקחת במקביל ל${courseMain.courseName}?
           </div>

@@ -1,5 +1,5 @@
 import { callLLMTools } from "../../services/llm.js";
-import { getAllCoursesCached, matchCourse, getRelationIndex } from "../../services/courseData.js";
+import { getAllCoursesCached, matchCourse, getRelationIndex, buildCourseInfoHtml } from "../../services/courseData.js";
 import { ragCuratedAnswer } from "../../services/curatedRag.js";
 import { getLatestYearId, getAllLabs, filterLabs, findNextLab, renderLabs } from "../../services/labsData.js";
 import { answerRegistration, findContactsByQuery } from "./registration.service.js";
@@ -36,6 +36,14 @@ async function runGetPrerequisites({ course }, { yearbookId }) {
       📘 <b class="bot-title">קורסי קדם ל־${target.courseName}</b><br/><br/>
       ${names.map((n) => `• ${n}`).join("<br/>")}
     </div>`;
+}
+
+// General course attributes: credits (נ"ז), weekly hours, semester.
+async function runGetCourseInfo({ course }, { yearbookId }) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const target = matchCourse(course, courses);
+  if (!target) return `<div class="text-sm">ℹ️ לא זיהיתי את הקורס "${course}".</div>`;
+  return buildCourseInfoHtml(target);
 }
 
 async function runGetCoursesRequiring({ course }, { yearbookId }) {
@@ -193,6 +201,20 @@ const TOOLS = [
       },
     },
     run: runGetPrerequisites,
+  },
+  {
+    schema: {
+      type: "function",
+      function: {
+        name: "get_course_info",
+        description:
+          "מחזיר מידע כללי על קורס יחיד: נקודות זכות (נ\"ז), שעות שבועיות (הרצאה/תרגול/מעבדה) ובאיזה סמסטר. " +
+          "השתמש כאשר המשתמש שואל על מאפייני קורס - למשל 'כמה נקז נותן הקורס X', 'כמה שעות שבועיות ל-X', " +
+          "'באיזה סמסטר לומדים את X'. אל תשתמש עבור קורסי קדם או קשר בין קורסים.",
+        parameters: COURSE_ARG,
+      },
+    },
+    run: runGetCourseInfo,
   },
   {
     schema: {

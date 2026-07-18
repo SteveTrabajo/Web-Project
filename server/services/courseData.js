@@ -48,6 +48,11 @@ export async function getAllCoursesCached(yearbookId) {
         semesterKey,
         nameNorm: normalizeHebrew(courseName),
         codeNorm: courseCode.replace(/\s+/g, ""),
+        // Attributes from the yearbook parser (null when absent in the source).
+        credits: data.credits ?? null,
+        lectureHours: data.lectureHours ?? null,
+        practiceHours: data.practiceHours ?? null,
+        labHours: data.labHours ?? null,
         // Layer 3: precomputed full prerequisite chain (null for legacy imports).
         transitivePrerequisites: Array.isArray(data.transitivePrerequisites)
           ? data.transitivePrerequisites
@@ -83,6 +88,30 @@ export function matchCourse(raw, courses, nameIndex) {
     courses.find((c) => c.nameNorm && (c.nameNorm.includes(n) || n.includes(c.nameNorm))) ||
     null
   );
+}
+
+// Course-info card: credits, weekly hours (lecture/practice/lab + total) and
+// semester. Rendered from the cached course object; fields absent in the source
+// yearbook are shown as "not specified" rather than omitted silently.
+export function buildCourseInfoHtml(course) {
+  const semNum = course.semesterKey?.match(/\d+/)?.[0] || null;
+
+  const hourBits = [];
+  if (course.lectureHours) hourBits.push(`הרצאה ${course.lectureHours}`);
+  if (course.practiceHours) hourBits.push(`תרגול ${course.practiceHours}`);
+  if (course.labHours) hourBits.push(`מעבדה ${course.labHours}`);
+  const totalHours = [course.lectureHours, course.practiceHours, course.labHours]
+    .reduce((sum, h) => sum + (Number(h) || 0), 0);
+
+  const rows = [`• נקודות זכות (נ"ז): ${course.credits != null ? course.credits : "לא צוין בשנתון"}`];
+  if (hourBits.length) rows.push(`• שעות שבועיות: ${hourBits.join(", ")} (סה"כ ${totalHours})`);
+  if (semNum) rows.push(`• סמסטר: ${semNum}`);
+
+  return `
+    <div class="text-sm leading-6">
+      📋 <b class="bot-title">${course.courseName}</b> (${course.courseCode})<br/><br/>
+      ${rows.join("<br/>")}
+    </div>`;
 }
 
 /* ---------- relations (both directions from one scan) ---------- */
