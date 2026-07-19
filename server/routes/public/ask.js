@@ -516,6 +516,18 @@ const MITVE_TO_FILE = {
   mitve_tashpuv_sem_a: "tashpav_semA.txt", // תשפ"ו (המסמך היחיד לתשפ"ו)
 };
 
+// General reserve-duty docs: framework-agnostic rights (by service type) plus
+// procedures, support services and contacts. Treated as the authoritative source
+// and loaded for every reserve answer; the mitve doc above only supplies
+// wartime-specific details on top.
+const MILUIM_GENERAL_FILES = [
+  "miluim_general_info.txt",
+  "miluim_rights_regular.txt",
+  "miluim_rights_long.txt",
+  "miluim_rights_parent.txt",
+  "miluim_rights_emergency.txt",
+];
+
 // Framework docs are static; read once and cache the content in memory.
 const _miluimDocs = new Map();
 async function readMiluimDoc(fileName) {
@@ -551,10 +563,8 @@ async function answerReserves(question, reservesMitve, reservesGroup, historyTex
   const framework = await readMiluimDoc(fileName);
   if (!framework) return null;
 
-  const [academic, contacts] = await Promise.all([
-    readMiluimDoc("miluim_academic_support.txt"),
-    readMiluimDoc("miluim_contacts.txt"),
-  ]);
+  const generalDocs = await Promise.all(MILUIM_GENERAL_FILES.map((f) => readMiluimDoc(f)));
+  const generalText = generalDocs.filter(Boolean).join("\n\n");
 
   const mitveLabel = RESERVES_MITVE_LABELS[reservesMitve] || reservesMitve;
   const groupLabel = RESERVES_GROUP_LABELS[reservesMitve]?.[reservesGroup] || "לא צוינה";
@@ -562,19 +572,29 @@ async function answerReserves(question, reservesMitve, reservesGroup, historyTex
   const prompt = `אתה BIO-BOT, עוזר אקדמי לסטודנטים לביוטכנולוגיה במכללת בראודה, המסייע לסטודנטים המשרתים במילואים.
 ענה בעברית בלבד, בלשון נייטרלית הפונה לשני המינים (את/ה, תוכל/י, מומלץ).
 ענה אך ורק על סמך המסמכים שמצורפים למטה - אל תמציא מידע ואל תשתמש בידע חיצוני.
+
 הסטודנט/ית שייך/ת למתווה: ${mitveLabel}. קבוצת זכאות: ${groupLabel}.
-תעדף/י את ההתאמות הרלוונטיות לקבוצת הזכאות הזו. אם התשובה אינה מופיעה במסמכים, המלץ/י לפנות למרכז החוסן בדקנט הסטודנטים דרך תחנת המידע לסטודנט.
+
+כללי מענה - חשוב מאוד:
+- ענה/י ישירות וממוקד לשאלה הספציפית שנשאלה בלבד. אל תחזיר/י סיכום כללי של הזכויות כאשר נשאלת שאלה ממוקדת.
+- אם נשאלת שאלה על פרט מסוים (מספר, תאריך, משך זמן, שם, טלפון, מייל, איש קשר או מוקד תמיכה) - חלץ/י מהמסמכים את הפרט המדויק ומסור/י אותו כתשובה. פרטי אנשי קשר ומוקדי תמיכה נחשבים מידע תקף לכל דבר.
+- אם נשאלת על תרחיש מסוים (למשל שירות בנסיבות חירום/צו 8, סטודנט הורה, שירות ארוך) - התבסס/י על סעיף המסמך הרלוונטי לאותו תרחיש ולא על הכלל הכללי.
+- אל תמליץ/י לפנות לרכז המילואים כאשר התשובה קיימת במסמכים - זו ברירת מחדל רק כשהמידע באמת חסר.
+
+מקורות המידע וסדר העדיפות ביניהם:
+1. "מסמכי הזכויות הכלליים" הם המקור הסמכותי והמדויק ביותר - הסתמך/י עליהם קודם. בחר/י מתוכם את הזכויות המתאימות לסוג השירות של הסטודנט/ית ולקבוצת הזכאות שלו/ה.
+2. "מסמך המתווה" מתאר התאמות ספציפיות לתקופת המלחמה עבור המתווה והסמסטר של הסטודנט/ית. השתמש/י בו רק כדי להשלים פרטים ספציפיים למתווה שאינם מופיעים במסמכים הכלליים.
+3. בכל מקרה של סתירה בין המסמכים - העדף/י את המסמכים הכלליים.
+
+אם המידע המבוקש אינו מופיע באף מסמך - אל תקבע/י שההטבה או הזכות אינה קיימת (היעדר מהמסמכים אינו שלילה); במקום זאת ציין/י שאין לך מידע על כך והמלץ/י לפנות לרכז המילואים בדקנט הסטודנטים דרך תחנת המידע לסטודנט.
 ${historyText ? `\nשיחה קודמת:\n${historyText}\n` : ""}
 שאלת הסטודנט/ית: ${question}
 
-=== מסמך המתווה: ${mitveLabel} ===
+=== מסמכי הזכויות הכלליים (מקור סמכותי) ===
+${generalText}
+
+=== מסמך המתווה: ${mitveLabel} (התאמות ספציפיות לתקופת המלחמה) ===
 ${framework}
-
-=== תמיכה אקדמית כללית למשרתי מילואים ===
-${academic}
-
-=== אנשי קשר רלוונטיים ===
-${contacts}
 
 החזר/י תשובה תמציתית וברורה בטקסט רגיל בעברית. אפשר להשתמש בשורות המתחילות ב-'-' לרשימות.`;
 
@@ -772,6 +792,13 @@ router.post("/ask", async (req, res) => {
         logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: "reserves", answerSource: "reserves_framework", wasAnswered: true });
         return res.json({ html: `<div class="text-sm leading-6 font-sans">${miluimHtml(reserveAnswer)}${MILUIM_DISCLAIMER}</div>` });
       }
+      // The LLM call failed (e.g. transient API error). A reserves question must
+      // never fall through to the generic pipeline, which would answer it with an
+      // unrelated registration/off-topic reply and no disclaimer.
+      logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: "reserves", answerSource: "reserves_error", wasAnswered: false });
+      return res.json({
+        html: `<div class="text-sm leading-6 font-sans">⚠️ לא הצלחתי לעבד את השאלה כרגע. אפשר לנסות שוב, או לפנות לרכז המילואים בדקנט הסטודנטים דרך תחנת המידע לסטודנט.${MILUIM_DISCLAIMER}</div>`,
+      });
     }
 
     // USE_TOOL_ROUTER=true routes free-text questions through the LLM tool

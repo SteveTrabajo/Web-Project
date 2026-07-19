@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:reserves": "node tests/reserves.accuracy.test.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

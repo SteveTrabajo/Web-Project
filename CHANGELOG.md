@@ -1,20 +1,30 @@
-2026-07-18
+2026-07-20
 
-## General course-info answers (credits / weekly hours / semester)
+## Reserve-duty (מילואים) RAG rework + accuracy hardening & test suite
 
-The bot can now answer general questions about a single course - how many נ"ז it gives,
-its weekly hours (lecture/practice/lab), and which semester it belongs to. Previously these
-fell through to the advisor-redirect fallback because the attributes were never loaded.
+The reserves answer now grounds on the new, more accurate rights files as the authoritative
+source, with the wartime mitve document supplying only framework-specific details on top.
+Hardened after end-to-end testing exposed focus and robustness gaps in a flow that must not err.
 
 ### Added
 
-- `server/services/courseData.js` - course cache now loads `credits`, `lectureHours`,
-  `practiceHours`, `labHours`; new `buildCourseInfoHtml()` renders a shared course-info card.
-- `server/routes/public/toolRouter.js` - new `get_course_info` tool (course credits/hours/semester).
-- `server/routes/public/ask.js` - `isCourseInfoQuestion` detector + course-info branch in the
-  keyword pipeline; capability advertised in the bare-course-mention clarify prompt.
+- `server/files/` - new source docs: `miluim_general_info.txt` + `miluim_rights_regular.txt`,
+  `miluim_rights_long.txt`, `miluim_rights_parent.txt`, `miluim_rights_emergency.txt`.
+- `server/tests/reserves.accuracy.test.js` + `npm run test:reserves` - file-integrity check
+  (every doc the flow needs exists and is non-empty) plus 14 fact-checks pinned to specific
+  lines in the source docs, run against a live server. Currently 14/14.
 
 ### Modified
 
-- `server/routes/public/ask.js` - registration gate now excludes course-info questions so a
-  per-course "כמה נ\"ז" is not answered with the degree-level 165 נ"ז rule.
+- `server/routes/public/ask.js` - `answerReserves` loads the 5 general docs (`MILUIM_GENERAL_FILES`)
+  + the selected mitve doc; new prompt defines a source hierarchy (general files authoritative,
+  mitve fills wartime specifics, general wins on conflict), answers the specific question directly
+  instead of dumping a generic rights summary, and never asserts a right is absent from mere
+  document silence.
+- `server/routes/public/ask.js` - a reserves question whose LLM call fails now returns an honest
+  reserves fallback instead of silently falling through to the registration/off-topic pipeline.
+
+### Removed
+
+- `server/files/` - `miluim_academic_support.txt`, `miluim_contacts.txt`,
+  `miluim_emotional_support.txt` (content folded into `miluim_general_info.txt`).
