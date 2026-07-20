@@ -150,8 +150,9 @@ const esc = (s = "") =>
 // as spaces so machine-style names read naturally.
 export const fileDisplayName = (f) => String(f.label || f.filename || "").replace(/_/g, " ");
 
+// No target/download attribute on purpose - the server sets the correct headers for all file types, including PDFs 
 const fileCard = (f) => `
-  <a href="${esc(f.url)}" target="_blank" rel="noreferrer" download
+  <a href="${esc(f.url)}"
      class="flex items-center justify-between gap-3 rounded-xl border border-surface-border bg-surface-page px-3 py-2 hover:border-bio-green transition-colors">
     <span class="text-content-primary font-semibold leading-snug">${esc(fileDisplayName(f))}</span>
     <span class="shrink-0 text-xs font-bold text-bio-green dark:text-bio-green-glow underline">להורדה ⬇</span>

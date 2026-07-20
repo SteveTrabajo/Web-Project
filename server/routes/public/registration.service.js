@@ -155,7 +155,7 @@ function appendForms(forms, intent) {
   return `
     <div class="mt-3 pt-2 border-t border-gray-200">
       <b class="bot-subtitle">טפסים רלוונטיים:</b><br/>
-      ${relevant.map((f) => `• <a href="${f.url}" target="_blank" rel="noopener noreferrer">${f.label}</a>`).join("<br/>")}
+      ${relevant.map((f) => `• <a href="${f.url}">${f.label}</a>`).join("<br/>")}
     </div>`;
 }
 

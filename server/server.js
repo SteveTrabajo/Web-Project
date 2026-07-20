@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import path from "path";
 import firebase_admin from "firebase-admin";
 import rateLimit from "express-rate-limit";
 
@@ -62,7 +63,46 @@ app.use((req, res, next) => {
   if (req.path.endsWith("/yearbook/commit")) return next();
   return globalJson(req, res, next);
 });
-app.use("/files", express.static("files"));
+/* ======================
+   Static files (form downloads)
+====================== */
+const DOWNLOAD_EXT = new Set([".doc", ".docx", ".pdf"]);
+
+// The files directory also holds the bot's knowledge-base corpus (the miluim /
+// mitve .txt docs) and forms.json, none of which are student downloads. Serving
+// the directory wholesale made those readable to anyone who guessed the URL, so
+// only the student-form document types are public.
+function isPublicFormPath(urlPath) {
+  let decoded = urlPath;
+  try {
+    decoded = decodeURIComponent(urlPath);
+  } catch {
+    // malformed encoding - fall through and judge the raw path
+  }
+  return DOWNLOAD_EXT.has(path.extname(decoded).toLowerCase());
+}
+
+app.use(
+  "/files",
+  (req, res, next) => {
+    if (!isPublicFormPath(req.path)) return res.status(404).json({ error: "Not found" });
+    next();
+  },
+  express.static("files", {
+    setHeaders: (res, filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+      if (!DOWNLOAD_EXT.has(ext)) return;
+      const name = path.basename(filePath);
+      // Hebrew filenames need RFC 5987 (filename*); the ASCII filename is a
+      // fallback for legacy browsers that only understand the plain form.
+      const asciiFallback = name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(name)}`
+      );
+    },
+  })
+);
 
 /* ======================
    Firebase init (ENV only)
