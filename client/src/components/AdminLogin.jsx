@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ export default function AdminLogin({ onSuccess }) {
   const [mode, setMode] = useState("login");
   const [msg, setMsg] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const login = async () => {
     setMsg("");
@@ -54,11 +56,23 @@ export default function AdminLogin({ onSuccess }) {
     setMsg("Password updated successfully");
   };
 
-  const handleSubmit = (e) => {
+  // Owns the pending state for all three modes, so the button can never be left
+  // spinning: a rejected fetch (server down, no network) is caught here rather
+  // than surfacing as an unhandled rejection.
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (mode === "login") login();
-    else if (mode === "forgot") sendCode();
-    else if (mode === "reset") resetPassword();
+    if (loading) return;
+    setLoading(true);
+    try {
+      if (mode === "login") await login();
+      else if (mode === "forgot") await sendCode();
+      else if (mode === "reset") await resetPassword();
+    } catch {
+      setIsSuccess(false);
+      setMsg("Connection failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const titles = {
@@ -77,6 +91,12 @@ export default function AdminLogin({ onSuccess }) {
     login: "Sign in",
     forgot: "Send reset code",
     reset: "Update password",
+  };
+
+  const loadingLabel = {
+    login: "Signing in...",
+    forgot: "Sending code...",
+    reset: "Updating...",
   };
 
   return (
@@ -144,13 +164,21 @@ export default function AdminLogin({ onSuccess }) {
 
       {/* Actions */}
       <div className="space-y-3">
-        <Button type="submit" className="w-full">
-          {submitLabel[mode]}
+        <Button type="submit" className="w-full" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" aria-hidden="true" />
+              {loadingLabel[mode]}
+            </>
+          ) : (
+            submitLabel[mode]
+          )}
         </Button>
         <div className="text-center">
           <Button
             type="button"
             variant="link"
+            disabled={loading}
             className="text-caption text-muted-foreground h-auto p-0"
             onClick={() => {
               setMode(mode === "login" ? "forgot" : "login");
