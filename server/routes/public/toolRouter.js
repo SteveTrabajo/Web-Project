@@ -1,5 +1,5 @@
 import { callLLMTools } from "../../services/llm.js";
-import { getAllCoursesCached, matchCourse, getRelationIndex, buildCourseInfoHtml } from "../../services/courseData.js";
+import { getAllCoursesCached, matchCourse, getRelationIndex, buildCourseInfoHtml, findCoursesInText } from "../../services/courseData.js";
 import { ragCuratedAnswer } from "../../services/curatedRag.js";
 import { getLatestYearId, getAllLabs, filterLabs, findNextLab, renderLabs } from "../../services/labsData.js";
 import { answerRegistration, findContactsByQuery } from "./registration.service.js";
@@ -183,7 +183,12 @@ async function runGetLabSchedule(args) {
 const COURSE_ARG = {
   type: "object",
   properties: {
-    course: { type: "string", description: "שם הקורס או קוד הקורס, למשל 'ביוכימיה' או '41345'." },
+    course: {
+      type: "string",
+      description:
+        "שם הקורס או קוד הקורס בדיוק כפי שהוזכר בשאלת המשתמש (קוד = 5-6 ספרות). " +
+        "אל תמציא/י שם קורס ואל תעתיק/י דוגמאות מתיאורי הכלים - העבר/י רק את הקורס שבשאלה.",
+    },
   },
   required: ["course"],
 };
@@ -208,9 +213,11 @@ const TOOLS = [
       function: {
         name: "get_course_info",
         description:
-          "מחזיר מידע כללי על קורס יחיד: נקודות זכות (נ\"ז), שעות שבועיות (הרצאה/תרגול/מעבדה) ובאיזה סמסטר. " +
-          "השתמש כאשר המשתמש שואל על מאפייני קורס - למשל 'כמה נקז נותן הקורס X', 'כמה שעות שבועיות ל-X', " +
-          "'באיזה סמסטר לומדים את X'. אל תשתמש עבור קורסי קדם או קשר בין קורסים.",
+          "מחזיר מידע כללי על קורס יחיד: מספר/קוד הקורס, שם, נקודות זכות (נ\"ז), שעות שבועיות (הרצאה/תרגול/מעבדה) ובאיזה סמסטר. " +
+          "השתמש כאשר המשתמש שואל על מאפייני קורס או על מספר/קוד הקורס - למשל 'מה מספר הקורס של X', 'מה הקוד של X', " +
+          "'כמה נקז נותן X', 'כמה שעות שבועיות ל-X', 'באיזה סמסטר לומדים את X'. " +
+          "השתמש גם כאשר המשתמש מזכיר שם של קורס בלבד ללא שאלה מפורשת (ברירת מחדל לכל אזכור של קורס יחיד). " +
+          "אל תשתמש עבור קורסי קדם או קשר בין קורסים.",
         parameters: COURSE_ARG,
       },
     },
@@ -223,7 +230,7 @@ const TOOLS = [
         name: "get_courses_requiring",
         description:
           "מחזיר את רשימת הקורסים שהקורס הנתון מהווה עבורם דרישת קדם (הכיוון ההפוך של קורסי קדם). " +
-          "השתמש כאשר המשתמש שואל למשל: 'לאילו קורסים ביוכימיה היא דרישת קדם', 'אילו קורסים דורשים את X', " +
+          "השתמש כאשר המשתמש שואל למשל: 'לאילו קורסים X היא דרישת קדם', 'אילו קורסים דורשים את X', " +
           "'מה אפשר ללמוד אחרי X'. אל תשתמש כאשר שואלים מה קורסי הקדם של X עצמו.",
         parameters: COURSE_ARG,
       },
@@ -376,7 +383,11 @@ const TOOLS = [
         parameters: {
           type: "object",
           properties: {
-            query: { type: "string", description: "שאלת המשתמש, מנוסחת כפי שנשאלה." },
+            query: {
+              type: "string",
+              description:
+                "העתק/י את שאלת המשתמש מילה במילה כפי שנשאלה. אל תנסח/י מחדש ואל תמציא/י שאלה אחרת.",
+            },
           },
           required: ["query"],
         },
@@ -388,16 +399,41 @@ const TOOLS = [
 
 /* ---------- router ---------- */
 
+const BASE_SYSTEM =
+  "אתה עוזר אקדמי למחלקה לביוטכנולוגיה במכללת בראודה. " +
+  "בחר בכלי המתאים ביותר לשאלת המשתמש. אם אף כלי אינו מתאים, אל תזמן כלי - " +
+  "ענה במשפט קצר שאין לך מידע על כך.";
+
+// The LLM picks tools from static descriptions and has no knowledge of the
+// actual catalog, so a bare or partial course name matches no description and is
+// dropped. Detecting real courses deterministically and telling the model closes
+// that gap and fixes the arg (it uses the exact name/code instead of guessing).
+function courseHint(detected) {
+  if (!detected.length) return "";
+  const list = detected.slice(0, 3).map((c) => `${c.courseName} (${c.courseCode})`).join(", ");
+  return (
+    ` שים לב: השאלה מזכירה קורס/ים קיימים מהשנתון: ${list}. ` +
+    "אם השאלה עוסקת בקורס זה, בחר בכלי הקורס המתאים: get_course_info למידע כללי / קוד / נ\"ז / שעות / סמסטר, " +
+    "get_prerequisites לקורסי קדם, get_courses_requiring לכיוון ההפוך, get_course_relations ליחס בין שני קורסים. " +
+    "אם לא מבוקש פרט ספציפי אלא הקורס עצמו - השתמש ב-get_course_info. העבר את שם או קוד הקורס בדיוק כפי שמופיע כאן."
+  );
+}
+
+// A confident, single course to fall back to when the model finds no tool or the
+// chosen tool produced no real answer. Ambiguous multi-matches (e.g. a bare
+// "כימיה" that fits many courses) are intentionally left unresolved.
+function courseCardResult(detected, source) {
+  const c = detected[0];
+  return { type: "tool", tool: "get_course_info", args: { course: c.courseCode }, html: buildCourseInfoHtml(c), source };
+}
+
 export async function routeWithTools(question, yearbookId) {
+  const courses = await getAllCoursesCached(yearbookId);
+  const detected = findCoursesInText(question, courses);
+
   const msg = await callLLMTools(
     [
-      {
-        role: "system",
-        content:
-          "אתה עוזר אקדמי למחלקה לביוטכנולוגיה במכללת בראודה. " +
-          "בחר בכלי המתאים ביותר לשאלת המשתמש. אם אף כלי אינו מתאים, אל תזמן כלי - " +
-          "ענה במשפט קצר שאין לך מידע על כך.",
-      },
+      { role: "system", content: BASE_SYSTEM + courseHint(detected) },
       { role: "user", content: question },
     ],
     TOOLS.map((t) => t.schema)
@@ -409,7 +445,9 @@ export async function routeWithTools(question, yearbookId) {
 
   const call = msg.tool_calls?.[0];
   if (!call) {
-    // No tool matched: admit no answer rather than echo possibly-hallucinated text.
+    // No tool matched. If the question names a real course, answer with its info
+    // card instead of admitting no answer.
+    if (detected.length) return courseCardResult(detected, "course_fallback_no_tool");
     return { type: "no_tool", html: NO_ANSWER_HTML };
   }
 
@@ -425,6 +463,9 @@ export async function routeWithTools(question, yearbookId) {
   // { html, answered:false, source } to signal it produced no real answer.
   const out = await tool.run(args, { yearbookId });
   if (typeof out === "object" && out?.answered === false) {
+    // e.g. a KB miss. If the question names a real course, prefer its info card
+    // over logging the question as unanswered.
+    if (detected.length) return courseCardResult(detected, "course_fallback_kb_miss");
     return { type: "no_answer", tool: call.function.name, args, html: out.html, source: out.source || "no_answer" };
   }
   return { type: "tool", tool: call.function.name, args, html: out };

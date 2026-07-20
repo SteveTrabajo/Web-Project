@@ -114,6 +114,29 @@ export function buildCourseInfoHtml(course) {
     </div>`;
 }
 
+function escapeRegex(str = "") {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Deterministic catalog detection: courses whose full name appears in the text
+// (every name-word present, word-bounded so a name is not matched inside a longer
+// word). Lets a caller recognise a real course even when the phrasing matches no
+// tool/intent. Most-specific (longest name) first, so a caller can take [0].
+export function findCoursesInText(text, courses) {
+  const q = normalizeHebrew(text);
+  const matches = [];
+  for (const c of courses) {
+    if (!c.nameNorm) continue;
+    const words = c.nameNorm.split(" ").filter((w) => w.length >= 2 || /\d/.test(w));
+    if (!words.length) continue;
+    const found = words.every((w) =>
+      new RegExp(`(?<![\\p{L}\\d])${escapeRegex(w)}(?![\\p{L}\\d])`, "iu").test(q)
+    );
+    if (found) matches.push(c);
+  }
+  return matches.sort((a, b) => b.nameNorm.length - a.nameNorm.length);
+}
+
 /* ---------- relations (both directions from one scan) ---------- */
 
 const _relIndexCache = new Map();
