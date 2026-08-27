@@ -23,6 +23,16 @@ router.get("/usage-stats", async (req, res) => {
       events = events.filter((e) => e.createdAt >= since);
     }
 
+    // Size of the unanswered-questions queue. Distinct from the event-log
+    // metric below: this one is the admin work queue and drops to 0 when the
+    // queue is cleared, while the event log keeps its historical record.
+    let unansweredQueue = 0;
+    try {
+      unansweredQueue = (await db.collection("unansweredQuestions").count().get()).data().count;
+    } catch {
+      unansweredQueue = 0;
+    }
+
     // Recent unanswered questions (last 20)
     const unansweredSnap = await db
       .collection("unansweredQuestions")
@@ -128,6 +138,7 @@ router.get("/usage-stats", async (req, res) => {
       totalQuestions,
       answeredQuestions,
       unansweredQuestions: unansweredQuestionsCount,
+      unansweredQueue,
       answerRate,
       bySemester,
       byTopic,

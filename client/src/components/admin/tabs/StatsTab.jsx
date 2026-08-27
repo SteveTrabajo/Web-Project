@@ -282,7 +282,9 @@ export default function StatsTab({ toast }) {
     setLoading(true);
     try {
       const params = selectedDays ? `?days=${selectedDays}` : "";
-      const result = await apiFetch(`/api/admin/usage-stats${params}`);
+      // force: skip the shared GET cache so the numbers always reflect the
+      // current data (e.g. right after the unanswered queue is cleared).
+      const result = await apiFetch(`/api/admin/usage-stats${params}`, { force: true });
       setData(result);
     } catch (e) {
       toast("error", e.message);
@@ -348,8 +350,13 @@ export default function StatsTab({ toast }) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <KpiCard label="סה״כ שאלות"     value={data.totalQuestions} />
         <KpiCard label="שאלות שנענו"    value={data.answeredQuestions} />
-        <KpiCard label="שאלות ללא מענה" value={data.unansweredQuestions} />
+        <KpiCard label="שאלות ללא מענה" value={data.unansweredQuestions} sub="מתוך יומן השימוש" />
         <KpiCard label="אחוז מענה"      value={`${data.answerRate}%`} />
+        <KpiCard
+          label="בתור לטיפול"
+          value={data.unansweredQueue ?? 0}
+          sub="שאלות שממתינות בטאב שאלות ללא מענה"
+        />
         <KpiCard
           label="סה״כ משובים"
           value={data.feedbackSummary?.totalFeedback ?? 0}

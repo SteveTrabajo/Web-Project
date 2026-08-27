@@ -142,6 +142,21 @@ export function findCoursesInText(text, courses) {
 const _relIndexCache = new Map();
 const RELATION_CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Drops cached courses/relations for a yearbook. Called after a destructive
+// admin action (e.g. deleting a yearbook) so the bot stops serving data for
+// something that no longer exists instead of waiting out the 5-minute TTL.
+// Omit the id to clear every yearbook.
+export function invalidateYearbookCaches(yearbookId) {
+  if (yearbookId) {
+    _coursesCache.delete(yearbookId);
+  } else {
+    _coursesCache.clear();
+  }
+  // The relation index is built from a collectionGroup scan across all
+  // yearbooks, so any deletion invalidates every entry.
+  _relIndexCache.clear();
+}
+
 // forward: course -> [{ code, type }] its prerequisites/co-reqs
 // reverse: course -> [{ code, type }] courses that list it as a relation
 export async function getRelationIndex(yearbookId) {

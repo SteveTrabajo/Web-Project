@@ -136,6 +136,10 @@ export default function UnansweredTab({ toast }) {
   const [yearbookMap, setYearbookMap] = useState({});
   const [answerDraft, setAnswerDraft] = useState(null);
   const [publishing, setPublishing]   = useState(false);
+  const [total, setTotal]             = useState(null);
+  const [purgeOpen, setPurgeOpen]     = useState(false);
+  const [purgePassword, setPurgePassword] = useState("");
+  const [purging, setPurging]         = useState(false);
 
   const loadQuestions = async (pageNum = 1) => {
     setLoading(true);
@@ -148,10 +152,33 @@ export default function UnansweredTab({ toast }) {
       setQuestions((prev) => (pageNum === 1 ? items : [...prev, ...items]));
       setPage(pageNum);
       setHasMore(data.hasMore ?? false);
+      setTotal(data.total ?? null);
     } catch (e) {
       toast("error", e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* Purging the queue is irreversible, so it asks for the admin password on top
+     of the session token. apiFetch clears its GET cache on any mutation, so the
+     statistics tab refetches instead of showing the deleted questions. */
+  const purgeAll = async () => {
+    if (!purgePassword) return toast("error", "יש להזין סיסמה.");
+    setPurging(true);
+    try {
+      const data = await apiFetch("/api/admin/unanswered-questions", {
+        method: "DELETE",
+        body: { password: purgePassword },
+      });
+      toast("ok", `נמחקו ${data.deleted} שאלות ללא מענה.`);
+      setPurgeOpen(false);
+      setPurgePassword("");
+      loadQuestions(1);
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -229,10 +256,26 @@ export default function UnansweredTab({ toast }) {
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <h2 className="text-heading">שאלות ללא מענה</h2>
-          <Button size="sm" variant="outline" onClick={() => loadQuestions(1)} disabled={loading}>
-            רענון
-          </Button>
+          <h2 className="text-heading">
+            שאלות ללא מענה
+            {total != null && (
+              <span className="ms-2 text-caption font-normal text-muted-foreground">({total})</span>
+            )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => loadQuestions(1)} disabled={loading}>
+              רענון
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setPurgeOpen(true)}
+              disabled={loading || total === 0}
+            >
+              מחיקת הכל
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -323,6 +366,46 @@ export default function UnansweredTab({ toast }) {
             {publishing ? "מפרסם..." : "פרסם"}
           </Button>
           <Button variant="outline" onClick={() => setAnswerDraft(null)}>ביטול</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Purge the whole queue - irreversible, so it re-checks the admin password */}
+    <Dialog open={purgeOpen} onOpenChange={(o) => { setPurgeOpen(o); if (!o) setPurgePassword(""); }}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">מחיקת כל השאלות ללא מענה</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-caption text-destructive">
+            הפעולה תמחק לצמיתות {total != null ? `${total} שאלות` : "את כל השאלות"} ואינה ניתנת לביטול.
+            תשובות שכבר פורסמו לא יושפעו.
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="purge-password">סיסמת המנהל לאישור</Label>
+            <Input
+              id="purge-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={purgePassword}
+              onChange={(e) => setPurgePassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && purgePassword) purgeAll(); }}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex-row gap-2 justify-start">
+          <Button
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={purgeAll}
+            disabled={purging || !purgePassword}
+          >
+            {purging ? "מוחק..." : "מחיקה לצמיתות"}
+          </Button>
+          <Button variant="outline" onClick={() => setPurgeOpen(false)} disabled={purging}>ביטול</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
