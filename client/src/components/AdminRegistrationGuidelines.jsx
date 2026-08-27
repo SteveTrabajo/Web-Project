@@ -183,6 +183,8 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   const [view, setView] = useState("general");
   const [uploading, setUploading] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [syncPreview, setSyncPreview] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const fileRef = useRef(null);
 
   const update = (path, value) => {
@@ -224,6 +226,40 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
     }
   };
 
+  /* Advisors are stored twice: here, and in the academicAdvisors collection that
+     the bot's letter/track picker reads. Saving offers to reconcile the two -
+     the admin sees the diff and approves it; nothing is written otherwise. */
+  const previewAdvisorSync = async () => {
+    const advisors = (doc.contacts?.academicAdvisors || []).filter((a) => a.name);
+    if (!advisors.length) return;
+    try {
+      const data = await apiFetch("/api/admin/advisors/sync/preview", {
+        method: "POST",
+        body: { advisors },
+      });
+      const pending = (data.rows || []).filter((r) => r.status !== "same");
+      setSyncPreview(pending.length ? { rows: pending, counts: data.counts } : null);
+    } catch {
+      // A failed preview must not make the save look failed - it already succeeded.
+    }
+  };
+
+  const applyAdvisorSync = async () => {
+    setSyncing(true);
+    try {
+      const data = await apiFetch("/api/admin/advisors/sync/apply", {
+        method: "POST",
+        body: { rows: syncPreview.rows },
+      });
+      toast("ok", `✅ ${data.written} יועצים סונכרנו לטאב היועצים`);
+      setSyncPreview(null);
+    } catch (e) {
+      toast("error", `⚠️ ${e.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const save = async () => {
     try {
       await apiFetch(`/api/admin/registration-guidelines/${semester}`, {
@@ -233,6 +269,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
       toast("ok", "✅ ההנחיות נשמרו");
       setDirty(false);
       load();
+      previewAdvisorSync();
     } catch (e) {
       toast("error", `⚠️ ${e.message}`);
     }
@@ -241,6 +278,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   useEffect(() => {
     load();
     setImportResult(null);
+    setSyncPreview(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [semester]);
 
@@ -367,6 +405,75 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
           </Button>
         </div>
       </div>
+
+      {/* Advisor sync proposal - shown after a save that changes advisor data */}
+      {syncPreview && (
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4 dark:bg-indigo-950/20 dark:border-indigo-800">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                סנכרון יועצים לטאב היועצים
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-5 max-w-xl">
+                היועצים שבמסמך ההנחיות אינם זהים לרשומים בטאב היועצים - שם מתבצע שיוך היועץ/ת
+                לסטודנט/ית לפי אות ומסלול. אפשר לעדכן אותם כך שיתאימו למסמך. יועצים שקיימים רק
+                בטאב היועצים לא יימחקו.
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setSyncPreview(null)} disabled={syncing}>
+                דילוג
+              </Button>
+              <Button
+                size="sm"
+                className="bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={applyAdvisorSync}
+                disabled={syncing}
+              >
+                {syncing ? "מסנכרן..." : `סנכרון ${syncPreview.rows.length} יועצים`}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {syncPreview.rows.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-xl bg-white border border-slate-200 p-3 text-xs dark:bg-slate-900 dark:border-slate-700"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold " +
+                      (r.status === "new"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")
+                    }
+                  >
+                    {r.status === "new" ? "חדש" : "עדכון"}
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-100">{r.advisor.name}</span>
+                  <span className="text-slate-400">
+                    סמסטרים {r.advisor.semesters.join(", ") || "-"} · {r.advisor.lastNameRanges.join(", ")}
+                    {r.advisor.effectiveFrom ? ` · מתאריך ${r.advisor.effectiveFrom}` : ""}
+                  </span>
+                </div>
+                {r.changes.length > 0 && (
+                  <ul className="mt-2 space-y-0.5 text-slate-500 dark:text-slate-400">
+                    {r.changes.map((c) => (
+                      <li key={c.field}>
+                        {c.label}: <span className="line-through">{String(c.from) || "ריק"}</span>
+                        {" -> "}
+                        <span className="text-slate-800 dark:text-slate-100 font-medium">{String(c.to) || "ריק"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sub-view segmented control */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-fit">

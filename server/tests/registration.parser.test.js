@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import os from "os";
 import path from "path";
-import { buildGuidelinesPatch } from "../services/registrationImport.js";
+import { buildGuidelinesPatch, toCollectionAdvisor, diffAdvisorSync } from "../services/registrationImport.js";
 
 /*
  * Regression test for registration_guidelines_parser.py.
@@ -131,7 +131,9 @@ function run() {
   check("semester 1 advisors", names(sem1, "academicAdvisors"), ["דר' בוסיס ערן", "פרופ' מרעי סמאר"]);
   check("semester 1 keeps department-wide labs contact", names(sem1, "labs"), ["גב' גולן עינב"]);
   check("semester 1 credit cap", sem1.audience.creditsRange, { min: 16, max: 24 });
-  checkTruthy("semester filter strips the semesters field", sem1.contacts.academicAdvisors.every((a) => a.semesters === undefined));
+  // The full range is kept, not narrowed to the doc it was imported through -
+  // the advisor sync needs to know בוסיס covers 1+2, not just semester 1.
+  check("advisor keeps its full semester range", sem1.contacts.academicAdvisors[0].semesters, [1, 2]);
 
   const sem3 = buildGuidelinesPatch(out, 3).patch;
   check("semester 3 advisors", names(sem3, "academicAdvisors"), ["דר' גולני עידית", "דר' אלפסי גלעד"]);
@@ -144,6 +146,56 @@ function run() {
 
   const noAdvisors = buildGuidelinesPatch({ ...out, contacts: { ...out.contacts, academicAdvisors: [] } }, 1);
   checkTruthy("warns when no advisor matches the semester", noAdvisors.warnings.some((w) => w.includes("לא נמצא יועץ")));
+
+  console.log("\n== Advisor sync to the academicAdvisors collection ==");
+  const docAdvisors = sem1.contacts.academicAdvisors;
+
+  const shaped = toCollectionAdvisor(docAdvisors.find((a) => a.name.includes("בוסיס")));
+  check("assignment converted to lastNameRanges", shaped.lastNameRanges, ["א-כ"]);
+  check("id derived from email local part", shaped.id, "bosis");
+  check("general advisor gets the כללי track", shaped.tracks, ["כללי"]);
+  check("semesters carried over", shaped.semesters, [1, 2]);
+
+  const sem6Advisors = buildGuidelinesPatch(out, 6).patch.contacts.academicAdvisors;
+  const shapedTrack = toCollectionAdvisor(sem6Advisors.find((a) => a.name.includes("ויץ")));
+  check("track advisor keeps its track", shapedTrack.tracks, ["מולקולרית-תרופתית"]);
+  check("advisor with no letter bucket covers all letters", shapedTrack.lastNameRanges, ["א-ת"]);
+  check("id falls back to a name slug without an email", shapedTrack.id, "דר-ויץ-איריס");
+
+  // Empty collection: everyone is new.
+  const allNew = diffAdvisorSync(docAdvisors, []);
+  check("all new against an empty collection", allNew.map((r) => r.status), ["new", "new"]);
+
+  // Existing entry that already matches: no change proposed.
+  const existing = [{ id: "bosis", ...toCollectionAdvisor(docAdvisors.find((a) => a.name.includes("בוסיס"))) }];
+  const noop = diffAdvisorSync([docAdvisors.find((a) => a.name.includes("בוסיס"))], existing);
+  check("identical advisor reports no change", noop[0].status, "same");
+
+  // Existing entry with a stale letter range: flagged as an update, id preserved.
+  const stale = [{ id: "custom-id", name: "דר' בוסיס ערן", email: "bosis@braude.ac.il", lastNameRanges: ["א-ת"], semesters: [1], tracks: ["כללי"] }];
+  const upd = diffAdvisorSync([docAdvisors.find((a) => a.name.includes("בוסיס"))], stale);
+  check("stale advisor flagged as update", upd[0].status, "update");
+  check("existing document id preserved", upd[0].id, "custom-id");
+  check(
+    "changed fields reported",
+    upd[0].changes.map((c) => c.field).sort(),
+    ["lastNameRanges", "semesters"]
+  );
+
+  // A doc entry with no email must not blank out an email already on record.
+  const noEmailIncoming = [{ name: "דר' ויץ איריס", email: "", assignment: { track: "מולקולרית-תרופתית" }, semesters: [5, 6, 7, 8] }];
+  const withEmail = [{ id: "weitz", name: "דר' ויץ איריס", email: "iris@braude.ac.il", lastNameRanges: ["א-ת"], semesters: [5, 6, 7, 8], tracks: ["מולקולרית-תרופתית"] }];
+  const preserved = diffAdvisorSync(noEmailIncoming, withEmail);
+  check("known email is not blanked by a doc row without one", preserved[0].advisor.email, "iris@braude.ac.il");
+  check("no email change proposed", preserved[0].changes.filter((c) => c.field === "email").length, 0);
+
+  // Nameless rows (the unassigned שנה א' mentor slot) never reach the collection.
+  check("nameless rows skipped", diffAdvisorSync([{ name: "", email: "" }], []).length, 0);
+
+  // Advisors that exist only in the tab are never proposed for deletion.
+  const handMade = [{ id: "manual", name: "יועץ ידני", email: "manual@braude.ac.il", lastNameRanges: ["א-ת"], semesters: [7], tracks: ["כללי"] }];
+  const rows = diffAdvisorSync(docAdvisors, handMade);
+  checkTruthy("hand-created advisor untouched", !rows.some((r) => r.id === "manual"));
 
   console.log(`\n== Summary ==`);
   console.log(`  ${passed} passed, ${failures.length} failed`);

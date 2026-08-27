@@ -14,14 +14,18 @@ This also activates the `rules` intent, which was reachable but had no renderer.
   (paragraphs and tables interleaved), extracts prose into `keyRules` with topic codes, and
   resolves the advisor table into semester / credit / surname-range / track / effective-date
   fields. Reports data gaps as warnings instead of guessing.
-- `server/services/registrationImport.js` - `buildGuidelinesPatch()` filters parsed contacts to
-  one semester and shapes the parser output into a `registrationGuidelines` patch.
+- `server/services/registrationImport.js` - shapes parser output into a per-semester patch, and
+  converts advisors between the two stores they live in (`assignment` <-> `lastNameRanges`).
 - `POST /api/admin/upload/registration-guidelines` - parse-and-preview only; nothing is written
   until the admin reviews and saves.
+- `POST /api/admin/advisors/sync/preview` + `/apply` - reconcile the guidelines doc's advisors
+  with the `academicAdvisors` collection that the bot's letter/track picker reads. Saving shows a
+  diff (new / changed fields) and writes only what the admin approves; deletions are never
+  proposed, so hand-created advisors are safe. The apply step recomputes the diff server-side.
 - Import card in the "כללים וקישורים" sub-view of the registration editor, which merges the patch
   into the open semester and lists any warnings.
 - `server/tests/registration.parser.test.js` + `npm run test:registration` - pins each extracted
-  fact to its source cell, plus the per-semester advisor split. 38/38.
+  fact to its source cell, the per-semester advisor split, and the sync diff. 54/54.
 
 ### Modified
 
