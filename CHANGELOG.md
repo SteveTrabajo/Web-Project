@@ -24,8 +24,13 @@ This also activates the `rules` intent, which was reachable but had no renderer.
   diff (new / changed fields) and writes only what the admin approves; deletions are never
   proposed, so hand-created advisors are safe. The apply step recomputes the diff server-side.
 - `client/src/components/admin/RegistrationImport.jsx` - dedicated "ייבוא מקובץ" sub-view with a
-  three-step flow (select file -> review -> import) and a destination map showing, per item, which
-  tab and which Firestore path it lands in, plus what was found but deliberately not imported.
+  three-step flow: drag-and-drop select, a review step whose destination map names the category and
+  Firestore path each item lands in (plus what was found and deliberately skipped), and a final
+  step that renders the imported data itself as collapsible, editable sections with a
+  before/after change summary and a sticky save bar - so verifying an import needs no tab-hopping.
+- `client/src/components/admin/registrationFields.jsx` / `registrationIcons.jsx` /
+  `registrationSchema.js` - field primitives, icons and record factories extracted out of
+  AdminRegistrationGuidelines so the editor and the import screen render identical inputs.
 - `server/tests/registration.parser.test.js` + `npm run test:registration` - pins each extracted
   fact to its source cell, the per-semester advisor split, the sync diff, table classification and
   the destination map. 64/64.
