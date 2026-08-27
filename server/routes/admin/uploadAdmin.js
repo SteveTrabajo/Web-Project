@@ -9,6 +9,7 @@ import admin from "firebase-admin";
 import { db } from "../../server.js";
 import { buildPreview } from "../../services/yearbookImport.js";
 import { computeTransitiveClosure } from "../../services/prereqGraph.js";
+import { buildGuidelinesPatch } from "../../services/registrationImport.js";
 
 const router = express.Router();
 
@@ -249,6 +250,52 @@ async function writeYearbook(yearbookId, label, courses) {
     cycles: cycles.length,
   };
 }
+
+// ======================
+// Upload registration guidelines (preview only)
+// Parses the "הנחיות כלליות לרישום" DOCX into a patch shaped like a
+// registrationGuidelines/semester_N doc. Writes nothing - the admin reviews the
+// patch in the registration editor and saves from there.
+// ======================
+
+router.post("/upload/registration-guidelines", upload.single("file"), (req, res) => {
+  const filePath = req.file?.path;
+  const semester = Number(req.body?.semester);
+
+  if (!filePath) return res.status(400).json({ error: "לא נבחר קובץ להעלאה." });
+  if (!Number.isInteger(semester) || semester < 1 || semester > 8) {
+    cleanupFile(filePath);
+    return res.status(400).json({ error: "יש לבחור סמסטר תקין (1-8)." });
+  }
+  if (path.extname(filePath).toLowerCase() !== ".docx") {
+    cleanupFile(filePath);
+    return res.status(400).json({ error: "יש להעלות קובץ מסוג DOCX בלבד." });
+  }
+
+  execFile(
+    PYTHON_CMD,
+    ["parsers/registration_guidelines_parser.py", filePath],
+    (err, stdout, stderr) => {
+      cleanupFile(filePath);
+      if (err) {
+        console.error(stderr || err.message); // full detail stays in logs
+        return res.status(500).json({ error: friendlyError(stderr || err.message) });
+      }
+
+      let parsed = null;
+      try {
+        const lines = stdout.trim().split(/\r?\n/);
+        parsed = JSON.parse(lines[lines.length - 1]);
+      } catch {
+        console.error("Failed to parse registration guidelines parser output");
+        return res.status(500).json({ error: friendlyError("valid json") });
+      }
+
+      const { patch, warnings } = buildGuidelinesPatch(parsed, semester);
+      res.json({ ok: true, semester, meta: parsed.meta, warnings, patch });
+    }
+  );
+});
 
 // ======================
 // Upload labs (preview only - unchanged)

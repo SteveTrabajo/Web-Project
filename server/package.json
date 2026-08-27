@@ -6,7 +6,8 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "test:reserves": "node tests/reserves.accuracy.test.js",
-    "test:router": "node tests/router.courses.test.js"
+    "test:router": "node tests/router.courses.test.js",
+    "test:registration": "node tests/registration.parser.test.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

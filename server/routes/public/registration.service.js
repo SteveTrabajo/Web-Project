@@ -29,7 +29,9 @@ export function isRegistrationQuestion(question = "") {
     "מעבדה","מעבדות",
     "מנטור","מלווה",
     "סטודנטים חדשים",
-    "סטאז","סטאז׳","התמחות"
+    "סטאז","סטאז׳","התמחות",
+    // Rules covered by the general registration guidelines document
+    "כללים","הנחיות","חפיפה","חוזרים","חסימה","סילבוס"
   ].some(w => q.includes(w));
 }
 
@@ -103,6 +105,14 @@ export function refineRegistrationIntent(intent, question) {
   if (q.includes("נז") || q.includes("165")) return "credits";
   if (q.includes("מתי") || q.includes("חלון")) return "window";
   if (q.includes("למי פונים") || q.includes("בעיה")) return "contacts";
+  if (
+    q.includes("כללים") ||
+    q.includes("הנחיות") ||
+    q.includes("חפיפה") ||
+    q.includes("חוזרים") ||
+    q.includes("חסימה") ||
+    q.includes("סילבוס")
+  ) return "rules";
 
   return intent || "general";
 }
@@ -185,7 +195,12 @@ export async function getRegistrationSummary(semesterNum) {
     const w = doc.registrationWindow;
     const windowStr = w ? `חלון רישום: ${w.date} בין ${w.from} ל-${w.to}` : "";
     const rules = (doc.keyRules || []).slice(0, 5).map((r) => r.text).join("; ");
-    return [`הנחיות רישום - סמסטר ${semesterNum}:`, windowStr, rules ? `כללים: ${rules}` : ""]
+    const cr = doc.audience?.creditsRange;
+    const creditsStr =
+      cr && (cr.min != null || cr.max != null)
+        ? `נקודות זכות בסמסטר: ${cr.min ?? "?"} עד ${cr.max ?? "?"} נ"ז`
+        : "";
+    return [`הנחיות רישום - סמסטר ${semesterNum}:`, windowStr, creditsStr, rules ? `כללים: ${rules}` : ""]
       .filter(Boolean)
       .join("\n");
   } catch {
@@ -378,10 +393,33 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
 
   /* ---------- CREDITS ---------- */
   if (intent === "credits") {
+    const r = doc.audience?.creditsRange;
+    const range =
+      r && (r.min != null || r.max != null)
+        ? `<br/>בסמסטר: ${[r.min != null ? `מינימום ${r.min} נ״ז` : "", r.max != null ? `מקסימום ${r.max} נ״ז` : ""]
+            .filter(Boolean)
+            .join(", ")}`
+        : "";
     return `
       <div class="text-sm">
         <b class="bot-title">נקודות זכות</b><br/>
-        ${doc.audience?.creditsRuleText || "נדרש מינימום 165 נ״ז"}
+        ${doc.audience?.creditsRuleText || "נדרש מינימום 165 נ״ז"}${range}
+      </div>`;
+  }
+
+  /* ---------- RULES ---------- */
+  // Backed by the "הנחיות כלליות לרישום" document parsed into keyRules.
+  if (intent === "rules") {
+    const rules = (doc.keyRules || []).filter((r) => r.text);
+    const formsHtml = appendForms(forms, intent);
+    if (!rules.length) {
+      return `<div class="text-sm">ℹ️ אין הנחיות רישום מפורטות לסמסטר ${sem}.${formsHtml}</div>`;
+    }
+    return `
+      <div class="text-sm leading-6">
+        📋 <b class="bot-title">הנחיות רישום – סמסטר ${sem}${cohort}</b><br/><br/>
+        ${rules.map((r) => `• ${r.text}`).join("<br/>")}
+        ${formsHtml}
       </div>`;
   }
 
@@ -525,6 +563,27 @@ export async function answerRegistration({ semester = null, aspect = "general", 
 
     if (finalIntent === "internship") {
       return `<div class="text-sm">ℹ️ תנאי סטאז' משתנים לפי סמסטר. אנא ציין/י סמסטר.</div>`;
+    }
+
+    // The same guidelines document is uploaded per semester, so most rules repeat.
+    // Dedupe by text to show each guideline once instead of asking for a semester.
+    if (finalIntent === "rules") {
+      const seen = new Set();
+      const rules = [];
+      for (const d of allDocs) {
+        for (const r of d.keyRules || []) {
+          const t = String(r.text || "").trim();
+          if (!t || seen.has(t)) continue;
+          seen.add(t);
+          rules.push(t);
+        }
+      }
+      if (!rules.length) return `<div class="text-sm">ℹ️ לא נמצאו הנחיות רישום.</div>`;
+      return `
+        <div class="text-sm leading-6">
+          📋 <b class="bot-title">הנחיות כלליות לרישום</b><br/><br/>
+          ${rules.map((t) => `• ${t}`).join("<br/>")}
+        </div>`;
     }
 
     if (finalIntent === "general") {
