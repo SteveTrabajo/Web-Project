@@ -44,6 +44,17 @@ const emptyDoc = (semesterNumber = 1) => ({
 
 const deepClone = (x) => JSON.parse(JSON.stringify(x));
 
+/*
+ * Sub-views stay mounted and are hidden with CSS instead of being unmounted, so
+ * switching tabs keeps each one's local state. That matters most for the import
+ * screen: unmounting it discarded the selected file and the analysis result, so
+ * a detour to another tab meant uploading again. The import screen is keyed by
+ * semester, since an analysis is filtered to the semester it was run for.
+ */
+function Pane({ active, children }) {
+  return <div className={active ? "" : "hidden"}>{children}</div>;
+}
+
 export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
   const [semester, setSemester] = useState(1);
   const [doc, setDoc] = useState(emptyDoc(1));
@@ -333,7 +344,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
       </div>
 
       {/* --- General info + registration window --- */}
-      {view === "general" && (
+      <Pane active={view === "general"}>
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2">
             <Card>
@@ -419,10 +430,10 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             </Card>
           </div>
         </div>
-      )}
+      </Pane>
 
       {/* --- Contacts (each category full-width on its own row) --- */}
-      {view === "contacts" && (
+      <Pane active={view === "contacts"}>
         <div className="space-y-4">
           <ContactSection
             title="תמיכה ומזכירות"
@@ -465,10 +476,10 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             type="lab"
           />
         </div>
-      )}
+      </Pane>
 
       {/* --- Key rules + links --- */}
-      {view === "rules" && (
+      <Pane active={view === "rules"}>
         <div className="space-y-6">
           <Card>
             <SectionHeader
@@ -567,11 +578,12 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             </div>
           </Card>
         </div>
-      )}
+      </Pane>
 
       {/* --- Guided DOCX import --- */}
-      {view === "import" && (
+      <Pane active={view === "import"}>
         <RegistrationImport
+          key={semester}
           semester={semester}
           doc={doc}
           update={update}
@@ -583,7 +595,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
           dirty={dirty}
           toast={toast}
         />
-      )}
+      </Pane>
     </div>
   );
 }
