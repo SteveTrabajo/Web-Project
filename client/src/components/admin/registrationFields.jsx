@@ -48,6 +48,7 @@ export function Btn({ children, className = "", ...props }) {
         "bg-white border-slate-200 text-slate-700 shadow-sm " +
         "hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 hover:shadow active:scale-95 " +
         "dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 " +
+        "dark:hover:text-white dark:hover:border-slate-600 " +
         className
       }
       {...props}
@@ -119,7 +120,7 @@ export function ContactSection({ title, items = [], onAdd, onRemove, onChange, t
   const [isOpen, setIsOpen] = useState(false); // Collapsible for cleaner UI on mobile
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-500/40">
       <div
         className="p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
@@ -149,7 +150,7 @@ export function ContactSection({ title, items = [], onAdd, onRemove, onChange, t
           {items.length === 0 && <div className="text-center text-xs text-slate-400 py-2">אין אנשי קשר ברשימה</div>}
 
           {items.map((item, idx) => (
-            <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 group hover:border-indigo-200 hover:bg-white transition-colors dark:bg-slate-800/40 dark:border-slate-700">
+            <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 group hover:border-indigo-200 hover:bg-white transition-colors dark:bg-slate-800/40 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:border-indigo-500/40">
               <div className="flex gap-3 items-start">
                 <div className="grow space-y-3">
                   {/* One row per person: name, email, and role-specific fields side by side */}

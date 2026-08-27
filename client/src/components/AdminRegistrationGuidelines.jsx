@@ -488,7 +488,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
                 return (
                   <div
                     key={idx}
-                    className="group relative bg-slate-50/50 rounded-xl p-4 border border-slate-200 transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700"
+                    className="group relative bg-slate-50/50 rounded-xl p-4 border border-slate-200 transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-800/70 dark:hover:border-indigo-500/40"
                   >
                     <div className="flex gap-4 items-start">
                       <div className="grow">
@@ -504,7 +504,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
                               updateItem("keyRules", idx, "text", e.target.value);
                             }}
                             placeholder="לדוגמה: חובה להירשם לקורסי חובה לפני בחירה חופשית..."
-                            className="min-h-27.5 bg-white leading-6"
+                            className="min-h-27.5 leading-6"
                           />
                         </Field>
 
@@ -538,14 +538,13 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
             />
             <div className="space-y-3">
               {(doc.links || []).map((l, idx) => (
-                <div key={idx} className="flex flex-col md:flex-row gap-3 items-end md:items-start p-3 rounded-xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md hover:border-indigo-100 dark:bg-slate-800 dark:border-slate-700">
+                <div key={idx} className="flex flex-col md:flex-row gap-3 items-end md:items-start p-3 rounded-xl border border-slate-100 bg-white shadow-sm transition hover:shadow-md hover:border-indigo-100 dark:bg-slate-800 dark:border-slate-700 dark:hover:border-indigo-500/40">
                   <div className="w-full md:w-1/3">
                     <Field label="כותרת">
                       <TextInput
                         value={l.label || ""}
                         onChange={(e) => updateItem("links", idx, "label", e.target.value)}
                         placeholder="שם הקישור"
-                        className="bg-slate-50"
                       />
                     </Field>
                   </div>
@@ -555,7 +554,7 @@ export default function AdminRegistrationGuidelines({ apiFetch, toast }) {
                         value={l.url || ""}
                         onChange={(e) => updateItem("links", idx, "url", e.target.value)}
                         placeholder="https://..."
-                        className="font-mono text-indigo-600 bg-slate-50 ltr"
+                        className="font-mono text-indigo-600 dark:text-indigo-300 ltr"
                       />
                     </Field>
                   </div>

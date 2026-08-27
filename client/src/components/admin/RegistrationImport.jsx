@@ -118,7 +118,7 @@ function Section({ title, count, tone = "slate", defaultOpen = false, action, ch
       : "bg-slate-50/50 dark:bg-slate-800/40";
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800 transition-all hover:border-indigo-300 dark:hover:border-indigo-500/40">
       <div
         className={`p-4 flex items-center justify-between cursor-pointer select-none ${toneCls}`}
         onClick={() => setOpen(!open)}
