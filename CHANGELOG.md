@@ -13,7 +13,8 @@ This also activates the `rules` intent, which was reachable but had no renderer.
 - `server/parsers/registration_guidelines_parser.py` - walks the DOCX body in document order
   (paragraphs and tables interleaved), extracts prose into `keyRules` with topic codes, and
   resolves the advisor table into semester / credit / surname-range / track / effective-date
-  fields. Reports data gaps as warnings instead of guessing.
+  fields. Classifies every table (advisors / courses / unknown) so a course listing is reported
+  and skipped rather than misread as advisors. Reports data gaps as warnings instead of guessing.
 - `server/services/registrationImport.js` - shapes parser output into a per-semester patch, and
   converts advisors between the two stores they live in (`assignment` <-> `lastNameRanges`).
 - `POST /api/admin/upload/registration-guidelines` - parse-and-preview only; nothing is written
@@ -22,10 +23,12 @@ This also activates the `rules` intent, which was reachable but had no renderer.
   with the `academicAdvisors` collection that the bot's letter/track picker reads. Saving shows a
   diff (new / changed fields) and writes only what the admin approves; deletions are never
   proposed, so hand-created advisors are safe. The apply step recomputes the diff server-side.
-- Import card in the "כללים וקישורים" sub-view of the registration editor, which merges the patch
-  into the open semester and lists any warnings.
+- `client/src/components/admin/RegistrationImport.jsx` - dedicated "ייבוא מקובץ" sub-view with a
+  three-step flow (select file -> review -> import) and a destination map showing, per item, which
+  tab and which Firestore path it lands in, plus what was found but deliberately not imported.
 - `server/tests/registration.parser.test.js` + `npm run test:registration` - pins each extracted
-  fact to its source cell, the per-semester advisor split, and the sync diff. 54/54.
+  fact to its source cell, the per-semester advisor split, the sync diff, table classification and
+  the destination map. 64/64.
 
 ### Modified
 

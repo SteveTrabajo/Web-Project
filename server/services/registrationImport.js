@@ -120,6 +120,93 @@ export function diffAdvisorSync(incoming = [], existing = []) {
   return rows;
 }
 
+/* =============================
+   Destination map
+
+   Answers "where did each part of my document go?" for the import screen.
+   Every row names what was found, where it lands, and whether it is imported at
+   all - a registration file can also carry course tables, which belong to the
+   yearbook importer and are deliberately skipped here.
+============================= */
+
+const CONTACT_LABELS = {
+  academicAdvisors: "יועצים אקדמיים",
+  registrationSupport: "תמיכה ומזכירות",
+  mentors: "מלווים (מנטורים)",
+  exemptions: "חריגים ופטורים",
+  labs: "מעבדות",
+};
+
+export function buildDestinationMap(parsed = {}, patch = {}, semester) {
+  const doc = `registrationGuidelines/semester_${semester}`;
+  const rows = [];
+
+  const add = (row) => rows.push({ status: "import", ...row });
+
+  if (patch.keyRules?.length) {
+    add({
+      label: "כללים חשובים",
+      count: patch.keyRules.length,
+      view: "כללים וקישורים",
+      store: `${doc}.keyRules`,
+    });
+  }
+
+  if (patch.audience?.creditsRange) {
+    const { min, max } = patch.audience.creditsRange;
+    add({
+      label: "מגבלות נ\"ז בסמסטר",
+      detail: [min != null ? `מינימום ${min}` : "", max != null ? `מקסימום ${max}` : ""].filter(Boolean).join(" · "),
+      count: 1,
+      view: "מידע כללי",
+      store: `${doc}.audience.creditsRange`,
+    });
+  }
+
+  if (patch.audience?.creditsRuleText) {
+    add({ label: "הנחיות נ\"ז (טקסט)", count: 1, view: "מידע כללי", store: `${doc}.audience.creditsRuleText` });
+  }
+
+  if (patch.title) {
+    add({ label: "כותרת ההנחיות", detail: patch.title, count: 1, view: "מידע כללי", store: `${doc}.title` });
+  }
+
+  if (patch.links?.length) {
+    add({ label: "קישורים", count: patch.links.length, view: "כללים וקישורים", store: `${doc}.links` });
+  }
+
+  for (const [key, label] of Object.entries(CONTACT_LABELS)) {
+    const list = patch.contacts?.[key] || [];
+    if (!list.length) continue;
+    const named = list.filter((c) => c.name);
+    add({
+      label,
+      count: list.length,
+      detail: named.map((c) => c.name).join(", ") || "רשומה ללא שם",
+      view: "אנשי קשר",
+      store: `${doc}.contacts.${key}`,
+      // Advisors also drive the bot's letter/track picker, which reads a
+      // different collection - that copy needs an explicit sync.
+      alsoNeedsSync: key === "academicAdvisors",
+    });
+  }
+
+  // Tables the parser recognised but does not own.
+  for (const t of parsed.tables || []) {
+    if (t.kind === "advisors") continue;
+    rows.push({
+      status: "skip",
+      label: t.kind === "courses" ? "טבלת קורסים" : "טבלה לא מזוהה",
+      count: t.rows,
+      detail: t.header,
+      view: "-",
+      store: t.kind === "courses" ? "מנוהל דרך העלאת שנתון" : "לא מיובא",
+    });
+  }
+
+  return rows;
+}
+
 // Parser output -> a patch shaped like a registrationGuidelines/semester_N doc,
 // so the admin editor can merge it field by field. registrationWindow is
 // deliberately absent: the source document carries no window dates.
@@ -130,19 +217,18 @@ export function buildGuidelinesPatch(parsed = {}, semester) {
     warnings.push(`לא נמצא יועץ אקדמי המשויך לסמסטר ${semester} בטבלה שבקובץ.`);
   }
 
-  return {
-    warnings,
-    patch: {
-      title: parsed.meta?.title || "",
-      term: parsed.meta?.term || "",
-      audience: {
-        cohortText: parsed.audience?.cohortText || "",
-        creditsRuleText: parsed.audience?.creditsRuleText || null,
-        creditsRange: parsed.audience?.creditsRange || null,
-      },
-      keyRules: parsed.keyRules || [],
-      links: parsed.links || [],
-      contacts,
+  const patch = {
+    title: parsed.meta?.title || "",
+    term: parsed.meta?.term || "",
+    audience: {
+      cohortText: parsed.audience?.cohortText || "",
+      creditsRuleText: parsed.audience?.creditsRuleText || null,
+      creditsRange: parsed.audience?.creditsRange || null,
     },
+    keyRules: parsed.keyRules || [],
+    links: parsed.links || [],
+    contacts,
   };
+
+  return { warnings, patch, destinations: buildDestinationMap(parsed, patch, semester) };
 }

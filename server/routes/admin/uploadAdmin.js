@@ -291,8 +291,8 @@ router.post("/upload/registration-guidelines", upload.single("file"), (req, res)
         return res.status(500).json({ error: friendlyError("valid json") });
       }
 
-      const { patch, warnings } = buildGuidelinesPatch(parsed, semester);
-      res.json({ ok: true, semester, meta: parsed.meta, warnings, patch });
+      const { patch, warnings, destinations } = buildGuidelinesPatch(parsed, semester);
+      res.json({ ok: true, semester, meta: parsed.meta, warnings, patch, destinations });
     }
   );
 });

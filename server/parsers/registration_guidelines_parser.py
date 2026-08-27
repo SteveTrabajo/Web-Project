@@ -192,6 +192,60 @@ def is_section_header(text):
 
 
 # ==============================
+# Table classification
+# ==============================
+ADVISOR_HEADER_HINTS = ("יועץ", "היועץ", "יעוץ", "ייעוץ")
+COURSE_HEADER_HINTS = ("קוד הקורס", "מספר קורס", "שם הקורס", "שם המקצוע", "נקודות זכות", "נ\"ז", "נ״ז", "סמסטר א", "שעות")
+
+
+def classify_table(header_text):
+    """Advisor routing table, course listing, or something we do not import.
+
+    A registration guidelines file can also carry course tables. Those belong to
+    the yearbook importer, so they must be reported and skipped - never read as
+    advisors, which is how course names ended up in the advisor warnings.
+    """
+    h = header_text or ""
+    advisor_hits = sum(1 for n in ADVISOR_HEADER_HINTS if n in h)
+    course_hits = sum(1 for n in COURSE_HEADER_HINTS if n in h)
+    if advisor_hits and advisor_hits >= course_hits:
+        return "advisors"
+    if course_hits:
+        return "courses"
+    return "unknown"
+
+
+# ==============================
+# Result assembly
+# ==============================
+def build_result(titles, joined_titles, title, year, term, credits_rule_text,
+                 sem_min, sem_max, degree_total, key_rules, links, contacts,
+                 rows_out, tables_found, warnings):
+    term_label = "סמסטר א'" if term == "A" else ("סמסטר ב'" if term == "B" else "")
+    return {
+        "ok": True,
+        "meta": {
+            "title": title,
+            "year": year,
+            "term": term,
+            "termText": joined_titles.strip(" -"),
+        },
+        "audience": {
+            "cohortText": " ".join(x for x in [year, term_label] if x).strip(),
+            "creditsRuleText": credits_rule_text or None,
+            "creditsRange": ({"min": sem_min, "max": sem_max} if sem_min is not None or sem_max is not None else None),
+            "degreeCredits": degree_total,
+        },
+        "keyRules": key_rules,
+        "links": links,
+        "contacts": contacts,
+        "advisorRows": rows_out,
+        "tables": tables_found,
+        "warnings": warnings,
+    }
+
+
+# ==============================
 # Main parse
 # ==============================
 def parse(path):
@@ -201,6 +255,7 @@ def parse(path):
     titles = []
     prose = []
     advisor_table = None
+    tables_found = []
 
     for block in iter_blocks(doc):
         if isinstance(block, Paragraph):
@@ -213,15 +268,18 @@ def parse(path):
             else:
                 prose.append(text)
         else:
-            header = " ".join(row_texts(block.rows[0], len(block.columns))) if block.rows else ""
-            if advisor_table is None and ("יועץ" in header or "שם היועץ" in header):
+            if not block.rows:
+                continue
+            header = " ".join(row_texts(block.rows[0], len(block.columns)))
+            kind = classify_table(header)
+            tables_found.append({
+                "kind": kind,
+                "rows": len(block.rows) - 1,
+                "columns": len(block.columns),
+                "header": header[:200],
+            })
+            if kind == "advisors" and advisor_table is None:
                 advisor_table = block
-            elif advisor_table is None and block.rows:
-                # Only one table is expected; keep the first as a fallback.
-                advisor_table = block
-
-    if advisor_table is None:
-        raise Exception("no advisor table found in document")
 
     # ---- meta ----
     joined_titles = " ".join(titles)
@@ -290,6 +348,27 @@ def parse(path):
         key_rules.append({"code": rule_code(p, idx), "text": p})
 
     # ---- advisor table ----
+    contacts = {
+        "registrationSupport": [],
+        "mentors": [],
+        "academicAdvisors": [],
+        "exemptions": [],
+        "labs": [],
+    }
+    rows_out = []
+
+    if advisor_table is None:
+        skipped = [t["kind"] for t in tables_found if t["kind"] != "advisors"]
+        if skipped:
+            warnings.append(
+                "לא נמצאה טבלת יועצים במסמך. נמצאו {} טבלאות אחרות (למשל טבלת קורסים) שאינן מיובאות כאן.".format(len(skipped))
+            )
+        else:
+            warnings.append("לא נמצאה טבלת יועצים במסמך - לא יובאו אנשי קשר.")
+        return build_result(titles, joined_titles, title, year, term, credits_rule_text,
+                            sem_min, sem_max, degree_total, key_rules, links, contacts,
+                            rows_out, tables_found, warnings)
+
     width = len(advisor_table.columns)
     header = row_texts(advisor_table.rows[0], width)
 
@@ -309,15 +388,6 @@ def parse(path):
         i_email = 2
     if i_notes is None:
         i_notes = 3
-
-    contacts = {
-        "registrationSupport": [],
-        "mentors": [],
-        "academicAdvisors": [],
-        "exemptions": [],
-        "labs": [],
-    }
-    rows_out = []
 
     for r in advisor_table.rows[1:]:
         cells = row_texts(r, width)
@@ -397,26 +467,9 @@ def parse(path):
                 "semesters": semesters,
             })
 
-    return {
-        "ok": True,
-        "meta": {
-            "title": title,
-            "year": year,
-            "term": term,
-            "termText": joined_titles.strip(" -"),
-        },
-        "audience": {
-            "cohortText": " ".join(x for x in [year, "סמסטר א'" if term == "A" else ("סמסטר ב'" if term == "B" else "")] if x).strip(),
-            "creditsRuleText": credits_rule_text or None,
-            "creditsRange": ({"min": sem_min, "max": sem_max} if sem_min is not None or sem_max is not None else None),
-            "degreeCredits": degree_total,
-        },
-        "keyRules": key_rules,
-        "links": links,
-        "contacts": contacts,
-        "advisorRows": rows_out,
-        "warnings": warnings,
-    }
+    return build_result(titles, joined_titles, title, year, term, credits_rule_text,
+                        sem_min, sem_max, degree_total, key_rules, links, contacts,
+                        rows_out, tables_found, warnings)
 
 
 # ==============================

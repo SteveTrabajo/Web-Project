@@ -197,6 +197,33 @@ function run() {
   const rows = diffAdvisorSync(docAdvisors, handMade);
   checkTruthy("hand-created advisor untouched", !rows.some((r) => r.id === "manual"));
 
+  console.log("\n== Table classification ==");
+  check("advisor table identified", (out.tables || []).filter((t) => t.kind === "advisors").length, 1);
+
+  // A course table must never be read as advisors - that produced course names
+  // like "טכנולוגיות חלבונים ופפטידים" in the advisor warnings.
+  const courseDoc = {
+    ...out,
+    tables: [{ kind: "courses", rows: 12, columns: 5, header: "קוד הקורס שם הקורס נ\"ז שעות" }],
+    contacts: { registrationSupport: [], mentors: [], academicAdvisors: [], exemptions: [], labs: [] },
+    warnings: ["לא נמצאה טבלת יועצים במסמך."],
+  };
+  const courseResult = buildGuidelinesPatch(courseDoc, 1);
+  check("course table yields no advisors", courseResult.patch.contacts.academicAdvisors.length, 0);
+  const courseRow = courseResult.destinations.find((d) => d.label === "טבלת קורסים");
+  checkTruthy("course table reported as skipped", courseRow?.status === "skip");
+  check("course table points at the yearbook importer", courseRow?.store, "מנוהל דרך העלאת שנתון");
+
+  console.log("\n== Destination map ==");
+  const dest = buildGuidelinesPatch(out, 1).destinations;
+  const byLabel = (l) => dest.find((d) => d.label === l);
+  checkTruthy("rules routed to the rules view", byLabel("כללים חשובים")?.view === "כללים וקישורים");
+  check("rules store path", byLabel("כללים חשובים")?.store, "registrationGuidelines/semester_1.keyRules");
+  checkTruthy("credit limits routed to general view", byLabel('מגבלות נ"ז בסמסטר')?.view === "מידע כללי");
+  checkTruthy("advisors flagged as needing a separate sync", byLabel("יועצים אקדמיים")?.alsoNeedsSync === true);
+  checkTruthy("labs contact routed to contacts view", byLabel("מעבדות")?.view === "אנשי קשר");
+  checkTruthy("every destination row names a store", dest.every((d) => !!d.store));
+
   console.log(`\n== Summary ==`);
   console.log(`  ${passed} passed, ${failures.length} failed`);
   if (failures.length) {
