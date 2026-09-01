@@ -453,6 +453,49 @@ async function getFormsCached() {
 }
 
 /* =============================
+   Reserves (מילואים) flow - TEMPORARILY DISABLED
+
+   The grounded answers were not accurate enough to keep serving, so the whole
+   flow is paused behind a flag and students are sent to the official dean's
+   page instead. Nothing below is deleted: set RESERVES_ENABLED=true to restore
+   it, and the documents, label maps and prompt stay exactly as they were.
+
+   The guard deliberately also catches reserve-duty wording on ANY question, not
+   just the guided flow, so a free-text "כמה ימי מילואים מזכים בפטור" cannot be
+   answered from the generative fallback or the knowledge base instead.
+============================= */
+const RESERVES_ENABLED = process.env.RESERVES_ENABLED === "true";
+const MILUIM_URL = "https://w3.braude.ac.il/department/dean/miluim/";
+
+const MILUIM_QUESTION_KEYWORDS = [
+  "מילואים",
+  "מילואימניק",
+  "מילואימניקית",
+  "צו 8",
+  "מתווה",
+  "משרתי מילואים",
+];
+
+function isReservesQuestion(question = "", qNorm = null) {
+  const q = qNorm ?? normalizeHebrew(question);
+  return MILUIM_QUESTION_KEYWORDS.some((k) => q.includes(normalizeHebrew(k)));
+}
+
+// Shown wherever the reserve-duty flow would previously have answered.
+function buildReservesRedirect() {
+  return `
+    <div dir="rtl" class="text-sm leading-6 text-right">
+      🎖️ <b class="bot-title">מידע לסטודנטים במילואים</b><br/><br/>
+      נכון לעכשיו הבוט אינו מוסר מידע על זכויות והתאמות למשרתי מילואים, כדי להימנע ממידע לא מדויק.<br/><br/>
+      המידע המלא והמעודכן מתפרסם באתר דיקנט הסטודנטים:<br/>
+      <a href="${MILUIM_URL}" target="_blank" rel="noopener noreferrer" class="underline text-blue-700 dark:text-sky-300">
+        זכויות והתאמות למשרתי מילואים - אתר המכללה
+      </a><br/><br/>
+      לשאלות אישיות מומלץ לפנות לרכז/ת המילואים בדיקנט הסטודנטים.
+    </div>`;
+}
+
+/* =============================
    Reserves (miluim) label map
    Mirrors the group definitions in Bot.jsx so the RAG prompt
    can tell the LLM which plan and eligibility group the student is in.
@@ -637,7 +680,10 @@ async function buildRagContext(yearbookId, semesterNum, reservesMitve, reservesG
     if (courseLines) parts.push(`קורסים בשנתון:\n${courseLines}`);
   } catch {}
 
-  if (reservesMitve && reservesGroup) {
+  // While the reserve-duty flow is paused, the student's mitve/group must not
+  // reach the generative prompt either - it would invite a reserve-duty answer
+  // from a model that has no grounding document to work from.
+  if (RESERVES_ENABLED && reservesMitve && reservesGroup) {
     const mitveLabel = RESERVES_MITVE_LABELS[reservesMitve] || reservesMitve;
     const groupLabel = RESERVES_GROUP_LABELS[reservesMitve]?.[reservesGroup] || reservesGroup;
     parts.push(`מידע על הסטודנט - מתווה מילואים: ${mitveLabel}\nקבוצת זכאות: ${groupLabel}`);
@@ -784,9 +830,24 @@ router.post("/ask", async (req, res) => {
       });
     }
 
+    // Reserve-duty flow is paused. This runs before every other branch - including
+    // the tool router, the knowledge base and the generative fallback - so no
+    // reserve-duty answer can be produced anywhere while the flag is off.
+    if (!RESERVES_ENABLED && (clientTopic === "reserves" || isReservesQuestion(question, qNorm))) {
+      logUsageEvent({
+        question,
+        yearbook: yearbookId,
+        semester: clientSemester || null,
+        topic: "reserves",
+        answerSource: "reserves_disabled",
+        wasAnswered: true,
+      });
+      return res.json({ html: buildReservesRedirect() });
+    }
+
     // Reserve-duty (מילואים): after the student picks their framework in the guided
     // flow, answer grounded in the official accommodations document for that mitve.
-    if (clientTopic === "reserves" && reservesMitve && MITVE_TO_FILE[reservesMitve]) {
+    if (RESERVES_ENABLED && clientTopic === "reserves" && reservesMitve && MITVE_TO_FILE[reservesMitve]) {
       const reserveAnswer = await answerReserves(question, reservesMitve, reservesGroup, historyText);
       if (reserveAnswer) {
         logUsageEvent({ question, yearbook: yearbookId, semester: clientSemester || null, topic: "reserves", answerSource: "reserves_framework", wasAnswered: true });

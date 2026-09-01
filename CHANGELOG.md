@@ -1,33 +1,36 @@
 2026-08-27
 
-## Multi-admin support, and mobile chat fixes
+## Reserve-duty (מילואים) flow paused behind a flag
 
-Admin credential routes were hardcoded to the "admin1" document, so a second admin changing
-their own password silently overwrote the first admin's credentials. Identity now always comes
-from the JWT, and admin accounts can be managed from the settings tab.
+The grounded reserve-duty answers were not accurate enough to keep serving. The flow is now
+disabled by a flag rather than deleted, and students are pointed at the college's official
+page. No documents, label maps, prompts or templates were removed - flipping the two flags
+restores the flow exactly as it was.
 
 ### Added
 
-- `server/services/adminAuth.js` - shared `verifyAdminPassword`, case-insensitive
-  `findAdminByEmail`, and readable unique id generation for new admin documents.
-- `GET/POST/DELETE /api/admin/security/admins` - list, create and remove admin accounts. Both
-  mutations re-check the acting admin's password on top of the JWT, since adding an account
-  grants full access and removing one can lock people out. Self-deletion and removing the last
-  remaining admin are blocked; password hashes are never returned.
-- "ניהול מנהלים" section in the settings tab: account list, add form, and a remove dialog.
+- `RESERVES_ENABLED` (server env, default off) and a matching constant in
+  `client/src/components/botTemplates.js`. The server refuses reserve-duty answers on its own,
+  so leaving the client flag alone still fails closed.
+- `isReservesQuestion()` + `buildReservesRedirect()` in `routes/public/ask.js`, and
+  `reservesDisabledHtml()` on the client. Both link to
+  https://w3.braude.ac.il/department/dean/miluim/
 
 ### Modified
 
-- `routes/admin/adminSecurity.js` - `change-password` and `change-email` now write to
-  `req.admin.id` instead of a hardcoded `admin1`, and the email uniqueness check compares
-  against the acting admin rather than that constant. Passwords require at least 6 characters.
-- `services/scheduler.js` - the weekly report goes to every admin; it previously read the same
-  hardcoded document, so any admin added later would never have received one.
-- `AdminLogin.jsx` - the identifier field is `type="text"` with `inputMode="email"`, so plain
-  usernames are accepted (accounts match on the stored string, not on email format).
-- `BotParts.jsx` - the chat input is RTL, so text flows toward the physical left where the send
-  button sits. Clearance was on the right (`pr-*`), which both wasted width and let the
-  placeholder run under the button; it is now `pl-14 sm:pl-16` with `ps-*` for the text start.
-- `ThemeToggle.jsx` / `Navbar.jsx` - the floating toggle overlapped the chat send button on
-  phones. It now takes a `variant`: floating (desktop only, `lg:`) and inline, rendered beside
-  the mobile menu button.
+- `routes/public/ask.js` - the guard runs immediately after the greeting check, ahead of the
+  tool router, the curated knowledge base and the generative fallback. It matches reserve-duty
+  wording on *any* question, not just `topic=reserves`, so a free-text "כמה ימי מילואים מזכים
+  בפטור" cannot be answered from a non-grounded path. The existing grounded branch is now
+  gated on the flag.
+- `routes/public/ask.js` - `buildRagContext()` no longer injects the student's mitve and
+  eligibility group into the generative prompt while the flow is off; that context would have
+  invited a reserve-duty answer with no source document behind it.
+- `Bot.jsx` - the מילואים topic button shows the redirect instead of opening the mitve picker,
+  and clears any stored mitve/group so later questions carry no reserve-duty context.
+
+### Verified
+
+Live probe against a running server: the guided flow and four free-text phrasings (ימי מילואים,
+מתווה, צו 8, מילואימניק) all return the official link with no reserve-duty figures in the
+response, while a normal course question still answers as before.

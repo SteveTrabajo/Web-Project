@@ -14,6 +14,8 @@ import {
   fileMatchesHtml,
   noFileMatchHtml,
   fileDisplayName,
+  RESERVES_ENABLED,
+  reservesDisabledHtml,
 } from "./botTemplates.js";
 import { groupByCategory } from "./formCategories.js";
 
@@ -287,6 +289,14 @@ const showReservesGuidelines = () => {
       showExceptionalRegistration();
     }
     else if (t === "reserves") {
+      // Flow paused: send the student to the official page instead of opening
+      // the mitve picker, and make sure no reserve-duty context is left on the
+      // request so later questions are not answered as reserve-duty ones.
+      if (!RESERVES_ENABLED) {
+        setContext((p) => ({ ...p, selectedMitve: null, selectedGroup: null }));
+        addBot(reservesDisabledHtml());
+        return;
+      }
       setContext((p) => ({ ...p, topic: "reserves", semesterNum: null }));
       showReservesGuidelines();
     }

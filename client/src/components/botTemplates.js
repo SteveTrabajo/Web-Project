@@ -4,6 +4,26 @@
 const SECRETARY_PHONE = "04-9901927";
 const SECRETARY_EMAIL = "nataliav@braude.ac.il";
 
+/* Reserves (מילואים) flow - TEMPORARILY DISABLED.
+   The guided flow produced answers that were not accurate enough to publish, so
+   students are pointed at the official dean's page instead. Everything below is
+   kept intact; flip RESERVES_ENABLED to true here AND set RESERVES_ENABLED=true
+   in the server env to bring the flow back. The server refuses reserve-duty
+   answers independently, so leaving this alone still fails closed. */
+export const RESERVES_ENABLED = false;
+export const MILUIM_URL = "https://w3.braude.ac.il/department/dean/miluim/";
+
+export const reservesDisabledHtml = () => `
+  <div dir="rtl" class="text-sm leading-6 text-right">
+    🎖️ <b class="bot-title">מידע לסטודנטים במילואים</b><br/><br/>
+    נכון לעכשיו הבוט אינו מוסר מידע על זכויות והתאמות למשרתי מילואים, כדי להימנע ממידע לא מדויק.<br/><br/>
+    המידע המלא והמעודכן מתפרסם באתר דיקנט הסטודנטים:<br/>
+    <a href="${MILUIM_URL}" target="_blank" rel="noopener noreferrer" class="underline text-blue-700 dark:text-sky-300">
+      זכויות והתאמות למשרתי מילואים - אתר המכללה
+    </a><br/><br/>
+    לשאלות אישיות מומלץ לפנות לרכז/ת המילואים בדיקנט הסטודנטים.
+  </div>`;
+
 // Reserves (מילואים) flow: button markup is data, not code. Edit the tables, not HTML.
 const RESERVES_BTN =
   "px-3 py-1.5 rounded-full border border-bio-green bg-surface-card text-bio-green text-xs font-medium hover:bg-surface-raised transition-colors shadow-sm";
