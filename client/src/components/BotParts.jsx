@@ -132,7 +132,11 @@ export function ChatInput({
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onKeyDown={(e) => e.key === "Enter" && !locked && onSend()}
                 placeholder={locked ? (hasYearbook ? "יש לבחור מהאפשרויות שלמעלה כדי להמשיך..." : "יש לבחור שנתון מהרשימה כדי להתחיל...") : "שאל על קורס (למשל: דרישות קדם לביוכימיה)..."}
-                className="w-full bg-surface-page rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none pr-12 sm:pr-14 shadow-inner font-sans placeholder:text-content-muted relative z-10 disabled:cursor-not-allowed"
+                /* The field is RTL, so text flows toward the physical left - which is
+                   where the send button sits. The clearance must therefore be on the
+                   left; pr-* reserved space on the empty right edge and let the
+                   placeholder run under the button. */
+                className="w-full bg-surface-page rounded-2xl ps-4 sm:ps-6 pl-14 sm:pl-16 py-3.5 sm:py-4 text-body text-content-primary focus:bg-surface-card transition-colors outline-none shadow-inner font-sans placeholder:text-content-muted relative z-10 disabled:cursor-not-allowed"
               />
               <button
                 onClick={onSend}

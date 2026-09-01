@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, X, Home, MessageCircle, FlaskConical, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "./ThemeToggle.jsx";
 
 const NAV_ITEMS = [
   { key: "home", label: "בית", Icon: Home },
@@ -100,16 +101,21 @@ export default function Navbar({ view, onNavigate, admin, onLogout }) {
           {item({ key: "admin", label: "אזור מנהל", Icon: ShieldCheck })}
         </nav>
 
-        {/* Right - mobile menu toggle */}
-        <button
-          type="button"
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label={menuOpen ? "סגירת תפריט" : "פתיחת תפריט"}
-          aria-expanded={menuOpen}
-          className="lg:hidden flex items-center justify-center w-11 h-11 rounded-xl text-white/80 border border-white/10 bg-white/5 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors"
-        >
-          {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Right - mobile theme toggle + menu button.
+            The floating toggle overlapped the chat send button on phones, so on
+            small screens it lives here instead. */}
+        <div className="lg:hidden flex items-center gap-2">
+          <ThemeToggle variant="inline" />
+          <button
+            type="button"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={menuOpen ? "סגירת תפריט" : "פתיחת תפריט"}
+            aria-expanded={menuOpen}
+            className="flex items-center justify-center w-11 h-11 rounded-xl text-white/80 border border-white/10 bg-white/5 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors"
+          >
+            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
 
       </div>
 
