@@ -112,9 +112,14 @@ export default function AdminLogin({ onSuccess }) {
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-caption text-muted-foreground">Email</Label>
+          {/* type="text" (not "email") so a plain username is accepted too -
+              accounts are matched on the stored string, not on email format.
+              inputMode keeps the "@" key on mobile keyboards. */}
           <Input
             id="email"
-            type="email"
+            type="text"
+            inputMode="email"
+            autoComplete="username"
             placeholder="admin@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -9,11 +9,13 @@ import {
 } from "./reportService.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const ADMIN_ID = "admin1";
 
+// Every admin gets the weekly report. This used to read a hardcoded "admin1"
+// document, so any admin added later silently never received one.
 export async function getAdminEmail() {
-  const snap = await db.collection("admins").doc(ADMIN_ID).get();
-  return snap.exists ? snap.data().email : null;
+  const snap = await db.collection("admins").get();
+  const emails = snap.docs.map((d) => d.data()?.email).filter(Boolean);
+  return emails.length ? emails.join(", ") : null;
 }
 
 // Builds the weekly stats, attaches the week's feedback as CSV, and emails the admin.

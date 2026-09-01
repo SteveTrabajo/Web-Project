@@ -1,30 +1,33 @@
 2026-08-27
 
-## Admin destructive actions: delete a yearbook, clear the unanswered queue
+## Multi-admin support, and mobile chat fixes
 
-Both are irreversible, so each is gated behind an explicit confirmation that matches the
-blast radius: a yearbook delete shows exactly what it will remove and requires the id to be
-retyped, and clearing the unanswered queue requires the admin password on top of the session.
+Admin credential routes were hardcoded to the "admin1" document, so a second admin changing
+their own password silently overwrote the first admin's credentials. Identity now always comes
+from the JWT, and admin accounts can be managed from the settings tab.
 
 ### Added
 
-- `GET /api/admin/yearbooks/:id/delete-impact` - counts the semesters, courses and relations a
-  delete would remove, flags the last remaining yearbook, and reports data that references the
-  yearbook without being owned by it (matching `lab_schedule` doc, curated answers).
-- `DELETE /api/admin/yearbooks/:id` - `recursiveDelete` over the four-level subcollection tree,
-  requires the id echoed in the body, optionally removes the matching lab schedule.
-- `DELETE /api/admin/unanswered-questions` - clears the whole queue in chunked batches after
-  re-verifying the admin password (bcrypt, with the same legacy-plaintext fallback as login).
-- `invalidateYearbookCaches()` in `services/courseData.js` - drops the 5-minute course and
-  relation caches after a delete, so the bot stops answering from a deleted yearbook.
-- Danger-zone section in the settings tab listing every yearbook with a delete dialog, and a
-  "מחיקת הכל" action with a password dialog in the unanswered-questions tab.
+- `server/services/adminAuth.js` - shared `verifyAdminPassword`, case-insensitive
+  `findAdminByEmail`, and readable unique id generation for new admin documents.
+- `GET/POST/DELETE /api/admin/security/admins` - list, create and remove admin accounts. Both
+  mutations re-check the acting admin's password on top of the JWT, since adding an account
+  grants full access and removing one can lock people out. Self-deletion and removing the last
+  remaining admin are blocked; password hashes are never returned.
+- "ניהול מנהלים" section in the settings tab: account list, add form, and a remove dialog.
 
 ### Modified
 
-- `routes/admin/usageStats.js` + `StatsTab` - added an `unansweredQueue` count so the statistics
-  reflect a cleared queue. It is labelled separately from the event-log "שאלות ללא מענה" metric,
-  which is historical and intentionally unaffected by clearing the queue. Stats now load with
-  `force: true` so they bypass the shared GET cache.
-- `routes/admin/unansweredAdmin.js` - the list response carries a whole-collection `total`, shown
-  next to the tab heading and in the purge confirmation.
+- `routes/admin/adminSecurity.js` - `change-password` and `change-email` now write to
+  `req.admin.id` instead of a hardcoded `admin1`, and the email uniqueness check compares
+  against the acting admin rather than that constant. Passwords require at least 6 characters.
+- `services/scheduler.js` - the weekly report goes to every admin; it previously read the same
+  hardcoded document, so any admin added later would never have received one.
+- `AdminLogin.jsx` - the identifier field is `type="text"` with `inputMode="email"`, so plain
+  usernames are accepted (accounts match on the stored string, not on email format).
+- `BotParts.jsx` - the chat input is RTL, so text flows toward the physical left where the send
+  button sits. Clearance was on the right (`pr-*`), which both wasted width and let the
+  placeholder run under the button; it is now `pl-14 sm:pl-16` with `ps-*` for the text start.
+- `ThemeToggle.jsx` / `Navbar.jsx` - the floating toggle overlapped the chat send button on
+  phones. It now takes a `variant`: floating (desktop only, `lg:`) and inline, rendered beside
+  the mobile menu button.

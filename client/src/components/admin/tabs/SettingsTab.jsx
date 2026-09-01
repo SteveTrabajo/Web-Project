@@ -42,6 +42,63 @@ export default function SettingsTab({ toast }) {
   const [emailError, setEmailError]       = useState(false);
   const [emailSaving, setEmailSaving]     = useState(false);
 
+  // ---------- Admin accounts state ----------
+  const [admins, setAdmins]               = useState([]);
+  const [newAdmin, setNewAdmin]           = useState({ email: "", name: "", password: "" });
+  const [adminPwConfirm, setAdminPwConfirm] = useState("");
+  const [addingAdmin, setAddingAdmin]     = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState(null);
+  const [removingAdmin, setRemovingAdmin] = useState(false);
+
+  const loadAdmins = async () => {
+    try {
+      const data = await apiFetch("/api/admin/security/admins", { force: true });
+      setAdmins(data.admins || []);
+    } catch {
+      // a failed list just leaves the section empty
+    }
+  };
+
+  const addAdmin = async () => {
+    if (!newAdmin.email.trim()) return toast("error", "יש להזין אימייל או שם משתמש");
+    if (newAdmin.password.length < 6) return toast("error", "הסיסמה חייבת להכיל לפחות 6 תווים");
+    if (!adminPwConfirm) return toast("error", "יש להזין את הסיסמה שלך לאישור");
+
+    setAddingAdmin(true);
+    try {
+      await apiFetch("/api/admin/security/admins", {
+        method: "POST",
+        body: { ...newAdmin, currentPassword: adminPwConfirm },
+      });
+      toast("ok", "המנהל נוסף בהצלחה");
+      setNewAdmin({ email: "", name: "", password: "" });
+      setAdminPwConfirm("");
+      loadAdmins();
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const removeAdmin = async () => {
+    setRemovingAdmin(true);
+    try {
+      await apiFetch(`/api/admin/security/admins/${encodeURIComponent(adminToRemove.id)}`, {
+        method: "DELETE",
+        body: { currentPassword: adminPwConfirm },
+      });
+      toast("ok", "המנהל הוסר");
+      setAdminToRemove(null);
+      setAdminPwConfirm("");
+      loadAdmins();
+    } catch (e) {
+      toast("error", e.message);
+    } finally {
+      setRemovingAdmin(false);
+    }
+  };
+
   // ---------- Yearbook deletion state ----------
   const [yearbooks, setYearbooks]         = useState([]);
   const [ybToDelete, setYbToDelete]       = useState("");
@@ -61,7 +118,7 @@ export default function SettingsTab({ toast }) {
     }
   };
 
-  useEffect(() => { loadYearbooks(); }, []);
+  useEffect(() => { loadYearbooks(); loadAdmins(); }, []);
 
   // Fetches what a delete would remove, so the admin sees the scope first.
   const openDeleteDialog = async (id) => {
@@ -221,6 +278,97 @@ export default function SettingsTab({ toast }) {
 
         <Separator />
 
+        {/* Admin accounts */}
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-heading text-foreground">ניהול מנהלים</h3>
+            <p className="text-caption text-muted-foreground mt-0.5">
+              כל מנהל מקבל גישה מלאה ללוח הבקרה ולדוח השבועי. אפשר להשתמש בכתובת מייל או בשם משתמש.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+            {admins.length === 0 && (
+              <div className="p-3 text-caption text-muted-foreground">לא נטענה רשימת מנהלים.</div>
+            )}
+            {admins.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-3 p-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-body font-medium text-foreground truncate">
+                    {a.email}
+                    {a.isSelf && (
+                      <span className="ms-2 text-caption font-normal text-muted-foreground">(אתה)</span>
+                    )}
+                  </div>
+                  <div className="text-caption text-muted-foreground truncate">
+                    {a.name || "ללא שם"} · <span className="font-mono">{a.id}</span>
+                  </div>
+                </div>
+                {!a.isSelf && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => { setAdminToRemove(a); setAdminPwConfirm(""); }}
+                  >
+                    הסרה
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-border p-3 space-y-3 max-w-xl">
+            <div className="text-body font-semibold text-foreground">הוספת מנהל</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-email">אימייל / שם משתמש</Label>
+                <Input
+                  id="admin-email"
+                  value={newAdmin.email}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="admin@braude.ac.il"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-name">שם לתצוגה (רשות)</Label>
+                <Input
+                  id="admin-name"
+                  value={newAdmin.name}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-password">סיסמה למנהל החדש</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newAdmin.password}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="לפחות 6 תווים"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="admin-confirm">הסיסמה שלך לאישור</Label>
+                <Input
+                  id="admin-confirm"
+                  type="password"
+                  autoComplete="current-password"
+                  value={adminPwConfirm}
+                  onChange={(e) => setAdminPwConfirm(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+            <Button onClick={addAdmin} disabled={addingAdmin}>
+              {addingAdmin ? "מוסיף..." : "הוספת מנהל"}
+            </Button>
+          </div>
+        </section>
+
+        <Separator />
+
         {/* Danger zone - irreversible data removal */}
         <section className="space-y-3">
           <div>
@@ -256,6 +404,48 @@ export default function SettingsTab({ toast }) {
         </section>
 
       </CardContent>
+
+      {/* Remove-admin confirmation */}
+      <Dialog
+        open={!!adminToRemove}
+        onOpenChange={(o) => { if (!o) { setAdminToRemove(null); setAdminPwConfirm(""); } }}
+      >
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">הסרת מנהל</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-caption text-destructive">
+              <b>{adminToRemove?.email}</b> יאבד/תאבד את הגישה ללוח הבקרה. אפשר להוסיף את החשבון שוב בהמשך.
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="remove-admin-confirm">הסיסמה שלך לאישור</Label>
+              <Input
+                id="remove-admin-confirm"
+                type="password"
+                autoComplete="current-password"
+                value={adminPwConfirm}
+                onChange={(e) => setAdminPwConfirm(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row gap-2 justify-start">
+            <Button
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={removeAdmin}
+              disabled={removingAdmin || !adminPwConfirm}
+            >
+              {removingAdmin ? "מסיר..." : "הסרה"}
+            </Button>
+            <Button variant="outline" onClick={() => setAdminToRemove(null)} disabled={removingAdmin}>
+              ביטול
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete-yearbook confirmation, showing the scope before it happens */}
       <Dialog

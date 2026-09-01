@@ -1,24 +1,8 @@
 import express from "express";
-import bcrypt from "bcrypt";
 import { db } from "../../server.js";
+import { verifyAdminPassword } from "../../services/adminAuth.js";
 
 const router = express.Router();
-
-/*
- * Re-authenticates the signed-in admin by password.
- * A valid JWT is already required to reach these routes; this is the extra
- * confirmation step for an irreversible bulk delete, so a walk-up on an open
- * session cannot wipe the queue.
- * Mirrors the bcrypt/legacy-plaintext handling in routes/admin/auth.js.
- */
-async function verifyAdminPassword(adminId, password) {
-  if (!adminId || !password) return false;
-  const doc = await db.collection("admins").doc(adminId).get();
-  if (!doc.exists) return false;
-  const stored = String(doc.data()?.password || "");
-  if (!stored) return false;
-  return stored.startsWith("$2") ? bcrypt.compare(password, stored) : stored === password;
-}
 
 // GET /api/admin/unanswered-questions — JWT protected, paginated + optional date filters
 // ?page=1&limit=20&from=ISO&to=ISO
