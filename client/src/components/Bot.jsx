@@ -534,33 +534,38 @@ const showReservesGuidelines = () => {
       dir="rtl"
     >
       {/* Header */}
-      <div className="relative bg-gradient-to-l from-brand-navy to-brand-navy-deep text-white px-4 sm:px-6 py-3 flex flex-row-reverse items-center justify-between shadow-md z-10">
-        <div className="flex flex-row-reverse items-center gap-3">
+      {/* Wraps rather than clips: the card is overflow-hidden, so without
+          flex-wrap the header buttons disappeared on narrow phones once both
+          were shown. Labels shorten under sm so they usually still fit on one row. */}
+      <div className="relative bg-gradient-to-l from-brand-navy to-brand-navy-deep text-white px-4 sm:px-6 py-3 flex flex-row-reverse flex-wrap items-center justify-between gap-x-3 gap-y-2 shadow-md z-10">
+        <div className="flex flex-row-reverse items-center gap-3 min-w-0">
           <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full bg-white text-brand-navy flex items-center justify-center font-black text-xl shadow-inner ring-2 ring-white/10">B</div>
             <span className="absolute -bottom-0.5 -left-0.5 w-3 h-3 rounded-full bg-bio-green-glow ring-2 ring-brand-navy" />
           </div>
-          <div className="leading-tight text-right">
-            <h1 className="text-heading leading-none">BIO BOT</h1>
+          <div className="leading-tight text-right min-w-0">
+            <h1 className="text-heading leading-none truncate">BIO BOT</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Re-opens topic selection as a fresh bot message */}
           {context.yearbook && context.topic && (
             <button
               onClick={promptTopic}
-              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans shrink-0 whitespace-nowrap"
             >
-              בחירת נושא
+              <span className="sm:hidden">נושא</span>
+              <span className="hidden sm:inline">בחירת נושא</span>
             </button>
           )}
           {context.semesterNum && ["courses", "advisor", "advisor_input", "track_input"].includes(context.topic) && (
             <button
               onClick={promptSemester}
-              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans"
+              className="text-caption bg-white/10 px-3 sm:px-4 py-2 rounded-lg hover:bg-white/20 hover:border-white/30 transition-all border border-white/15 font-sans shrink-0 whitespace-nowrap"
             >
-              שינוי סמסטר
+              <span className="sm:hidden">סמסטר</span>
+              <span className="hidden sm:inline">שינוי סמסטר</span>
             </button>
           )}
         </div>

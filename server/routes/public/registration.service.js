@@ -329,7 +329,7 @@ export async function buildRegistrationAnswer(intent, doc, { forms = [] } = {}) 
         <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
 
         <div class="text-gray-500" style="text-align:center;">
-          ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה
+          ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך כפתור "בחירת נושא" שבראש הצ׳אט
         </div>
         ${formsHtml}
       </div>`;
@@ -473,7 +473,7 @@ export function buildAllAdvisorsAnswer(docs = []) {
       <br/>
 
       <p class="text-gray-500" style="text-align:center; margin-top:8px;">
-        ℹ️ ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך התפריט למטה ⬇️
+        ℹ️ ניתן למצוא את היועץ/ת האקדמי/ת שלך גם דרך כפתור "בחירת נושא" שבראש הצ׳אט
       </p>
     </div>
   `;
